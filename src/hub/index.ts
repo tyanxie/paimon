@@ -1,5 +1,7 @@
-// Hub Server 入口：HTTP + WebSocket 服务
+// Hub Server 入口：HTTP + WebSocket + 静态文件服务
 
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import type { ServerWebSocket } from "bun";
 import { DEFAULTS } from "../protocol/types";
 import { registry, type WsData } from "./registry";
@@ -8,9 +10,23 @@ import * as log from "./logger";
 
 const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
 
+// 静态文件目录：相对于项目根 dist/web
+const webDir = resolve(import.meta.dir, "../../dist/web");
+
+// 启动前校验 dist/web 存在
+if (!existsSync(webDir)) {
+  log.error(`dist/web/ not found at ${webDir}. Run 'vite build' first.`);
+  process.exit(1);
+}
+if (!existsSync(resolve(webDir, "index.html"))) {
+  log.error(`dist/web/index.html not found. Run 'vite build' first.`);
+  process.exit(1);
+}
+
 log.info(`Starting Hub server on port ${port}...`);
 
 const server = Bun.serve<WsData>({
+  hostname: "0.0.0.0",
   port,
   // HTTP 请求处理
   async fetch(req, server) {
@@ -49,23 +65,16 @@ const server = Bun.serve<WsData>({
       return Response.json({ status: "ok", uptime: process.uptime() });
     }
 
-    // 静态文件（Web UI）— 生产环境从 dist/web 提供
-    // 开发时由 Vite dev server 代理
-    const webDir = new URL("../../dist/web", import.meta.url).pathname;
+    // 静态文件服务
     const filePath = url.pathname === "/" ? "/index.html" : url.pathname;
-    const file = Bun.file(`${webDir}${filePath}`);
+    const file = Bun.file(resolve(webDir, `.${filePath}`));
 
     if (await file.exists()) {
       return new Response(file);
     }
 
     // SPA fallback
-    const indexFile = Bun.file(`${webDir}/index.html`);
-    if (await indexFile.exists()) {
-      return new Response(indexFile);
-    }
-
-    return new Response("Not Found", { status: 404 });
+    return new Response(Bun.file(resolve(webDir, "index.html")));
   },
 
   // WebSocket 处理
@@ -102,7 +111,7 @@ const server = Bun.serve<WsData>({
   },
 });
 
-log.info(`Hub server listening on http://localhost:${server.port}`);
+log.info(`Hub server listening on http://0.0.0.0:${server.port}`);
 
 // 优雅退出
 process.on("SIGTERM", () => {

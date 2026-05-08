@@ -25,7 +25,7 @@ function printHelp() {
 paimon - Remote observation and control panel for pi coding agent
 
 Usage:
-  paimon hub start [--port 7890]    Start Hub daemon
+  paimon hub start [--port 8080]    Start Hub daemon
   paimon hub stop                   Stop Hub
   paimon hub status                 Show Hub status
   paimon hub logs [--follow]        View Hub logs

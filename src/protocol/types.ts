@@ -254,7 +254,7 @@ export interface HubErrorMessage {
 
 export const DEFAULTS = {
   /** Hub 默认端口 */
-  PORT: 7890 as number,
+  PORT: 8080 as number,
   /** 心跳间隔 (ms) */
   HEARTBEAT_INTERVAL: 15_000,
   /** 心跳超时 (ms) */

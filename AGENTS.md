@@ -75,7 +75,7 @@ paimon/
 
 中心化 Hub + Extension Client 模式：
 
-- **Hub Server**: 独立长驻进程，固定端口（默认 7890），提供 Web UI + WebSocket
+- **Hub Server**: 独立长驻进程，默认监听 0.0.0.0:8080，提供 Web UI + WebSocket
 - **Pi Extension**: 每个 pi 实例加载，主动连接 Hub 注册自己，转发事件流
 - **Web UI**: 单一网页入口，自动发现所有已连接 pi 实例
 
@@ -135,7 +135,7 @@ Browser → Hub：
 ## CLI 设计
 
 ```bash
-paimon hub start [--port 7890]    # 启动 Hub daemon
+paimon hub start [--port 8080]    # 启动 Hub daemon
 paimon hub stop                   # 停止 Hub
 paimon hub status                 # 显示状态
 paimon hub logs [--follow]        # 查看日志
@@ -151,6 +151,7 @@ paimon hub logs [--follow]        # 查看日志
 - 日志和用户提示使用英文
 - Git 提交格式：`type(scope): 描述`（中文描述）
 - Extension 开发遵循 pi extension 规范（参考 pi docs/extensions.md）
+- **禁止自行提交**：任何 git commit 必须由用户审阅确认后才可执行，不得主动提交
 
 ## 安全
 

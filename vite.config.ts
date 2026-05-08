@@ -12,18 +12,6 @@ export default defineConfig({
       "@protocol": path.resolve(__dirname, "src/protocol"),
     },
   },
-  server: {
-    // 开发时代理 WebSocket 到 Hub
-    proxy: {
-      "/ws": {
-        target: "ws://localhost:7890",
-        ws: true,
-      },
-      "/api": {
-        target: "http://localhost:7890",
-      },
-    },
-  },
   build: {
     outDir: "../../dist/web",
     emptyOutDir: true,

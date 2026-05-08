@@ -11,7 +11,7 @@ Paimon 由两部分组成：
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Hub Server (paimon hub start, 监听 :7890)           │
+│  Hub Server (paimon hub start, 监听 :8080)           │
 │  ├── Web UI (React + Tailwind, macOS 26 风格)        │
 │  ├── 维护已连接的 pi 实例列表                         │
 │  └── 路由：浏览器 ↔ 指定 pi 实例                     │
@@ -49,7 +49,7 @@ Paimon 由两部分组成：
 ## CLI
 
 ```bash
-paimon hub start [--port 7890]    # 启动 Hub daemon（后台）
+paimon hub start [--port 8080]    # 启动 Hub daemon（后台）
 paimon hub stop                   # 停止 Hub
 paimon hub status                 # 显示状态、已连接实例
 paimon hub logs [--follow]        # 查看 Hub 日志
@@ -75,7 +75,7 @@ paimon hub start
 pi
 
 # 3. 浏览器打开
-open http://localhost:7890
+open http://localhost:8080
 ```
 
 ## 开发
@@ -84,19 +84,17 @@ open http://localhost:7890
 # 安装依赖
 bun install
 
-# 启动 Hub（前台，可观察日志）
-bun run src/hub/index.ts
-
-# 启动前端 dev server（代理 /ws 到 Hub）
+# 一键启动（Hub + Vite build watch，同端口）
 bun run dev
+
+# 构建前端
+bun run build
+
+# 启动 Hub（生产模式）
+bun run start
 
 # 类型检查
 bunx tsc --noEmit
-
-# CLI 直接运行
-bun run src/cli/index.ts hub start
-bun run src/cli/index.ts hub status
-bun run src/cli/index.ts hub stop
 ```
 
 ## 状态文件
