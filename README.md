@@ -33,6 +33,7 @@ Paimon 由两部分组成：
 - 进入某实例查看实时对话流（assistant streaming、tool calls）
 - 发送消息（prompt / steer）
 - 中止当前操作（abort）
+- URL 路由保持选中状态（刷新不丢失）
 
 ## 技术栈
 
@@ -42,6 +43,7 @@ Paimon 由两部分组成：
 | 运行时 / 包管理 | Bun                         |
 | Hub 后端        | Bun native HTTP + WebSocket |
 | 前端框架        | React                       |
+| 前端路由        | React Router                |
 | 样式方案        | Tailwind CSS                |
 | 前端构建        | Vite                        |
 | 进程管理        | Fork daemon + PID 文件      |

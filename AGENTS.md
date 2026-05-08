@@ -53,6 +53,7 @@ paimon/
 - **运行时 / 包管理**: Bun
 - **Hub 后端**: Bun 原生 HTTP + WebSocket server
 - **前端框架**: React
+- **前端路由**: React Router (history mode)
 - **样式方案**: Tailwind CSS
 - **前端构建**: Vite
 - **进程管理**: fork daemon + PID 文件 (~/.paimon/)
@@ -71,11 +72,12 @@ paimon/
 
 ### 核心视觉规范
 
-- 侧边栏 + 内容区双栏布局
+- 浮动面板布局：sidebar 和 content 是独立的玻璃面板，浮在背景之上
+- 动态渐变背景：animated gradient 20s 循环，亮暗双模式各有配色
+- 毛玻璃效果（backdrop-filter: blur(30px) + 半透明底色 + 0.5px 边框）
 - 大圆角卡片（window 26px / panel 18px / item 8px）
-- 毛玻璃效果（backdrop-filter: blur(30px)）
-- 柔和阴影（panel: `0 8px 40px rgba(0,0,0,0.12)`）
-- 充足留白
+- 柔和阴影（panel: `0 8px 40px rgba(0,0,0,0.08)`）
+- 面板间 gap 12px，外层 padding 12px，背景可透出
 - 系统字体栈（-apple-system / Inter）
 - 亮色/暗色双模式（基于 prefers-color-scheme）
 
@@ -162,6 +164,7 @@ paimon hub logs [--follow]        # 查看日志
 - Git 提交格式：`type(scope): 描述`（中文描述）
 - Extension 开发遵循 pi extension 规范（参考 pi docs/extensions.md）
 - **禁止自行提交**：任何 git commit 必须由用户审阅确认后才可执行，不得主动提交
+- **文档同步**：每次功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
 
 ## 安全
 
@@ -176,6 +179,8 @@ paimon hub logs [--follow]        # 查看日志
 - [x] 进入某实例查看实时对话流
 - [x] 发送消息（prompt / steer）
 - [x] abort 按钮
+- [x] URL 路由保持选中状态
+- [x] Liquid Glass 浮动面板 + 动态渐变背景
 - [ ] 移动端优化（后续）
 - [ ] tunnel 集成（后续）
 - [ ] 认证（后续）

@@ -1,6 +1,7 @@
 // 根组件
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { Routes, Route, useParams, useNavigate } from "react-router";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useAppState } from "./stores/useAppState";
 import { Sidebar } from "./components/Sidebar";
@@ -17,8 +18,9 @@ export default function App() {
   } = useAppState();
 
   const { connected, send } = useWebSocket(handleMessage);
+  const navigate = useNavigate();
 
-  // 选中实例时自动订阅
+  // 选中实例时导航 + 订阅
   const handleSelect = useCallback(
     (id: InstanceId) => {
       if (selectedInstanceId) {
@@ -29,8 +31,9 @@ export default function App() {
       }
       send({ type: "subscribe", payload: { instanceId: id } });
       setSelectedInstanceId(id);
+      navigate(`/instance/${id}`);
     },
-    [selectedInstanceId, send, setSelectedInstanceId],
+    [selectedInstanceId, send, setSelectedInstanceId, navigate],
   );
 
   const handleSendMessage = useCallback(
@@ -56,21 +59,103 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen animated-bg flex items-stretch p-3 gap-3 overflow-hidden">
-      {/* 侧边栏面板 */}
       <Sidebar
         instances={instances}
         selectedId={selectedInstanceId}
         onSelect={handleSelect}
         connected={connected}
       />
-      {/* 内容面板 */}
-      <EventStream
-        events={events}
-        instanceId={selectedInstanceId}
-        onSendMessage={handleSendMessage}
-        onAbort={handleAbort}
-        instanceStatus={selectedInstance?.status}
-      />
+      <Routes>
+        <Route
+          path="/instance/:id"
+          element={
+            <InstanceRoute
+              instances={instances}
+              selectedInstanceId={selectedInstanceId}
+              setSelectedInstanceId={setSelectedInstanceId}
+              send={send}
+              events={events}
+              onSendMessage={handleSendMessage}
+              onAbort={handleAbort}
+              instanceStatus={selectedInstance?.status}
+            />
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <EventStream
+              events={events}
+              instanceId={null}
+              onSendMessage={handleSendMessage}
+              onAbort={handleAbort}
+            />
+          }
+        />
+      </Routes>
     </div>
+  );
+}
+
+/** 处理 URL 中的实例 ID：同步路由参数到状态 */
+function InstanceRoute({
+  instances,
+  selectedInstanceId,
+  setSelectedInstanceId,
+  send,
+  events,
+  onSendMessage,
+  onAbort,
+  instanceStatus,
+}: {
+  instances: Array<{ id: InstanceId }>;
+  selectedInstanceId: InstanceId | null;
+  setSelectedInstanceId: (id: InstanceId | null) => void;
+  send: (msg: any) => void;
+  events: any[];
+  onSendMessage: (message: string) => void;
+  onAbort: () => void;
+  instanceStatus?: "idle" | "streaming";
+}) {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  // URL 中的 id 变化时，同步选中状态 + 订阅
+  useEffect(() => {
+    if (!id) return;
+
+    // 实例存在则选中
+    const exists = instances.some((i) => i.id === id);
+    if (exists && id !== selectedInstanceId) {
+      if (selectedInstanceId) {
+        send({
+          type: "unsubscribe",
+          payload: { instanceId: selectedInstanceId },
+        });
+      }
+      send({ type: "subscribe", payload: { instanceId: id } });
+      setSelectedInstanceId(id);
+    } else if (!exists && instances.length > 0) {
+      // 实例不存在（ID 过期），回首页
+      navigate("/", { replace: true });
+      setSelectedInstanceId(null);
+    }
+  }, [
+    id,
+    instances,
+    selectedInstanceId,
+    setSelectedInstanceId,
+    send,
+    navigate,
+  ]);
+
+  return (
+    <EventStream
+      events={events}
+      instanceId={id as InstanceId | null}
+      onSendMessage={onSendMessage}
+      onAbort={onAbort}
+      instanceStatus={instanceStatus}
+    />
   );
 }
