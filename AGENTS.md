@@ -59,7 +59,18 @@ paimon/
 
 ## 设计风格
 
-- **macOS 26 Liquid Glass 风格**
+参考 macOS 26 系统设置页 / App Store 的视觉风格（Liquid Glass），设计 token 从 Apple Figma 文件（`av2f5FwZtGoCObPOByH1O0`）提取。
+
+### 设计参考文件
+
+| 文件                                      | 内容                                                                  |
+| ----------------------------------------- | --------------------------------------------------------------------- |
+| `docs/design/macos-26-tokens.md`          | 整理后的设计规范速查表（双模式颜色、圆角、阴影、字体、Tailwind 映射） |
+| `docs/design/macos-26-design-tokens.json` | Figma Design Tokens 插件原始导出（Dark mode，3782 行）                |
+| `docs/design/macos-26-figma-raw-data.md`  | Figma REST API 返回的布局/结构数据缓存                                |
+
+### 核心视觉规范
+
 - 侧边栏 + 内容区双栏布局
 - 大圆角卡片（window 26px / panel 18px / item 8px）
 - 毛玻璃效果（backdrop-filter: blur(30px)）
@@ -67,7 +78,6 @@ paimon/
 - 充足留白
 - 系统字体栈（-apple-system / Inter）
 - 亮色/暗色双模式（基于 prefers-color-scheme）
-- 设计参考文件: `docs/design/macos-26-tokens.md`
 
 ## 架构设计
 
