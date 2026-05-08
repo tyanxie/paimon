@@ -7,7 +7,7 @@
     "paimon": "./dist/cli/index.js"
   },
   "pi": {
-    "extensions": ["src/extension"]
+    "extensions": ["src/extensions"]
   },
   "scripts": {
     "dev": "vite build && concurrently -n hub,vite -c blue,green 'bun --watch src/hub/index.ts' 'vite build --watch'",

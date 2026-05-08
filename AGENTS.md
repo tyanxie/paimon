@@ -21,7 +21,7 @@ paimon/
 │   │   ├── router.ts               # 消息路由（Extension / Browser）
 │   │   └── logger.ts               # 日志
 │   │
-│   ├── extension/                  # pi extension
+│   ├── extensions/paimon/              # pi extension
 │   │   ├── index.ts                # 入口：连接 Hub、事件转发
 │   │   ├── client.ts               # WebSocket 客户端 + 指数退避重连
 │   │   └── serializer.ts           # 事件序列化

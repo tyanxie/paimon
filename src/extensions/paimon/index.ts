@@ -1,8 +1,8 @@
 // Pi Extension 入口：连接 Hub、转发事件、接收指令
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { DEFAULTS } from "../protocol/types";
-import type { HubToExtensionMessage } from "../protocol/types";
+import { DEFAULTS } from "../../protocol/types";
+import type { HubToExtensionMessage } from "../../protocol/types";
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
 

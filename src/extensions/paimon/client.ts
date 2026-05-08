@@ -3,8 +3,8 @@
 import type {
   ExtensionToHubMessage,
   HubToExtensionMessage,
-} from "../protocol/types";
-import { DEFAULTS } from "../protocol/types";
+} from "../../protocol/types";
+import { DEFAULTS } from "../../protocol/types";
 
 export type MessageHandler = (msg: HubToExtensionMessage) => void;
 export type ConnectionHandler = () => void;
