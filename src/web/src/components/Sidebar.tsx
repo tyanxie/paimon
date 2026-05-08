@@ -24,7 +24,7 @@ export function Sidebar({
         </h1>
         <span
           className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
-          title={connected ? "Connected to Hub" : "Disconnected"}
+          title={connected ? "Online" : "Offline"}
         />
       </div>
 
@@ -52,8 +52,11 @@ export function Sidebar({
                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors ${
                         instance.status === "streaming"
                           ? "bg-[var(--color-accent)]"
-                          : "bg-[var(--label-tertiary)]"
+                          : "bg-green-500"
                       }`}
+                      title={
+                        instance.status === "streaming" ? "Streaming" : "Idle"
+                      }
                     />
                     {/* 工作目录（取最后一段） */}
                     <span className="text-[13px] text-[var(--label-primary)] truncate">
