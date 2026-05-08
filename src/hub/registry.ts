@@ -34,7 +34,7 @@ class Registry {
     return `pi-${this.nextId++}-${Date.now().toString(36)}`;
   }
 
-  /** 注册新实例 */
+  /** 注册新实例（或更新已有实例） */
   register(
     ws: ServerWebSocket<WsData>,
     payload: {
@@ -44,6 +44,40 @@ class Registry {
       pid: number;
     },
   ): InstanceInfo {
+    // 同一 ws 重复注册：更新已有实例信息
+    const existingId = ws.data.instanceId;
+    if (existingId && this.instances.has(existingId)) {
+      const record = this.instances.get(existingId)!;
+      record.info.cwd = payload.cwd;
+      record.info.model = payload.model;
+      record.info.sessionName = payload.sessionName;
+      record.info.lastHeartbeat = Date.now();
+      log.info(
+        `Instance updated: ${existingId} (model: ${payload.model.provider}/${payload.model.id})`,
+      );
+      this.broadcastToBrowsers({
+        type: "instance_update",
+        payload: { instance: record.info, action: "updated" },
+      });
+      return record.info;
+    }
+
+    // 同一 pid 但不同 ws：清理旧实例（extension reload 场景）
+    for (const [staleId, record] of this.instances) {
+      if (record.info.pid === payload.pid && record.ws !== ws) {
+        log.info(
+          `Replacing stale instance ${staleId} (same pid: ${payload.pid})`,
+        );
+        if (record.heartbeatTimer) clearTimeout(record.heartbeatTimer);
+        record.ws.close(1000, "Replaced by new connection");
+        this.instances.delete(staleId);
+        this.broadcastToBrowsers({
+          type: "instance_update",
+          payload: { instance: record.info, action: "disconnected" },
+        });
+      }
+    }
+
     const id = this.generateId();
     const now = Date.now();
 

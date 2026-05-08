@@ -47,8 +47,19 @@ export default function (pi: ExtensionAPI) {
     });
   }
 
-  // 转发状态变更
-  pi.on("agent_start", async () => {
+  // 转发状态变更 + 更新注册信息（确保 model 正确）
+  pi.on("agent_start", async (_event, ctx) => {
+    if (ctx.model) {
+      client.send({
+        type: "register",
+        payload: {
+          cwd: ctx.cwd,
+          model: { provider: ctx.model.provider, id: ctx.model.id },
+          sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
+          pid: process.pid,
+        },
+      });
+    }
     client.send({ type: "state", payload: { status: "streaming" } });
   });
 
