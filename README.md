@@ -1,0 +1,113 @@
+# Paimon
+
+Pi coding agent 的远程观察与控制面板。通过 Web 界面实时查看和操控多个 pi 实例。
+
+## 概述
+
+Paimon 由两部分组成：
+
+1. **Hub Server** — 独立长驻进程，提供 Web UI，管理所有 pi 实例连接
+2. **Pi Extension** — 加载到每个 pi 实例中，自动连接 Hub，转发事件、接收指令
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Hub Server (paimon hub start, 监听 :7890)           │
+│  ├── Web UI (React + Tailwind, macOS 26 风格)        │
+│  ├── 维护已连接的 pi 实例列表                         │
+│  └── 路由：浏览器 ↔ 指定 pi 实例                     │
+└─────────────────────────────────────────────────────┘
+        ↕ WebSocket              ↕ WebSocket
+┌──────────────┐         ┌──────────────┐
+│ Pi 实例 A     │         │ Pi 实例 B     │
+│ cwd: project1│         │ cwd: project2│
+│ extension:   │         │ extension:   │
+│  主动连接 Hub │         │  主动连接 Hub │
+└──────────────┘         └──────────────┘
+```
+
+## 功能 (v0.1)
+
+- Hub 启动/停止/状态查看
+- Pi 实例自动注册 + 心跳探活
+- 网页展示所有活跃 pi 实例列表
+- 进入某实例查看实时对话流（assistant streaming、tool calls）
+- 发送消息（prompt / steer）
+- 中止当前操作（abort）
+
+## 技术栈
+
+| 层              | 选型                        |
+| --------------- | --------------------------- |
+| 语言            | TypeScript                  |
+| 运行时 / 包管理 | Bun                         |
+| Hub 后端        | Bun native HTTP + WebSocket |
+| 前端框架        | React                       |
+| 样式方案        | Tailwind CSS                |
+| 前端构建        | Vite                        |
+| 进程管理        | Fork daemon + PID 文件      |
+
+## CLI
+
+```bash
+paimon hub start [--port 7890]    # 启动 Hub daemon（后台）
+paimon hub stop                   # 停止 Hub
+paimon hub status                 # 显示状态、已连接实例
+paimon hub logs [--follow]        # 查看 Hub 日志
+```
+
+## 安装
+
+```bash
+# 全局安装
+bun install -g paimon
+
+# 或作为 pi package 安装（自动注册 extension）
+pi install npm:paimon
+```
+
+## 使用
+
+```bash
+# 1. 启动 Hub
+paimon hub start
+
+# 2. 正常启动 pi（extension 自动连接 Hub）
+pi
+
+# 3. 浏览器打开
+open http://localhost:7890
+```
+
+## 开发
+
+```bash
+# 安装依赖
+bun install
+
+# 启动 Hub（前台，可观察日志）
+bun run src/hub/index.ts
+
+# 启动前端 dev server（代理 /ws 到 Hub）
+bun run dev
+
+# 类型检查
+bunx tsc --noEmit
+
+# CLI 直接运行
+bun run src/cli/index.ts hub start
+bun run src/cli/index.ts hub status
+bun run src/cli/index.ts hub stop
+```
+
+## 状态文件
+
+```
+~/.paimon/
+├── hub.pid          # Hub 进程 PID
+├── hub.log          # Hub 日志
+└── hub.port         # 当前监听端口
+```
+
+## License
+
+MIT

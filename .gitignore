@@ -1,0 +1,23 @@
+# 依赖
+node_modules/
+bun.lock
+
+# 构建产物
+dist/
+
+# 运行时状态
+.paimon/
+
+# 编辑器
+.vscode/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 环境变量
+.env
+.env.local

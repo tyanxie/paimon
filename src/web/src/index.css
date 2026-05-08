@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/* macOS 26 Design Tokens */
+@theme {
+  /* 圆角 */
+  --radius-window: 26px;
+  --radius-panel: 18px;
+  --radius-item: 8px;
+  --radius-control: 9px;
+  --radius-pill: 1000px;
+
+  /* 模糊 */
+  --blur-material: 30px;
+  --blur-bg: 60px;
+
+  /* 阴影 */
+  --shadow-window: 0 0 48px rgba(0, 0, 0, 0.12);
+  --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.12);
+
+  /* 强调色 */
+  --color-accent: #0091ff;
+  --color-accent-vibrant: #0a99ff;
+
+  /* 尺寸 */
+  --spacing-sidebar: 240px;
+  --size-control-height: 36px;
+
+  /* 字体 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro", sans-serif;
+
+  /* 文字尺寸 */
+  --text-large-title: 26px;
+  --text-title-1: 22px;
+  --text-title-2: 17px;
+  --text-title-3: 15px;
+  --text-headline: 13px;
+  --text-body: 13px;
+  --text-callout: 12px;
+  --text-subheadline: 11px;
+  --text-footnote: 10px;
+  --text-caption: 10px;
+}
+
+/* 基础全局样式 */
+:root {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+
+  /* Light mode 默认色 */
+  --label-primary: rgba(0, 0, 0, 0.85);
+  --label-secondary: rgba(0, 0, 0, 0.5);
+  --label-tertiary: rgba(0, 0, 0, 0.25);
+  --fill-primary: rgba(0, 0, 0, 0.1);
+  --fill-secondary: rgba(0, 0, 0, 0.08);
+  --fill-tertiary: rgba(0, 0, 0, 0.05);
+  --material-bg: rgba(246, 246, 246, 0.72);
+  --material-overlay: rgba(246, 246, 246, 0.6);
+  --window-bg: #ffffff;
+  --separator: rgba(0, 0, 0, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --label-primary: rgba(255, 255, 255, 0.85);
+    --label-secondary: rgba(255, 255, 255, 0.55);
+    --label-tertiary: rgba(255, 255, 255, 0.25);
+    --fill-primary: rgba(255, 255, 255, 0.1);
+    --fill-secondary: rgba(255, 255, 255, 0.08);
+    --fill-tertiary: rgba(255, 255, 255, 0.05);
+    --material-bg: rgba(40, 40, 40, 0.7);
+    --material-overlay: rgba(40, 40, 40, 0.6);
+    --window-bg: #1e1e1e;
+    --separator: rgba(255, 255, 255, 0.1);
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--window-bg);
+  color: var(--label-primary);
+}

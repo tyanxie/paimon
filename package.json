@@ -1,0 +1,36 @@
+{
+  "name": "paimon",
+  "version": "0.1.0",
+  "description": "Remote observation and control panel for pi coding agent",
+  "type": "module",
+  "bin": {
+    "paimon": "./dist/cli/index.js"
+  },
+  "pi": {
+    "extensions": ["src/extension"]
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:server": "bun build src/cli/index.ts --outdir dist/cli --target bun && bun build src/hub/index.ts --outdir dist/hub --target bun && bun build src/extension/index.ts --outdir dist/extension --target bun",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "@tailwindcss/vite": "^4.1.5",
+    "@types/bun": "^1.2.14",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.5",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.4"
+  },
+  "license": "MIT"
+}
