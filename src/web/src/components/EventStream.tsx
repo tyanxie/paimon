@@ -1,4 +1,4 @@
-// 事件流面板：展示选中实例的实时事件
+// 事件流面板：展示选中实例的实时事件（独立玻璃面板）
 
 import { useRef, useEffect } from "react";
 import type { InstanceId } from "../../../protocol/types";
@@ -46,21 +46,29 @@ export function EventStream({
     input.value = "";
   };
 
+  // 未选中实例：空状态（不带面板，直接浮在背景上）
   if (!instanceId) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[var(--label-tertiary)]">
+      <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-[22px] font-light mb-2">Paimon</div>
-          <div className="text-[13px]">Select a pi instance to observe</div>
+          <div className="text-[26px] font-light text-[var(--label-tertiary)] mb-2">
+            Paimon
+          </div>
+          <div className="text-[13px] text-[var(--label-tertiary)]">
+            Select a pi instance to observe
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0">
+    <main className="glass-panel flex-1 flex flex-col min-w-0 overflow-hidden">
       {/* 事件流 */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin"
+      >
         {filteredEvents.length === 0 ? (
           <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
             Waiting for events...
@@ -77,11 +85,11 @@ export function EventStream({
             ref={inputRef}
             type="text"
             placeholder="Send a message..."
-            className="flex-1 h-[var(--size-control-height)] px-3 rounded-[var(--radius-pill)] bg-[var(--fill-secondary)] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none focus:ring-1 focus:ring-[var(--color-accent)] text-[13px]"
+            className="flex-1 h-[36px] px-3 rounded-[1000px] bg-[var(--fill-secondary)] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none focus:ring-1 focus:ring-[var(--color-accent)] text-[13px] transition-shadow"
           />
           <button
             type="submit"
-            className="h-[var(--size-control-height)] px-4 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
+            className="h-[36px] px-4 rounded-[1000px] bg-[var(--color-accent)] text-white text-[13px] font-medium hover:opacity-90 active:opacity-80 transition-opacity"
           >
             Send
           </button>
@@ -89,13 +97,13 @@ export function EventStream({
         {instanceStatus === "streaming" && (
           <button
             onClick={onAbort}
-            className="h-[var(--size-control-height)] px-4 rounded-[var(--radius-pill)] bg-red-500/80 text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
+            className="h-[36px] px-4 rounded-[1000px] bg-red-500/80 text-white text-[13px] font-medium hover:opacity-90 active:opacity-80 transition-opacity"
           >
             Abort
           </button>
         )}
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -107,7 +115,6 @@ function EventItem({
 }) {
   const time = new Date(event.timestamp).toLocaleTimeString();
 
-  // 根据事件类型显示不同样式
   const getEventColor = (eventName: string) => {
     if (eventName.includes("error")) return "text-red-400";
     if (eventName.includes("tool")) return "text-purple-400";
@@ -115,15 +122,12 @@ function EventItem({
     return "text-[var(--label-secondary)]";
   };
 
-  // 尝试提取可读内容
   const getContent = (data: unknown): string => {
     if (!data || typeof data !== "object") return JSON.stringify(data);
     const d = data as Record<string, unknown>;
-    // message_update: 显示 content
     if (d.content && typeof d.content === "string") {
       return d.content.slice(0, 200);
     }
-    // tool events: 显示 toolName
     if (d.toolName) {
       return `${d.toolName}${d.input ? ` → ${JSON.stringify(d.input).slice(0, 100)}` : ""}`;
     }
@@ -131,7 +135,7 @@ function EventItem({
   };
 
   return (
-    <div className="group px-3 py-1.5 rounded-lg hover:bg-[var(--fill-tertiary)] transition-colors">
+    <div className="group px-3 py-1.5 rounded-[8px] hover:bg-[var(--fill-tertiary)] transition-colors">
       <div className="flex items-baseline gap-2">
         <span className="text-[10px] text-[var(--label-tertiary)] tabular-nums">
           {time}

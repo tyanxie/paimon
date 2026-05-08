@@ -15,7 +15,7 @@
 
   /* 阴影 */
   --shadow-window: 0 0 48px rgba(0, 0, 0, 0.12);
-  --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.12);
+  --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.08);
 
   /* 强调色 */
   --color-accent: #0091ff;
@@ -41,23 +41,66 @@
   --text-caption: 10px;
 }
 
-/* 基础全局样式 */
+/* ========================================
+   动态渐变背景
+   ======================================== */
+
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
+/* ========================================
+   基础全局样式
+   ======================================== */
+
 :root {
   font-family: var(--font-sans);
   font-size: 13px;
   line-height: 16px;
 
-  /* Light mode 默认色 */
+  /* Light mode */
   --label-primary: rgba(0, 0, 0, 0.85);
   --label-secondary: rgba(0, 0, 0, 0.5);
   --label-tertiary: rgba(0, 0, 0, 0.25);
   --fill-primary: rgba(0, 0, 0, 0.1);
   --fill-secondary: rgba(0, 0, 0, 0.08);
   --fill-tertiary: rgba(0, 0, 0, 0.05);
-  --material-bg: rgba(246, 246, 246, 0.72);
-  --material-overlay: rgba(246, 246, 246, 0.6);
-  --window-bg: #ffffff;
-  --separator: rgba(0, 0, 0, 0.12);
+  --fill-quaternary: rgba(0, 0, 0, 0.03);
+
+  /* 材质（Liquid Glass Medium） */
+  --material-thick: rgba(246, 246, 246, 0.72);
+  --material-medium: rgba(246, 246, 246, 0.6);
+  --material-thin: rgba(246, 246, 246, 0.48);
+
+  /* 面板 */
+  --panel-bg: var(--material-medium);
+  --panel-border: rgba(255, 255, 255, 0.5);
+  --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  /* 分隔 */
+  --separator: rgba(0, 0, 0, 0.08);
+
+  /* 背景渐变 */
+  --bg-gradient: linear-gradient(
+    135deg,
+    #e8f0fe 0%,
+    #f5e6f0 25%,
+    #e6f0f5 50%,
+    #f0f5e6 75%,
+    #e8f0fe 100%
+  );
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,15 +111,79 @@
     --fill-primary: rgba(255, 255, 255, 0.1);
     --fill-secondary: rgba(255, 255, 255, 0.08);
     --fill-tertiary: rgba(255, 255, 255, 0.05);
-    --material-bg: rgba(40, 40, 40, 0.7);
-    --material-overlay: rgba(40, 40, 40, 0.6);
-    --window-bg: #1e1e1e;
-    --separator: rgba(255, 255, 255, 0.1);
+    --fill-quaternary: rgba(255, 255, 255, 0.03);
+
+    /* 材质（Dark mode） */
+    --material-thick: rgba(40, 40, 40, 0.8);
+    --material-medium: rgba(40, 40, 40, 0.6);
+    --material-thin: rgba(40, 40, 40, 0.4);
+
+    /* 面板 */
+    --panel-bg: var(--material-medium);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    /* 分隔 */
+    --separator: rgba(255, 255, 255, 0.06);
+
+    /* 背景渐变 */
+    --bg-gradient: linear-gradient(
+      135deg,
+      #1a1a2e 0%,
+      #2d1b3e 25%,
+      #1b2838 50%,
+      #1e2e1e 75%,
+      #1a1a2e 100%
+    );
   }
 }
 
 body {
   margin: 0;
-  background: var(--window-bg);
   color: var(--label-primary);
+  overflow: hidden;
+}
+
+/* ========================================
+   动态背景
+   ======================================== */
+
+.animated-bg {
+  background: var(--bg-gradient);
+  background-size: 300% 300%;
+  animation: gradient-shift 20s ease infinite;
+}
+
+/* ========================================
+   玻璃面板
+   ======================================== */
+
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 18px;
+  border: 0.5px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+}
+
+/* ========================================
+   滚动条
+   ======================================== */
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--fill-secondary);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--fill-primary);
 }

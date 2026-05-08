@@ -21,14 +21,12 @@ export default function App() {
   // 选中实例时自动订阅
   const handleSelect = useCallback(
     (id: InstanceId) => {
-      // 取消之前的订阅
       if (selectedInstanceId) {
         send({
           type: "unsubscribe",
           payload: { instanceId: selectedInstanceId },
         });
       }
-      // 订阅新实例
       send({ type: "subscribe", payload: { instanceId: id } });
       setSelectedInstanceId(id);
     },
@@ -57,13 +55,15 @@ export default function App() {
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="h-screen w-screen animated-bg flex items-stretch p-3 gap-3 overflow-hidden">
+      {/* 侧边栏面板 */}
       <Sidebar
         instances={instances}
         selectedId={selectedInstanceId}
         onSelect={handleSelect}
         connected={connected}
       />
+      {/* 内容面板 */}
       <EventStream
         events={events}
         instanceId={selectedInstanceId}
