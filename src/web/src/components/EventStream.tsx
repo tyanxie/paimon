@@ -38,7 +38,7 @@ export function EventStream({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [filteredEvents.length]);
+  }, [filteredEvents.length, history.length]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
