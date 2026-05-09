@@ -1,7 +1,7 @@
 // 事件流面板：展示选中实例的对话 entries（独立玻璃面板）
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Square, ChevronsDown } from "lucide-react";
 import type { InstanceId } from "../../../protocol/types";
 import type { SessionEntry } from "../stores/useAppState";
 
@@ -32,6 +32,10 @@ export function EventStream({
 
   // 自动滚到底部（仅当用户在底部附近时）
   const isAtBottomRef = useRef(true);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  // 标记正在调整 scroll 位置（prepend 场景），期间不更新 isAtBottom
+  const adjustingScrollRef = useRef(false);
+
   useEffect(() => {
     if (scrollRef.current && isAtBottomRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -51,8 +55,13 @@ export function EventStream({
     ) {
       const el = scrollRef.current;
       if (el) {
+        adjustingScrollRef.current = true;
         const newHeight = el.scrollHeight;
         el.scrollTop += newHeight - prevScrollHeightRef.current;
+        // 下一帧恢复 scroll 监听
+        requestAnimationFrame(() => {
+          adjustingScrollRef.current = false;
+        });
       }
       loadingMoreRef.current = false;
     }
@@ -63,9 +72,13 @@ export function EventStream({
     const el = scrollRef.current;
     if (!el) return;
 
+    // 调整 scroll 位置期间不更新 isAtBottom 状态
+    if (adjustingScrollRef.current) return;
+
     // 检测是否在底部（60px 容差）
-    isAtBottomRef.current =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    isAtBottomRef.current = atBottom;
+    setShowScrollBtn(!atBottom);
 
     // 滚动到顶部加载更多
     if (
@@ -79,6 +92,15 @@ export function EventStream({
       onLoadMore();
     }
   }, [hasMore, onLoadMore]);
+
+  // 快速滚动到底部
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      isAtBottomRef.current = true;
+      setShowScrollBtn(false);
+    }
+  }, []);
 
   // textarea 自动调整高度
   const handleInputChange = useCallback(
@@ -133,7 +155,7 @@ export function EventStream({
   return (
     <div className="flex-1 flex flex-col min-w-0 gap-3">
       {/* 对话流 */}
-      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden py-4">
+      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden py-4 relative">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
@@ -159,6 +181,18 @@ export function EventStream({
             ))
           )}
         </div>
+        {/* 快速滚动到底部按钮 */}
+        {showScrollBtn && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+            <button
+              onClick={scrollToBottom}
+              className="w-9 h-9 rounded-full backdrop-blur-[30px] bg-[var(--fill-primary)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--fill-secondary)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+              title="Scroll to bottom"
+            >
+              <ChevronsDown size={16} />
+            </button>
+          </div>
+        )}
       </main>
 
       {/* 输入栏（独立玻璃胶囊） */}
