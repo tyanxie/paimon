@@ -5,8 +5,8 @@ import { ArrowUp, Square, ChevronsDown } from "lucide-react";
 import type { InstanceId } from "../../../protocol/types";
 import type { SessionEntry } from "../stores/useAppState";
 import { useMessageRenderMode } from "../stores/useSettings";
-import { RawEntryItem } from "./entries/RawEntry";
-import { RichEntryItem } from "./entries/RichEntry";
+import { RawEntryItem } from "./entries/raw";
+import { RichEntryItem } from "./entries/rich";
 
 interface EventStreamProps {
   entries: SessionEntry[];
@@ -182,6 +182,8 @@ export function EventStream({
                 <EntryComponent
                   key={entry.id ?? `e-${i}`}
                   entry={entry}
+                  index={i}
+                  entries={entries}
                   isLast={i === entries.length - 1}
                   isStreaming={isStreaming}
                 />

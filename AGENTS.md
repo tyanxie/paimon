@@ -35,7 +35,9 @@ paimon/
 │           ├── hooks/              # useWebSocket
 │           ├── stores/             # useAppState, useSettings
 │           └── components/         # Sidebar, EventStream, Settings
-│               └── entries/        # RawEntry, RichEntry（渲染器）
+│               └── entries/        # 消息渲染器
+│                   ├── raw/        # 原始模式（调试用）
+│                   └── rich/       # 渲染模式（Markdown + 气泡 + Tool卡片）
 │
 ├── docs/design/                    # 设计参考
 │   ├── macos-26-design-tokens.json # Figma Design Tokens 插件导出

@@ -15,5 +15,17 @@ export default defineConfig({
   build: {
     outDir: "../../dist/web",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          markdown: [
+            "react-markdown",
+            "remark-gfm",
+            "rehype-highlight",
+            "highlight.js",
+          ],
+        },
+      },
+    },
   },
 });

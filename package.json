@@ -15,10 +15,14 @@
     "start": "bun src/hub/index.ts"
   },
   "dependencies": {
+    "highlight.js": "^11.11.1",
     "lucide-react": "^1.14.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router": "^7.15.0"
+    "react-markdown": "^10.1.0",
+    "react-router": "^7.15.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.74.0",
@@ -27,9 +31,7 @@
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.4.1",
-    "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
-    "postcss": "^8.5.3",
     "tailwindcss": "^4.1.5",
     "typescript": "^5.8.3",
     "vite": "^6.3.4"
