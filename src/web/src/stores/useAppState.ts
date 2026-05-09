@@ -24,7 +24,6 @@ export interface SessionEntry {
 
 export interface AppState {
   instances: InstanceInfo[];
-  selectedInstanceId: InstanceId | null;
   /** 每个实例的统一对话 entries 列表 */
   entries: Map<InstanceId, SessionEntry[]>;
   /** 当前正在流式输出的实例（用于 loading 指示） */
@@ -33,8 +32,6 @@ export interface AppState {
 
 export function useAppState() {
   const [instances, setInstances] = useState<InstanceInfo[]>([]);
-  const [selectedInstanceId, setSelectedInstanceId] =
-    useState<InstanceId | null>(null);
   const [entries, setEntries] = useState<Map<InstanceId, SessionEntry[]>>(
     new Map(),
   );
@@ -53,9 +50,6 @@ export function useAppState() {
         } else if (msg.payload.action === "disconnected") {
           setInstances((prev) =>
             prev.filter((i) => i.id !== msg.payload.instance.id),
-          );
-          setSelectedInstanceId((prev) =>
-            prev === msg.payload.instance.id ? null : prev,
           );
         } else if (msg.payload.action === "updated") {
           setInstances((prev) =>
@@ -154,8 +148,6 @@ export function useAppState() {
 
   return {
     instances,
-    selectedInstanceId,
-    setSelectedInstanceId,
     entries,
     streamingInstances,
     handleMessage,

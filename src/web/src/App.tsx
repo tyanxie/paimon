@@ -1,7 +1,13 @@
 // 根组件
 
-import { useCallback, useEffect } from "react";
-import { Routes, Route, useParams, useNavigate } from "react-router";
+import { useCallback, useEffect, useMemo } from "react";
+import {
+  Routes,
+  Route,
+  useParams,
+  useNavigate,
+  useLocation,
+} from "react-router";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useAppState } from "./stores/useAppState";
 import { Sidebar } from "./components/Sidebar";
@@ -9,18 +15,20 @@ import { EventStream } from "./components/EventStream";
 import { Settings } from "./components/Settings";
 import type { InstanceId } from "../../protocol/types";
 
+/** 从 URL pathname 派生当前选中的实例 ID */
+function useSelectedInstanceId(): InstanceId | null {
+  const { pathname } = useLocation();
+  const match = pathname.match(/^\/instance\/(.+)$/);
+  return match ? (match[1] as InstanceId) : null;
+}
+
 export default function App() {
-  const {
-    instances,
-    selectedInstanceId,
-    setSelectedInstanceId,
-    entries,
-    streamingInstances,
-    handleMessage,
-  } = useAppState();
+  const { instances, entries, streamingInstances, handleMessage } =
+    useAppState();
 
   const { connected, send } = useWebSocket(handleMessage);
   const navigate = useNavigate();
+  const selectedInstanceId = useSelectedInstanceId();
 
   // 选中实例时导航 + 订阅 + 请求历史
   const handleSelect = useCallback(
@@ -33,10 +41,9 @@ export default function App() {
       }
       send({ type: "subscribe", payload: { instanceId: id } });
       send({ type: "history", payload: { instanceId: id } });
-      setSelectedInstanceId(id);
       navigate(`/instance/${id}`);
     },
-    [selectedInstanceId, send, setSelectedInstanceId, navigate],
+    [selectedInstanceId, send, navigate],
   );
 
   const handleSendMessage = useCallback(
@@ -76,7 +83,6 @@ export default function App() {
             <InstanceRoute
               instances={instances}
               selectedInstanceId={selectedInstanceId}
-              setSelectedInstanceId={setSelectedInstanceId}
               send={send}
               entries={entries}
               streamingInstances={streamingInstances}
@@ -103,11 +109,10 @@ export default function App() {
   );
 }
 
-/** 处理 URL 中的实例 ID：同步路由参数到状态 */
+/** 处理 URL 中的实例 ID：同步路由参数到订阅 */
 function InstanceRoute({
   instances,
   selectedInstanceId,
-  setSelectedInstanceId,
   send,
   entries,
   streamingInstances,
@@ -117,7 +122,6 @@ function InstanceRoute({
 }: {
   instances: Array<{ id: InstanceId }>;
   selectedInstanceId: InstanceId | null;
-  setSelectedInstanceId: (id: InstanceId | null) => void;
   send: (msg: any) => void;
   entries: Map<InstanceId, unknown[]>;
   streamingInstances: Set<InstanceId>;
@@ -128,7 +132,7 @@ function InstanceRoute({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // URL 中的 id 变化时，同步选中状态 + 订阅
+  // URL 中的 id 变化时，订阅实例
   useEffect(() => {
     if (!id) return;
 
@@ -142,19 +146,10 @@ function InstanceRoute({
       }
       send({ type: "subscribe", payload: { instanceId: id } });
       send({ type: "history", payload: { instanceId: id } });
-      setSelectedInstanceId(id);
     } else if (!exists && instances.length > 0) {
       navigate("/", { replace: true });
-      setSelectedInstanceId(null);
     }
-  }, [
-    id,
-    instances,
-    selectedInstanceId,
-    setSelectedInstanceId,
-    send,
-    navigate,
-  ]);
+  }, [id, instances, selectedInstanceId, send, navigate]);
 
   const instanceEntries = (entries.get(id as InstanceId) ?? []) as any[];
   const isStreaming = streamingInstances.has(id as InstanceId);
