@@ -149,9 +149,11 @@ Browser → Hub：
 - **历史消息**: `ctx.sessionManager.getBranch()` 获取当前分支完整历史，浏览器订阅时自动请求
 - **重要：`getBranch()` 只返回已完成的消息**（`appendMessage` 在 `message_end` 时才调用），正在 streaming 的消息不在其中
 - **分页加载**: 按 turn 分组（每个 user message 开始新 turn），支持 offset + limit 参数，滚动到顶部加载更多
-- **Streaming 处理**: `message_start` 或未在 streaming 状态的 `message_update` 都会 append 新条目，解决刷新页面后看不到正在 streaming 的消息的问题
+- **前端数据分层**: `historyEntries`（已完成消息，来自 history API + message_end）与 `streamingEntry`（当前 streaming 消息）分离存储，message_end 时从 streaming 移入 history。offset 只计算 historyEntries 长度，精确匹配 extension 侧 getBranch() 条目数
+- **Streaming 恢复**: 刷新页面后 `message_update` 隐式创建 streamingEntry，无需先收到 `message_start`
+- **自动滚动**: 用户在底部时自动跟随新内容；history prepend 期间暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中）
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
-- **对话展示**: 统一 `Entry[]` 列表，历史 prepend + 实时 append，互不冲突，详见 `docs/design/conversation-rendering.md`
+- **对话展示**: 统一渲染 `[...historyEntries, streamingEntry?]`，历史 prepend + streaming 实时更新，互不冲突，详见 `docs/design/conversation-rendering.md`
 
 ## CLI 设计
 
