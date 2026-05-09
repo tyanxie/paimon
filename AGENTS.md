@@ -87,6 +87,7 @@ paimon/
 - 亮色/暗色双模式（基于 data-theme 属性，支持手动切换 + 跟随系统）
 - 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）
 - 设置页（/settings）：外观配置（主题 + 背景）+ 对话配置（渲染模式：原始/渲染），存储于 localStorage（paimon:appearance / paimon:background / paimon:messageRenderMode）
+- 代码高亮：不使用第三方 hljs 主题，自定义 CSS 变量配色（`--hljs-*`），跟随 light/dark 主题自动切换；配色低饱和度，与 macOS 26 label 色系协调
 
 ## 架构设计
 

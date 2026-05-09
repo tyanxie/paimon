@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "highlight.js/styles/github-dark.min.css";
+
+/* highlight.js 不使用第三方主题，用 CSS 变量自定义配色，跟随主题切换 */
 
 /* macOS 26 Design Tokens */
 @theme {
@@ -136,6 +137,162 @@
   --panel-border: rgba(255, 255, 255, 0.08);
   --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
   --separator: rgba(255, 255, 255, 0.06);
+}
+
+/* ========================================
+   Highlight.js 自定义主题 (macOS 26 风格)
+   ======================================== */
+
+:root {
+  --hljs-base: rgba(0, 0, 0, 0.85);
+  --hljs-keyword: #c4344d;
+  --hljs-function: #6f42c1;
+  --hljs-variable: #0060b0;
+  --hljs-string: #1a7a5a;
+  --hljs-builtin: #b05000;
+  --hljs-comment: rgba(0, 0, 0, 0.4);
+  --hljs-tag: #1a7040;
+  --hljs-section: #0060b0;
+  --hljs-bullet: #7a5a00;
+  --hljs-addition-fg: #1a7040;
+  --hljs-addition-bg: #e6ffe6;
+  --hljs-deletion-fg: #c4344d;
+  --hljs-deletion-bg: #fff0f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --hljs-base: rgba(255, 255, 255, 0.85);
+    --hljs-keyword: #ff7b9f;
+    --hljs-function: #b4a0ff;
+    --hljs-variable: #7ec8ff;
+    --hljs-string: #7edcb5;
+    --hljs-builtin: #ffb870;
+    --hljs-comment: rgba(255, 255, 255, 0.35);
+    --hljs-tag: #7ee0a0;
+    --hljs-section: #7ec8ff;
+    --hljs-bullet: #f2cc60;
+    --hljs-addition-fg: #7ee0a0;
+    --hljs-addition-bg: rgba(30, 80, 50, 0.3);
+    --hljs-deletion-fg: #ff7b9f;
+    --hljs-deletion-bg: rgba(100, 30, 40, 0.3);
+  }
+}
+
+[data-theme="dark"] {
+  --hljs-base: rgba(255, 255, 255, 0.85);
+  --hljs-keyword: #ff7b9f;
+  --hljs-function: #b4a0ff;
+  --hljs-variable: #7ec8ff;
+  --hljs-string: #7edcb5;
+  --hljs-builtin: #ffb870;
+  --hljs-comment: rgba(255, 255, 255, 0.35);
+  --hljs-tag: #7ee0a0;
+  --hljs-section: #7ec8ff;
+  --hljs-bullet: #f2cc60;
+  --hljs-addition-fg: #7ee0a0;
+  --hljs-addition-bg: rgba(30, 80, 50, 0.3);
+  --hljs-deletion-fg: #ff7b9f;
+  --hljs-deletion-bg: rgba(100, 30, 40, 0.3);
+}
+
+/* hljs 样式规则 */
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+}
+
+.hljs {
+  color: var(--hljs-base);
+  background: transparent;
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: var(--hljs-keyword);
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color: var(--hljs-function);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-variable {
+  color: var(--hljs-variable);
+}
+
+.hljs-meta .hljs-string,
+.hljs-regexp,
+.hljs-string {
+  color: var(--hljs-string);
+}
+
+.hljs-built_in,
+.hljs-symbol {
+  color: var(--hljs-builtin);
+}
+
+.hljs-code,
+.hljs-comment,
+.hljs-formula {
+  color: var(--hljs-comment);
+  font-style: italic;
+}
+
+.hljs-name,
+.hljs-quote,
+.hljs-selector-pseudo,
+.hljs-selector-tag {
+  color: var(--hljs-tag);
+}
+
+.hljs-subst {
+  color: var(--hljs-base);
+}
+
+.hljs-section {
+  color: var(--hljs-section);
+  font-weight: 700;
+}
+
+.hljs-bullet {
+  color: var(--hljs-bullet);
+}
+
+.hljs-emphasis {
+  color: var(--hljs-base);
+  font-style: italic;
+}
+
+.hljs-strong {
+  color: var(--hljs-base);
+  font-weight: 700;
+}
+
+.hljs-addition {
+  color: var(--hljs-addition-fg);
+  background-color: var(--hljs-addition-bg);
+}
+
+.hljs-deletion {
+  color: var(--hljs-deletion-fg);
+  background-color: var(--hljs-deletion-bg);
 }
 
 /* ========================================
