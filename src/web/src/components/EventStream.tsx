@@ -182,7 +182,6 @@ export function EventStream({
                 <EntryComponent
                   key={entry.id ?? `e-${i}`}
                   entry={entry}
-                  index={i}
                   entries={entries}
                   isLast={i === entries.length - 1}
                   isStreaming={isStreaming}

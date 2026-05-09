@@ -1,20 +1,20 @@
 // Rich 模式渲染：气泡对话 + Markdown + Tool Cards
 // macOS 26 Liquid Glass 设计风格
 
+import { useState } from "react";
 import type { SessionEntry } from "../../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
+import { X } from "lucide-react";
 
 export function RichEntryItem({
   entry,
-  index,
   entries,
   isLast,
   isStreaming,
 }: {
   entry: SessionEntry;
-  index: number;
   entries: SessionEntry[];
   isLast: boolean;
   isStreaming: boolean;
@@ -176,14 +176,56 @@ function AssistantBlock({
 
 /** 元信息条目（compaction / branch_summary） */
 function MetaEntry({ type, summary }: { type: string; summary: string }) {
+  const [showDetail, setShowDetail] = useState(false);
+  const label = type === "compaction" ? "上下文已压缩" : "分支摘要";
+
   return (
-    <div className="flex justify-center px-4 py-2">
-      <div className="px-3 py-1 rounded-full bg-[var(--fill-tertiary)] text-[11px] text-[var(--label-tertiary)]">
-        {type === "compaction" ? "对话已压缩" : "分支摘要"}
-        {summary && (
-          <span className="ml-1.5 opacity-70">— {summary.slice(0, 60)}</span>
-        )}
+    <>
+      <div className="flex justify-center px-4 py-2">
+        <button
+          onClick={() => summary && setShowDetail(true)}
+          className={`px-3 py-1 rounded-full bg-[var(--fill-tertiary)] text-[11px] text-[var(--label-tertiary)] transition-colors ${
+            summary ? "hover:bg-[var(--fill-secondary)] cursor-pointer" : ""
+          }`}
+        >
+          {label}
+          {summary && (
+            <span className="ml-1.5 opacity-70">
+              — {summary.slice(0, 60)}
+              {summary.length > 60 ? "..." : ""}
+            </span>
+          )}
+        </button>
       </div>
-    </div>
+
+      {showDetail && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowDetail(false)}
+        >
+          <div
+            className="w-[90%] max-w-[640px] max-h-[80vh] rounded-[18px] bg-[var(--panel-bg)] backdrop-blur-[30px] border border-[var(--separator)] shadow-[0_8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 标题栏 */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--separator)]">
+              <span className="text-[15px] font-semibold text-[var(--label-primary)]">
+                {label}
+              </span>
+              <button
+                onClick={() => setShowDetail(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--fill-secondary)] transition-colors text-[var(--label-secondary)]"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {/* 内容 */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-auto">
+              <MarkdownRenderer content={summary} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -4,13 +4,10 @@ import type { SessionEntry } from "../../../stores/useAppState";
 
 export function RawEntryItem({
   entry,
-  index: _index,
-  entries: _entries,
   isLast,
   isStreaming,
 }: {
   entry: SessionEntry;
-  index: number;
   entries: SessionEntry[];
   isLast: boolean;
   isStreaming: boolean;
