@@ -18,14 +18,19 @@ export function Sidebar({
   return (
     <aside className="glass-panel w-[240px] flex-shrink-0 flex flex-col overflow-hidden">
       {/* 标题区 */}
-      <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-        <h1 className="text-[15px] font-semibold text-[var(--label-primary)]">
-          Paimon
-        </h1>
-        <span
-          className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
-          title={connected ? "Online" : "Offline"}
-        />
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between">
+          <h1 className="text-[15px] font-semibold text-[var(--label-primary)]">
+            Paimon
+          </h1>
+          <span
+            className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
+            title={connected ? "Online" : "Offline"}
+          />
+        </div>
+        <div className="text-[11px] text-[var(--label-tertiary)] mt-1">
+          {instances.length} instance{instances.length !== 1 ? "s" : ""}
+        </div>
       </div>
 
       {/* 实例列表 */}
@@ -71,11 +76,6 @@ export function Sidebar({
             ))}
           </ul>
         )}
-      </div>
-
-      {/* 底部信息 */}
-      <div className="px-4 py-2.5 border-t border-[var(--separator)] text-[10px] text-[var(--label-tertiary)]">
-        {instances.length} instance{instances.length !== 1 ? "s" : ""}
       </div>
     </aside>
   );
