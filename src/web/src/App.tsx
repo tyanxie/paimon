@@ -1,13 +1,7 @@
 // 根组件
 
-import { useCallback, useEffect, useMemo } from "react";
-import {
-  Routes,
-  Route,
-  useParams,
-  useNavigate,
-  useLocation,
-} from "react-router";
+import { useCallback, useEffect, useRef } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useAppState } from "./stores/useAppState";
 import { Sidebar } from "./components/Sidebar";
@@ -30,20 +24,46 @@ export default function App() {
   const navigate = useNavigate();
   const selectedInstanceId = useSelectedInstanceId();
 
-  // 选中实例时导航 + 订阅 + 请求历史
+  // 订阅管理：监听 URL 派生的 selectedInstanceId 变化
+  const subscribedRef = useRef<InstanceId | null>(null);
+
+  useEffect(() => {
+    // WS 未连接时不操作
+    if (!connected) return;
+
+    // selectedInstanceId 为 null（去设置页/首页）时保持订阅不动
+    if (!selectedInstanceId) return;
+
+    if (selectedInstanceId === subscribedRef.current) return;
+
+    // 切换到了另一个实例，取消订阅旧的
+    if (subscribedRef.current) {
+      send({
+        type: "unsubscribe",
+        payload: { instanceId: subscribedRef.current },
+      });
+      subscribedRef.current = null;
+    }
+
+    // 订阅新实例
+    const exists = instances.some((i) => i.id === selectedInstanceId);
+    if (exists) {
+      send({
+        type: "subscribe",
+        payload: { instanceId: selectedInstanceId },
+      });
+      subscribedRef.current = selectedInstanceId;
+      send({ type: "history", payload: { instanceId: selectedInstanceId } });
+    }
+    // exists 为 false 时不更新 ref，等 instances 加载后重试
+  }, [selectedInstanceId, instances, connected, send]);
+
+  // 点击侧边栏实例：只导航，订阅由 useEffect 自动响应
   const handleSelect = useCallback(
     (id: InstanceId) => {
-      if (selectedInstanceId) {
-        send({
-          type: "unsubscribe",
-          payload: { instanceId: selectedInstanceId },
-        });
-      }
-      send({ type: "subscribe", payload: { instanceId: id } });
-      send({ type: "history", payload: { instanceId: id } });
       navigate(`/instance/${id}`);
     },
-    [selectedInstanceId, send, navigate],
+    [navigate],
   );
 
   const handleSendMessage = useCallback(
@@ -66,6 +86,12 @@ export default function App() {
   }, [selectedInstanceId, send]);
 
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
+  const instanceEntries = selectedInstanceId
+    ? ((entries.get(selectedInstanceId) ?? []) as any[])
+    : [];
+  const isStreaming = selectedInstanceId
+    ? streamingInstances.has(selectedInstanceId)
+    : false;
 
   return (
     <div className="h-screen w-screen animated-bg flex items-stretch p-3 gap-3 overflow-hidden">
@@ -80,12 +106,10 @@ export default function App() {
         <Route
           path="/instance/:id"
           element={
-            <InstanceRoute
-              instances={instances}
-              selectedInstanceId={selectedInstanceId}
-              send={send}
-              entries={entries}
-              streamingInstances={streamingInstances}
+            <EventStream
+              entries={instanceEntries}
+              instanceId={selectedInstanceId}
+              isStreaming={isStreaming}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
               instanceStatus={selectedInstance?.status}
@@ -106,62 +130,5 @@ export default function App() {
         />
       </Routes>
     </div>
-  );
-}
-
-/** 处理 URL 中的实例 ID：同步路由参数到订阅 */
-function InstanceRoute({
-  instances,
-  selectedInstanceId,
-  send,
-  entries,
-  streamingInstances,
-  onSendMessage,
-  onAbort,
-  instanceStatus,
-}: {
-  instances: Array<{ id: InstanceId }>;
-  selectedInstanceId: InstanceId | null;
-  send: (msg: any) => void;
-  entries: Map<InstanceId, unknown[]>;
-  streamingInstances: Set<InstanceId>;
-  onSendMessage: (message: string) => void;
-  onAbort: () => void;
-  instanceStatus?: "idle" | "streaming";
-}) {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-
-  // URL 中的 id 变化时，订阅实例
-  useEffect(() => {
-    if (!id) return;
-
-    const exists = instances.some((i) => i.id === id);
-    if (exists && id !== selectedInstanceId) {
-      if (selectedInstanceId) {
-        send({
-          type: "unsubscribe",
-          payload: { instanceId: selectedInstanceId },
-        });
-      }
-      send({ type: "subscribe", payload: { instanceId: id } });
-      send({ type: "history", payload: { instanceId: id } });
-    } else if (!exists && instances.length > 0) {
-      navigate("/", { replace: true });
-    }
-  }, [id, instances, selectedInstanceId, send, navigate]);
-
-  const instanceEntries = (entries.get(id as InstanceId) ?? []) as any[];
-  const isStreaming = streamingInstances.has(id as InstanceId);
-
-  return (
-    <EventStream
-      entries={instanceEntries}
-      instanceId={id as InstanceId | null}
-      isStreaming={isStreaming}
-      onSendMessage={onSendMessage}
-      onAbort={onAbort}
-      instanceStatus={instanceStatus}
-    />
   );
 }
