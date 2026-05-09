@@ -38,8 +38,27 @@ export function EventStream({
     }
   }, [entries]);
 
-  // 滚动事件：检测是否在底部 + 滚动到顶部加载更多
+  // 加载更多：滚动到顶部触发
   const loadingMoreRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
+  const prevEntriesLengthRef = useRef(entries.length);
+
+  // entries 变化后：调整滚动位置 + 重置 loading 状态
+  useEffect(() => {
+    if (
+      loadingMoreRef.current &&
+      entries.length > prevEntriesLengthRef.current
+    ) {
+      const el = scrollRef.current;
+      if (el) {
+        const newHeight = el.scrollHeight;
+        el.scrollTop += newHeight - prevScrollHeightRef.current;
+      }
+      loadingMoreRef.current = false;
+    }
+    prevEntriesLengthRef.current = entries.length;
+  }, [entries]);
+
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -56,14 +75,8 @@ export function EventStream({
       !loadingMoreRef.current
     ) {
       loadingMoreRef.current = true;
-      const prevHeight = el.scrollHeight;
+      prevScrollHeightRef.current = el.scrollHeight;
       onLoadMore();
-      // prepend 后保持滚动位置
-      requestAnimationFrame(() => {
-        const newHeight = el.scrollHeight;
-        el.scrollTop += newHeight - prevHeight;
-        loadingMoreRef.current = false;
-      });
     }
   }, [hasMore, onLoadMore]);
 
