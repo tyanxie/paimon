@@ -168,22 +168,106 @@ body {
 }
 
 /* ========================================
-   滚动条
+   输入框玻璃材质（Liquid Glass Small / Controls）
    ======================================== */
 
-.scrollbar-thin::-webkit-scrollbar {
+.input-glass {
+  /* 亮色模式：#333 base → #fff/0.5 → #f7f7f7 */
+  background:
+    linear-gradient(0deg, #f7f7f7, #f7f7f7),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)),
+    #333333;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 0.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.input-glass:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.input-glass-disabled {
+  /* 亮色模式禁用：更灰更暗 */
+  background:
+    linear-gradient(0deg, #e8e8e8, #e8e8e8),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)),
+    #333333;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
+  box-shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .input-glass {
+    /* 暗色模式：#ccc/0.5 → #000/0.6 → #fff/0.06 */
+    background:
+      linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.06),
+        rgba(255, 255, 255, 0.06)
+      ),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+      rgba(204, 204, 204, 0.5);
+    border: 0.5px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .input-glass:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: inset 0 0 0 1px var(--color-accent);
+  }
+
+  .input-glass-disabled {
+    /* 暗色模式禁用：更暗更不透明 */
+    background:
+      linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.03),
+        rgba(255, 255, 255, 0.03)
+      ),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+      rgba(204, 204, 204, 0.3);
+    border: 0.5px solid rgba(255, 255, 255, 0.04);
+    box-shadow: none;
+  }
+}
+
+/* ========================================
+   滚动条（滚动时显示，空闲时隐藏）
+   ======================================== */
+
+.scrollbar-auto {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scrollbar-auto:hover {
+  scrollbar-color: var(--fill-secondary) transparent;
+}
+
+.scrollbar-auto::-webkit-scrollbar {
   width: 6px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-track {
+.scrollbar-auto::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: var(--fill-secondary);
+.scrollbar-auto::-webkit-scrollbar-thumb {
+  background: transparent;
   border-radius: 3px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+.scrollbar-auto:hover::-webkit-scrollbar-thumb {
+  background: var(--fill-secondary);
+}
+
+.scrollbar-auto:hover::-webkit-scrollbar-thumb:hover {
   background: var(--fill-primary);
 }

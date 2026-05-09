@@ -34,7 +34,7 @@ export function Sidebar({
       </div>
 
       {/* 实例列表 */}
-      <div className="flex-1 overflow-y-auto px-2 py-1 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto px-2 py-1 scrollbar-auto">
         {instances.length === 0 ? (
           <div className="px-3 py-8 text-center text-[var(--label-tertiary)] text-[11px]">
             No pi instances connected

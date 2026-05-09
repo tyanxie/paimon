@@ -1,6 +1,7 @@
 // 事件流面板：展示选中实例的对话 entries（独立玻璃面板）
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
+import { ArrowUp, Square } from "lucide-react";
 import type { InstanceId } from "../../../protocol/types";
 import type { SessionEntry } from "../stores/useAppState";
 
@@ -22,7 +23,8 @@ export function EventStream({
   instanceStatus,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [inputValue, setInputValue] = useState("");
 
   // 自动滚到底部
   useEffect(() => {
@@ -31,13 +33,40 @@ export function EventStream({
     }
   }, [entries]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const input = inputRef.current;
-    if (!input || !input.value.trim()) return;
-    onSendMessage(input.value.trim());
-    input.value = "";
-  };
+  // textarea 自动调整高度
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setInputValue(e.target.value);
+      const el = e.target;
+      el.style.height = "auto";
+      const newHeight = Math.min(el.scrollHeight, 150);
+      el.style.height = `${newHeight}px`;
+      el.style.overflowY = el.scrollHeight > 150 ? "auto" : "hidden";
+    },
+    [],
+  );
+
+  // 发送消息
+  const handleSend = useCallback(() => {
+    if (!inputValue.trim()) return;
+    onSendMessage(inputValue.trim());
+    setInputValue("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+  }, [inputValue, onSendMessage]);
+
+  // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.nativeEvent.isComposing) return;
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend],
+  );
 
   if (!instanceId) {
     return (
@@ -55,54 +84,78 @@ export function EventStream({
   }
 
   return (
-    <main className="glass-panel flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div className="flex-1 flex flex-col min-w-0 gap-3">
       {/* 对话流 */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin"
-      >
-        {entries.length === 0 ? (
-          <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
-            Waiting for messages...
-          </div>
-        ) : (
-          entries.map((entry, i) => (
-            <EntryItem
-              key={entry.id ?? `e-${i}`}
-              entry={entry}
-              isLast={i === entries.length - 1}
-              isStreaming={isStreaming}
-            />
-          ))
-        )}
-      </div>
+      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden py-4">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-5 space-y-1 scrollbar-auto"
+        >
+          {entries.length === 0 ? (
+            <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
+              Waiting for messages...
+            </div>
+          ) : (
+            entries.map((entry, i) => (
+              <EntryItem
+                key={entry.id ?? `e-${i}`}
+                entry={entry}
+                isLast={i === entries.length - 1}
+                isStreaming={isStreaming}
+              />
+            ))
+          )}
+        </div>
+      </main>
 
-      {/* 输入栏 */}
-      <div className="border-t border-[var(--separator)] p-3 flex gap-2">
-        <form onSubmit={handleSubmit} className="flex-1 flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Send a message..."
-            className="flex-1 h-[36px] px-3 rounded-[1000px] bg-[var(--fill-secondary)] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none focus:ring-1 focus:ring-[var(--color-accent)] text-[13px] transition-shadow"
-          />
-          <button
-            type="submit"
-            className="h-[36px] px-4 rounded-[1000px] bg-[var(--color-accent)] text-white text-[13px] font-medium hover:opacity-90 active:opacity-80 transition-opacity"
-          >
-            Send
-          </button>
-        </form>
-        {instanceStatus === "streaming" && (
-          <button
-            onClick={onAbort}
-            className="h-[36px] px-4 rounded-[1000px] bg-red-500/80 text-white text-[13px] font-medium hover:opacity-90 active:opacity-80 transition-opacity"
-          >
-            Abort
-          </button>
-        )}
+      {/* 输入栏（独立玻璃胶囊） */}
+      <div
+        className={`relative flex items-end rounded-[20px] overflow-hidden ${
+          instanceStatus === "streaming"
+            ? "input-glass-disabled"
+            : "input-glass"
+        }`}
+      >
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          placeholder={
+            instanceStatus === "streaming"
+              ? "Agent is running..."
+              : "Send a message..."
+          }
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          disabled={instanceStatus === "streaming"}
+          className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[13px] leading-[20px] px-4 py-[10px] outline-none overflow-hidden disabled:cursor-default"
+        />
+        <div className="flex-shrink-0 pb-[6px] pr-[6px]">
+          {instanceStatus === "streaming" && !inputValue.trim() ? (
+            <button
+              onClick={onAbort}
+              className="w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
+              title="Stop"
+            >
+              <Square size={12} fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!inputValue.trim()}
+              className={`w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
+                inputValue.trim()
+                  ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
+                  : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
+              }`}
+              title="Send"
+            >
+              <ArrowUp size={16} strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
 
