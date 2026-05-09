@@ -12,6 +12,8 @@ interface EventStreamProps {
   onSendMessage: (message: string) => void;
   onAbort: () => void;
   instanceStatus?: "idle" | "streaming";
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 export function EventStream({
@@ -21,17 +23,49 @@ export function EventStream({
   onSendMessage,
   onAbort,
   instanceStatus,
+  hasMore = false,
+  onLoadMore,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState("");
 
-  // 自动滚到底部
+  // 自动滚到底部（仅当用户在底部附近时）
+  const isAtBottomRef = useRef(true);
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && isAtBottomRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [entries]);
+
+  // 滚动事件：检测是否在底部 + 滚动到顶部加载更多
+  const loadingMoreRef = useRef(false);
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    // 检测是否在底部（60px 容差）
+    isAtBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+
+    // 滚动到顶部加载更多
+    if (
+      el.scrollTop < 100 &&
+      hasMore &&
+      onLoadMore &&
+      !loadingMoreRef.current
+    ) {
+      loadingMoreRef.current = true;
+      const prevHeight = el.scrollHeight;
+      onLoadMore();
+      // prepend 后保持滚动位置
+      requestAnimationFrame(() => {
+        const newHeight = el.scrollHeight;
+        el.scrollTop += newHeight - prevHeight;
+        loadingMoreRef.current = false;
+      });
+    }
+  }, [hasMore, onLoadMore]);
 
   // textarea 自动调整高度
   const handleInputChange = useCallback(
@@ -89,9 +123,15 @@ export function EventStream({
       <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden py-4">
         <div
           ref={scrollRef}
+          onScroll={handleScroll}
           className="flex-1 overflow-y-auto px-5 space-y-1 scrollbar-auto"
         >
-          {entries.length === 0 ? (
+          {hasMore && (
+            <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2">
+              Loading earlier messages...
+            </div>
+          )}
+          {entries.length === 0 && !hasMore ? (
             <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
               Waiting for messages...
             </div>

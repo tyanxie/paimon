@@ -40,8 +40,8 @@ paimon/
 │   ├── macos-26-design-tokens.json # Figma Design Tokens 插件导出
 │   ├── macos-26-figma-raw-data.md  # Figma API 原始数据缓存
 │   ├── macos-26-tokens.md          # 整理后的设计规范速查表
-│   ├── paimon-icon-draft.png       # AI 生成的原始图标
-│   └── paimon-icon-transparent.png # 去背景透明版图标
+│   ├── paimon-icon-source.png      # AI 生成的原始图标（白底）
+│   └── paimon-icon-transparent.png # 去背景透明版图标（flood fill 保留角色内白色）
 │
 ├── package.json                    # 依赖 + bin + pi extension 声明
 ├── tsconfig.json
@@ -101,9 +101,9 @@ Extension → Hub（上报）：
 
 - `register` — 注册实例（cwd、model、sessionName、pid）
 - `heartbeat` — 心跳保活
-- `event` — 转发 pi 事件（全量转发所有 28 种 pi 事件）
+- `event` — 转发 pi 事件（仅前端实际使用的 message_start/update/end）
 - `state` — 状态变更（idle/streaming）
-- `history` — 响应历史请求（getBranch 返回的 session entries）
+- `history` — 响应历史请求（getBranch 返回的 session entries，按 turn 分页）
 
 Hub → Extension（下发）：
 
@@ -111,7 +111,7 @@ Hub → Extension（下发）：
 - `prompt` — 发送用户消息
 - `steer` — 发送 steer 消息
 - `abort` — 中止当前操作
-- `get_history` — 请求历史消息
+- `get_history` — 请求历史消息（支持 offset/limit 分页）
 - `ping` — 心跳确认
 
 Hub → Browser：
@@ -119,14 +119,14 @@ Hub → Browser：
 - `instance_list` — 完整实例列表
 - `instance_update` — 单个实例变更（connected/disconnected/updated）
 - `forwarded_event` — 实时事件转发
-- `history` — 历史消息
+- `history` — 历史消息（含 hasMore 分页标记）
 - `error` — 错误信息
 
 Browser → Hub：
 
 - `list` — 请求实例列表
 - `subscribe` / `unsubscribe` — 订阅/取消实例事件流
-- `history` — 请求实例历史
+- `history` — 请求实例历史（支持 offset/limit 分页）
 - `prompt` / `steer` / `abort` — 操作指令
 
 ### Hub 存活探测
@@ -147,9 +147,11 @@ Browser → Hub：
 ### 数据获取与对话展示
 
 - **历史消息**: `ctx.sessionManager.getBranch()` 获取当前分支完整历史，浏览器订阅时自动请求
-- **实时事件**: 全量转发所有 pi 事件（28 种，来自 ExtensionAPI.on() 类型声明）
+- **重要：`getBranch()` 只返回已完成的消息**（`appendMessage` 在 `message_end` 时才调用），正在 streaming 的消息不在其中
+- **分页加载**: 按 turn 分组（每个 user message 开始新 turn），支持 offset + limit 参数，滚动到顶部加载更多
+- **Streaming 处理**: `message_start` 或未在 streaming 状态的 `message_update` 都会 append 新条目，解决刷新页面后看不到正在 streaming 的消息的问题
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
-- **对话展示**: 统一 `Entry[]` 列表，历史 + 实时事件共同维护，详见 `docs/design/conversation-rendering.md`
+- **对话展示**: 统一 `Entry[]` 列表，历史 prepend + 实时 append，互不冲突，详见 `docs/design/conversation-rendering.md`
 
 ## CLI 设计
 

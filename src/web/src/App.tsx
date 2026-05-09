@@ -17,7 +17,7 @@ function useSelectedInstanceId(): InstanceId | null {
 }
 
 export default function App() {
-  const { instances, entries, streamingInstances, handleMessage } =
+  const { instances, entries, streamingInstances, hasMore, handleMessage } =
     useAppState();
 
   const { connected, send } = useWebSocket(handleMessage);
@@ -92,6 +92,22 @@ export default function App() {
   const isStreaming = selectedInstanceId
     ? streamingInstances.has(selectedInstanceId)
     : false;
+  const instanceHasMore = selectedInstanceId
+    ? (hasMore.get(selectedInstanceId) ?? false)
+    : false;
+
+  // 加载更多历史
+  const handleLoadMore = useCallback(() => {
+    if (!selectedInstanceId || !instanceHasMore) return;
+    const currentEntries = entries.get(selectedInstanceId) ?? [];
+    send({
+      type: "history",
+      payload: {
+        instanceId: selectedInstanceId,
+        offset: currentEntries.length,
+      },
+    });
+  }, [selectedInstanceId, instanceHasMore, entries, send]);
 
   return (
     <div className="h-screen w-screen animated-bg flex items-stretch p-3 gap-3 overflow-hidden">
@@ -113,6 +129,8 @@ export default function App() {
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
               instanceStatus={selectedInstance?.status}
+              hasMore={instanceHasMore}
+              onLoadMore={handleLoadMore}
             />
           }
         />

@@ -124,18 +124,65 @@ function handleHubMessage(
       const ctx = getCurrentCtx();
       if (ctx?.sessionManager) {
         try {
-          const entries = ctx.sessionManager.getBranch();
+          const allEntries = ctx.sessionManager.getBranch();
+          const offset = msg.payload?.offset ?? 0;
+          const limit = msg.payload?.limit ?? 50;
+
+          // 按 turn 分组：每个 role=user 的 message 开始一个新 turn
+          const turns: unknown[][] = [];
+          let currentTurn: unknown[] = [];
+          for (const entry of allEntries) {
+            const e = entry as { type?: string; message?: { role?: string } };
+            if (
+              e.type === "message" &&
+              e.message?.role === "user" &&
+              currentTurn.length > 0
+            ) {
+              turns.push(currentTurn);
+              currentTurn = [];
+            }
+            currentTurn.push(entry);
+          }
+          if (currentTurn.length > 0) turns.push(currentTurn);
+
+          // 从末尾往前取：跳过 offset 个 entries，取 limit 个 entries（turn 对齐）
+          // 先将 turns 展平计算每个 turn 的 entry 数量
+          let skipped = 0;
+          let endTurnIdx = turns.length;
+          // 从末尾跳过 offset 个 entries
+          while (endTurnIdx > 0 && skipped < offset) {
+            endTurnIdx--;
+            skipped += turns[endTurnIdx].length;
+          }
+
+          // 从 endTurnIdx 往前取 limit 个 entries
+          let collected = 0;
+          let startTurnIdx = endTurnIdx;
+          while (startTurnIdx > 0 && collected < limit) {
+            startTurnIdx--;
+            collected += turns[startTurnIdx].length;
+          }
+
+          const sliced = turns.slice(startTurnIdx, endTurnIdx).flat();
+          const hasMore = startTurnIdx > 0;
+
           const response: ExtHistoryMessage = {
             type: "history",
-            payload: { entries },
+            payload: { entries: sliced, hasMore },
           };
           client.send(response);
         } catch {
           // getBranch 失败时返回空列表
-          client.send({ type: "history", payload: { entries: [] } });
+          client.send({
+            type: "history",
+            payload: { entries: [], hasMore: false },
+          });
         }
       } else {
-        client.send({ type: "history", payload: { entries: [] } });
+        client.send({
+          type: "history",
+          payload: { entries: [], hasMore: false },
+        });
       }
       break;
     }

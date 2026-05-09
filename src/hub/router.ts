@@ -79,6 +79,7 @@ export function handleExtensionMessage(
           payload: {
             instanceId: id,
             messages: msg.payload.entries,
+            hasMore: msg.payload.hasMore ?? false,
           },
         });
         for (const browser of subscribers) {
@@ -122,10 +123,20 @@ export function handleBrowserMessage(
       break;
     }
     case "history": {
-      // 向 Extension 请求历史（通过 forwarding 机制）
+      // 向 Extension 请求历史（透传 offset/limit）
       const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
       if (instanceWs) {
-        instanceWs.send(JSON.stringify({ type: "get_history" }));
+        const getHistoryMsg: any = { type: "get_history" };
+        if (
+          msg.payload.offset !== undefined ||
+          msg.payload.limit !== undefined
+        ) {
+          getHistoryMsg.payload = {
+            offset: msg.payload.offset,
+            limit: msg.payload.limit,
+          };
+        }
+        instanceWs.send(JSON.stringify(getHistoryMsg));
       } else {
         ws.send(
           JSON.stringify({

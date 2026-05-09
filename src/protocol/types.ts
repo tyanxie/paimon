@@ -81,8 +81,10 @@ export interface ExtStateMessage {
 export interface ExtHistoryMessage {
   type: "history";
   payload: {
-    /** session branch entries */
+    /** session branch entries（分页后的） */
     entries: unknown[];
+    /** 是否还有更早的历史 */
+    hasMore: boolean;
   };
 }
 
@@ -135,6 +137,12 @@ export interface HubPingMessage {
 /** 请求历史消息 */
 export interface HubGetHistoryMessage {
   type: "get_history";
+  payload?: {
+    /** 从末尾跳过的条目数 */
+    offset?: number;
+    /** 本次请求的最大条目数（按 turn 对齐） */
+    limit?: number;
+  };
 }
 
 // ============================================================
@@ -202,6 +210,10 @@ export interface BrowserHistoryMessage {
   type: "history";
   payload: {
     instanceId: InstanceId;
+    /** 从末尾跳过的条目数 */
+    offset?: number;
+    /** 本次请求的最大条目数（按 turn 对齐） */
+    limit?: number;
   };
 }
 
@@ -250,8 +262,10 @@ export interface HubHistoryMessage {
   type: "history";
   payload: {
     instanceId: InstanceId;
-    /** session branch 数据 */
+    /** session branch 数据（分页后的） */
     messages: unknown[];
+    /** 是否还有更早的历史 */
+    hasMore: boolean;
   };
 }
 
