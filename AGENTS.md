@@ -39,7 +39,9 @@ paimon/
 ├── docs/design/                    # 设计参考
 │   ├── macos-26-design-tokens.json # Figma Design Tokens 插件导出
 │   ├── macos-26-figma-raw-data.md  # Figma API 原始数据缓存
-│   └── macos-26-tokens.md          # 整理后的设计规范速查表
+│   ├── macos-26-tokens.md          # 整理后的设计规范速查表
+│   ├── paimon-icon-draft.png       # AI 生成的原始图标
+│   └── paimon-icon-transparent.png # 去背景透明版图标
 │
 ├── package.json                    # 依赖 + bin + pi extension 声明
 ├── tsconfig.json

@@ -110,10 +110,10 @@ export function EventStream({
 
       {/* 输入栏（独立玻璃胶囊） */}
       <div
-        className={`relative flex items-end rounded-[20px] overflow-hidden ${
+        className={`relative flex items-end rounded-[20px] overflow-hidden glass-panel ${
           instanceStatus === "streaming"
-            ? "input-glass-disabled"
-            : "input-glass"
+            ? "glass-panel-disabled"
+            : "glass-panel-input"
         }`}
       >
         <textarea
