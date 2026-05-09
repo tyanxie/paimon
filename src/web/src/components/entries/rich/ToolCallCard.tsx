@@ -12,6 +12,7 @@ import {
   X,
   CircleX,
   Loader2,
+  ChevronRight,
 } from "lucide-react";
 import type { SessionEntry } from "../../../stores/useAppState";
 
@@ -102,7 +103,7 @@ export function ToolCallCard({
       {/* 折叠卡片 */}
       <button
         onClick={() => setShowModal(true)}
-        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-secondary)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group"
+        className="w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-secondary)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group"
       >
         <span className="text-[var(--label-secondary)] group-hover:text-[var(--color-accent)] transition-colors">
           {getToolIcon(name)}
@@ -115,17 +116,22 @@ export function ToolCallCard({
             {summary}
           </span>
         )}
-        {/* 状态指示 */}
-        {isError && (
-          <span className="text-red-400 flex-shrink-0">
-            <CircleX size={14} />
-          </span>
-        )}
-        {!isCompleted && (
-          <span className="text-[var(--label-tertiary)] flex-shrink-0 animate-spin">
-            <Loader2 size={14} />
-          </span>
-        )}
+        {/* 右侧状态 icon：执行中 / 失败 / 完成 */}
+        <span className="flex-shrink-0">
+          {!isCompleted ? (
+            <Loader2
+              size={14}
+              className="text-[var(--label-tertiary)] animate-spin"
+            />
+          ) : isError ? (
+            <CircleX size={14} className="text-red-400" />
+          ) : (
+            <ChevronRight
+              size={14}
+              className="text-[var(--label-tertiary)] group-hover:text-[var(--label-secondary)] transition-colors"
+            />
+          )}
+        </span>
       </button>
 
       {/* 详情弹窗 */}

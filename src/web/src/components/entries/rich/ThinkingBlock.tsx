@@ -25,7 +25,9 @@ export function ThinkingBlock({
   }, [autoCollapse]);
 
   return (
-    <div className="rounded-[8px] bg-[var(--fill-tertiary)] border border-[var(--separator)] overflow-hidden">
+    <div
+      className={`rounded-[8px] bg-[var(--fill-tertiary)] border border-[var(--separator)] overflow-hidden transition-all ${collapsed ? "max-w-[640px]" : ""}`}
+    >
       {/* 标题栏：可点击切换折叠 */}
       <button
         onClick={() => setCollapsed(!collapsed)}
