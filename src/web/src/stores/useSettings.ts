@@ -8,6 +8,7 @@ import { useSyncExternalStore } from "react";
 
 export type Appearance = "light" | "dark" | "system";
 export type Background = "mist" | "aurora" | "ember";
+export type MessageRenderMode = "raw" | "rich";
 
 // ========================================
 // 常量
@@ -16,11 +17,13 @@ export type Background = "mist" | "aurora" | "ember";
 const KEYS = {
   appearance: "paimon:appearance",
   background: "paimon:background",
+  messageRenderMode: "paimon:messageRenderMode",
 } as const;
 
 const DEFAULTS = {
   appearance: "system" as Appearance,
   background: "mist" as Background,
+  messageRenderMode: "raw" as MessageRenderMode,
 } as const;
 
 // ========================================
@@ -52,6 +55,12 @@ function getBackground(): Background {
   const val = localStorage.getItem(KEYS.background);
   if (val === "mist" || val === "aurora" || val === "ember") return val;
   return DEFAULTS.background;
+}
+
+function getMessageRenderMode(): MessageRenderMode {
+  const val = localStorage.getItem(KEYS.messageRenderMode);
+  if (val === "raw" || val === "rich") return val;
+  return DEFAULTS.messageRenderMode;
 }
 
 // ========================================
@@ -114,6 +123,11 @@ export function setBackground(value: Background) {
   emit();
 }
 
+export function setMessageRenderMode(value: MessageRenderMode) {
+  localStorage.setItem(KEYS.messageRenderMode, value);
+  emit();
+}
+
 // ========================================
 // React Hooks
 // ========================================
@@ -126,6 +140,14 @@ export function useAppearance(): [Appearance, (v: Appearance) => void] {
 export function useBackground(): [Background, (v: Background) => void] {
   const value = useSyncExternalStore(subscribe, getBackground);
   return [value, setBackground];
+}
+
+export function useMessageRenderMode(): [
+  MessageRenderMode,
+  (v: MessageRenderMode) => void,
+] {
+  const value = useSyncExternalStore(subscribe, getMessageRenderMode);
+  return [value, setMessageRenderMode];
 }
 
 /** 获取当前解析后的实际主题（light/dark） */

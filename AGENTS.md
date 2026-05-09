@@ -35,6 +35,7 @@ paimon/
 │           ├── hooks/              # useWebSocket
 │           ├── stores/             # useAppState, useSettings
 │           └── components/         # Sidebar, EventStream, Settings
+│               └── entries/        # RawEntry, RichEntry（渲染器）
 │
 ├── docs/design/                    # 设计参考
 │   ├── macos-26-design-tokens.json # Figma Design Tokens 插件导出
@@ -83,7 +84,7 @@ paimon/
 - 系统字体栈（-apple-system / Inter）
 - 亮色/暗色双模式（基于 data-theme 属性，支持手动切换 + 跟随系统）
 - 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）
-- 设置页（/settings）：外观配置（主题 + 背景），存储于 localStorage（paimon:appearance / paimon:background）
+- 设置页（/settings）：外观配置（主题 + 背景）+ 对话配置（渲染模式：原始/渲染），存储于 localStorage（paimon:appearance / paimon:background / paimon:messageRenderMode）
 
 ## 架构设计
 
