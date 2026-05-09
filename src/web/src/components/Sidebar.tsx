@@ -19,17 +19,26 @@ export function Sidebar({
     <aside className="glass-panel w-[240px] flex-shrink-0 flex flex-col overflow-hidden">
       {/* 标题区 */}
       <div className="px-4 pt-4 pb-2">
-        <div className="flex items-center justify-between">
-          <h1 className="text-[15px] font-semibold text-[var(--label-primary)]">
-            Paimon
-          </h1>
-          <span
-            className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
-            title={connected ? "Online" : "Offline"}
-          />
-        </div>
-        <div className="text-[11px] text-[var(--label-tertiary)] mt-1">
-          {instances.length} instance{instances.length !== 1 ? "s" : ""}
+        <div className="grid grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-x-2.5 items-center">
+          <div className="row-span-2 h-0 min-h-full">
+            <img
+              src="/paimon-logo.png"
+              alt="Paimon"
+              className="h-full w-auto object-contain"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <h1 className="text-[15px] font-semibold text-[var(--label-primary)] leading-tight">
+              Paimon
+            </h1>
+            <span
+              className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
+              title={connected ? "Online" : "Offline"}
+            />
+          </div>
+          <div className="text-[11px] text-[var(--label-tertiary)] leading-tight">
+            {instances.length} instance{instances.length !== 1 ? "s" : ""}
+          </div>
         </div>
       </div>
 

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/design/paimon-icon-transparent.png" width="96" />
+</p>
+
 # Paimon
 
 把你所有的 pi coding agent 会话搬到浏览器里——实时查看、发消息、随时介入。
