@@ -1,5 +1,7 @@
 // 侧边栏：pi 实例列表（独立玻璃面板）
 
+import { Settings as SettingsIcon } from "lucide-react";
+import { useNavigate } from "react-router";
 import type { InstanceInfo, InstanceId } from "../../../protocol/types";
 
 interface SidebarProps {
@@ -15,6 +17,8 @@ export function Sidebar({
   onSelect,
   connected,
 }: SidebarProps) {
+  const navigate = useNavigate();
+
   return (
     <aside className="glass-panel w-[240px] flex-shrink-0 flex flex-col overflow-hidden">
       {/* 标题区 */}
@@ -85,6 +89,17 @@ export function Sidebar({
             ))}
           </ul>
         )}
+      </div>
+
+      {/* 设置入口 */}
+      <div className="px-3 py-2 border-t border-[var(--separator)]">
+        <button
+          onClick={() => navigate("/settings")}
+          className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-[8px] text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-all duration-150"
+        >
+          <SettingsIcon size={14} />
+          <span className="text-[12px]">设置</span>
+        </button>
       </div>
     </aside>
   );

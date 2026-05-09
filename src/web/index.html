@@ -10,6 +10,23 @@
     <title>Paimon</title>
   </head>
   <body class="antialiased">
+    <script>
+      // 防 FOUC：在 React 渲染前同步设置 data-theme 和 data-bg
+      (function () {
+        var appearance = localStorage.getItem("paimon:appearance") || "system";
+        var bg = localStorage.getItem("paimon:background") || "mist";
+        var theme;
+        if (appearance === "system") {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        } else {
+          theme = appearance;
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.setAttribute("data-bg", bg);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="./src/main.tsx"></script>
   </body>

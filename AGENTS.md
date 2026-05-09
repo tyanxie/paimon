@@ -33,8 +33,8 @@ paimon/
 │           ├── App.tsx             # 根组件
 │           ├── index.css           # Tailwind + macOS 26 tokens
 │           ├── hooks/              # useWebSocket
-│           ├── stores/             # useAppState
-│           └── components/         # Sidebar, EventStream
+│           ├── stores/             # useAppState, useSettings
+│           └── components/         # Sidebar, EventStream, Settings
 │
 ├── docs/design/                    # 设计参考
 │   ├── macos-26-design-tokens.json # Figma Design Tokens 插件导出
@@ -81,7 +81,9 @@ paimon/
 - 柔和阴影（panel: `0 8px 40px rgba(0,0,0,0.08)`）
 - 面板间 gap 12px，外层 padding 12px，背景可透出
 - 系统字体栈（-apple-system / Inter）
-- 亮色/暗色双模式（基于 prefers-color-scheme）
+- 亮色/暗色双模式（基于 data-theme 属性，支持手动切换 + 跟随系统）
+- 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）
+- 设置页（/settings）：外观配置（主题 + 背景），存储于 localStorage（paimon:appearance / paimon:background）
 
 ## 架构设计
 

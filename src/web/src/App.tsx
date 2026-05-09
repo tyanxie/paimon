@@ -6,6 +6,7 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { useAppState } from "./stores/useAppState";
 import { Sidebar } from "./components/Sidebar";
 import { EventStream } from "./components/EventStream";
+import { Settings } from "./components/Settings";
 import type { InstanceId } from "../../protocol/types";
 
 export default function App() {
@@ -68,6 +69,7 @@ export default function App() {
         connected={connected}
       />
       <Routes>
+        <Route path="/settings" element={<Settings />} />
         <Route
           path="/instance/:id"
           element={
