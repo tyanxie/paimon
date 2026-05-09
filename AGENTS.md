@@ -140,11 +140,12 @@ Browser → Hub：
 - 首次断连时通过 `ctx.ui.notify()` 提示用户
 - 重连成功时通知
 
-### 数据获取
+### 数据获取与对话展示
 
 - **历史消息**: `ctx.sessionManager.getBranch()` 获取当前分支完整历史，浏览器订阅时自动请求
 - **实时事件**: 全量转发所有 pi 事件（28 种，来自 ExtensionAPI.on() 类型声明）
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
+- **对话展示**: 统一 `Entry[]` 列表，历史 + 实时事件共同维护，详见 `docs/design/conversation-rendering.md`
 
 ## CLI 设计
 

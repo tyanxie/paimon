@@ -1,26 +1,22 @@
-// 事件流面板：展示选中实例的实时事件（独立玻璃面板）
+// 事件流面板：展示选中实例的对话 entries（独立玻璃面板）
 
 import { useRef, useEffect } from "react";
 import type { InstanceId } from "../../../protocol/types";
+import type { SessionEntry } from "../stores/useAppState";
 
 interface EventStreamProps {
-  events: Array<{
-    instanceId: InstanceId;
-    event: string;
-    data: unknown;
-    timestamp: number;
-  }>;
-  history: unknown[];
+  entries: SessionEntry[];
   instanceId: InstanceId | null;
+  isStreaming: boolean;
   onSendMessage: (message: string) => void;
   onAbort: () => void;
   instanceStatus?: "idle" | "streaming";
 }
 
 export function EventStream({
-  events,
-  history,
+  entries,
   instanceId,
+  isStreaming,
   onSendMessage,
   onAbort,
   instanceStatus,
@@ -28,17 +24,12 @@ export function EventStream({
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 过滤当前实例事件
-  const filteredEvents = instanceId
-    ? events.filter((e) => e.instanceId === instanceId)
-    : [];
-
   // 自动滚到底部
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [filteredEvents.length, history.length]);
+  }, [entries]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,10 +39,9 @@ export function EventStream({
     input.value = "";
   };
 
-  // 未选中实例：空状态（不带面板，直接浮在背景上）
   if (!instanceId) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="glass-panel flex-1 flex items-center justify-center">
         <div className="text-center">
           <div className="text-[26px] font-light text-[var(--label-tertiary)] mb-2">
             Paimon
@@ -66,29 +56,24 @@ export function EventStream({
 
   return (
     <main className="glass-panel flex-1 flex flex-col min-w-0 overflow-hidden">
-      {/* 事件流 */}
+      {/* 对话流 */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin"
       >
-        {/* 历史消息 */}
-        {history.length > 0 && (
-          <>
-            {history.map((entry, i) => (
-              <HistoryItem key={`h-${i}`} entry={entry} />
-            ))}
-            {filteredEvents.length > 0 && (
-              <div className="border-t border-[var(--separator)] my-2" />
-            )}
-          </>
-        )}
-        {/* 实时事件 */}
-        {filteredEvents.length === 0 && history.length === 0 ? (
+        {entries.length === 0 ? (
           <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
-            Waiting for events...
+            Waiting for messages...
           </div>
         ) : (
-          filteredEvents.map((event, i) => <EventItem key={i} event={event} />)
+          entries.map((entry, i) => (
+            <EntryItem
+              key={entry.id ?? `e-${i}`}
+              entry={entry}
+              isLast={i === entries.length - 1}
+              isStreaming={isStreaming}
+            />
+          ))
         )}
       </div>
 
@@ -121,70 +106,60 @@ export function EventStream({
   );
 }
 
-/** 单条事件渲染 */
-function EventItem({
-  event,
+/** 统一的 entry 渲染组件 */
+function EntryItem({
+  entry,
+  isLast,
+  isStreaming,
 }: {
-  event: { event: string; data: unknown; timestamp: number };
+  entry: SessionEntry;
+  isLast: boolean;
+  isStreaming: boolean;
 }) {
-  const time = new Date(event.timestamp).toLocaleTimeString();
-
-  const getEventColor = (eventName: string) => {
-    if (eventName.includes("error")) return "text-red-400";
-    if (eventName.includes("tool")) return "text-purple-400";
-    if (eventName === "message_start") return "text-green-400";
-    if (eventName === "message_update") return "text-[var(--color-accent)]";
-    if (eventName === "message_end") return "text-emerald-400";
-    if (eventName === "agent_start" || eventName === "agent_end")
-      return "text-orange-400";
-    if (eventName === "turn_start" || eventName === "turn_end")
-      return "text-yellow-400";
-    if (eventName.includes("session")) return "text-pink-400";
-    return "text-[var(--label-secondary)]";
-  };
-
-  const getContent = (data: unknown): string => {
-    if (!data || typeof data !== "object") return JSON.stringify(data);
-    const d = data as Record<string, unknown>;
-    if (d.content && typeof d.content === "string") {
-      return d.content.slice(0, 200);
-    }
-    if (d.toolName) {
-      return `${d.toolName}${d.input ? ` → ${JSON.stringify(d.input).slice(0, 100)}` : ""}`;
-    }
-    return JSON.stringify(data).slice(0, 200);
-  };
-
-  return (
-    <div className="group px-3 py-1.5 rounded-[8px] hover:bg-[var(--fill-tertiary)] transition-colors">
-      <div className="flex items-baseline gap-2">
-        <span className="text-[10px] text-[var(--label-tertiary)] tabular-nums">
-          {time}
-        </span>
-        <span
-          className={`text-[11px] font-medium ${getEventColor(event.event)}`}
-        >
-          {event.event}
-        </span>
-      </div>
-      <div className="text-[12px] text-[var(--label-secondary)] mt-0.5 break-all line-clamp-3">
-        {getContent(event.data)}
-      </div>
-    </div>
-  );
+  switch (entry.type) {
+    case "message":
+      return <MessageItem entry={entry} streaming={isLast && isStreaming} />;
+    case "compaction":
+      return (
+        <MetaItem
+          label="compaction"
+          content={entry.summary ?? ""}
+          color="text-pink-400"
+        />
+      );
+    case "branch_summary":
+      return (
+        <MetaItem
+          label="branch_summary"
+          content={entry.summary ?? ""}
+          color="text-pink-400"
+        />
+      );
+    default:
+      return (
+        <MetaItem
+          label={entry.type}
+          content={entry.summary ?? JSON.stringify(entry).slice(0, 200)}
+          color="text-[var(--label-tertiary)]"
+        />
+      );
+  }
 }
 
-/** 历史 entry 渲染（session branch 条目） */
-function HistoryItem({ entry }: { entry: unknown }) {
-  if (!entry || typeof entry !== "object") return null;
-
-  const e = entry as Record<string, unknown>;
-  const message = e.message as Record<string, unknown> | undefined;
+/** 消息条目渲染 */
+function MessageItem({
+  entry,
+  streaming,
+}: {
+  entry: SessionEntry;
+  streaming: boolean;
+}) {
+  const message = entry.message;
   if (!message) return null;
 
-  const role = message.role as string;
-  const timestamp = e.timestamp
-    ? new Date(e.timestamp as string).toLocaleTimeString()
+  const role = message.role;
+  const timestamp = entry.timestamp
+    ? new Date(entry.timestamp).toLocaleTimeString()
     : "";
 
   const getRoleColor = (r: string) => {
@@ -192,24 +167,6 @@ function HistoryItem({ entry }: { entry: unknown }) {
     if (r === "assistant") return "text-[var(--color-accent)]";
     if (r === "toolResult") return "text-purple-400";
     return "text-[var(--label-secondary)]";
-  };
-
-  const getContent = (): string => {
-    const content = message.content;
-    if (typeof content === "string") return content.slice(0, 300);
-    if (Array.isArray(content)) {
-      // content blocks
-      const texts = content
-        .filter((b: any) => b.type === "text")
-        .map((b: any) => b.text)
-        .join("");
-      if (texts) return texts.slice(0, 300);
-      // tool_use blocks
-      const toolUse = content.find((b: any) => b.type === "tool_use");
-      if (toolUse) return `tool: ${(toolUse as any).name}`;
-      return JSON.stringify(content).slice(0, 200);
-    }
-    return JSON.stringify(content).slice(0, 200);
   };
 
   return (
@@ -220,11 +177,104 @@ function HistoryItem({ entry }: { entry: unknown }) {
         </span>
         <span className={`text-[11px] font-medium ${getRoleColor(role)}`}>
           {role}
+          {streaming && <span className="ml-1 animate-pulse">...</span>}
         </span>
       </div>
-      <div className="text-[12px] text-[var(--label-secondary)] mt-0.5 break-all line-clamp-3">
-        {getContent()}
+      <div className="text-[12px] text-[var(--label-secondary)] mt-0.5 break-words whitespace-pre-wrap">
+        <MessageContent content={message.content} role={role} />
       </div>
+    </div>
+  );
+}
+
+/** 消息内容渲染 */
+function MessageContent({ content, role }: { content: unknown; role: string }) {
+  // user message: content 可能是 string
+  if (typeof content === "string") {
+    return <>{content}</>;
+  }
+
+  // content blocks 数组
+  if (Array.isArray(content)) {
+    return (
+      <>
+        {content.map((block: any, i: number) => (
+          <ContentBlock key={i} block={block} role={role} />
+        ))}
+      </>
+    );
+  }
+
+  // fallback
+  return <>{JSON.stringify(content)}</>;
+}
+
+/** 单个 content block 渲染 */
+function ContentBlock({ block, role }: { block: any; role: string }) {
+  if (!block || typeof block !== "object") {
+    return <span>{JSON.stringify(block)}</span>;
+  }
+
+  switch (block.type) {
+    case "text":
+      return <span>{block.text}</span>;
+    case "thinking":
+      return (
+        <details className="my-1">
+          <summary className="text-[11px] text-yellow-400 cursor-pointer">
+            thinking
+          </summary>
+          <div className="pl-3 mt-1 text-[11px] text-[var(--label-tertiary)] whitespace-pre-wrap">
+            {block.thinking}
+          </div>
+        </details>
+      );
+    case "toolCall":
+      return (
+        <div className="my-1 pl-3 border-l-2 border-purple-400/50">
+          <span className="text-[11px] text-purple-400 font-medium">
+            {block.name}
+          </span>
+          <div className="text-[11px] text-[var(--label-tertiary)] mt-0.5 whitespace-pre-wrap">
+            {typeof block.arguments === "string"
+              ? block.arguments
+              : JSON.stringify(block.arguments, null, 2)}
+          </div>
+        </div>
+      );
+    case "image":
+      return (
+        <div className="my-1 text-[11px] text-[var(--label-tertiary)]">
+          [image: {block.mimeType}]
+        </div>
+      );
+    default:
+      return (
+        <span className="text-[11px] text-[var(--label-tertiary)]">
+          [{block.type}]
+        </span>
+      );
+  }
+}
+
+/** 元信息条目（compaction / branch_summary / unknown） */
+function MetaItem({
+  label,
+  content,
+  color,
+}: {
+  label: string;
+  content: string;
+  color: string;
+}) {
+  return (
+    <div className="px-3 py-1 rounded-[8px] hover:bg-[var(--fill-tertiary)] transition-colors">
+      <span className={`text-[11px] font-medium ${color}`}>[{label}]</span>
+      {content && (
+        <span className="text-[11px] text-[var(--label-tertiary)] ml-2">
+          {content}
+        </span>
+      )}
     </div>
   );
 }

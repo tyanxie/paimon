@@ -13,8 +13,8 @@ export default function App() {
     instances,
     selectedInstanceId,
     setSelectedInstanceId,
-    events,
-    history,
+    entries,
+    streamingInstances,
     handleMessage,
   } = useAppState();
 
@@ -76,8 +76,8 @@ export default function App() {
               selectedInstanceId={selectedInstanceId}
               setSelectedInstanceId={setSelectedInstanceId}
               send={send}
-              events={events}
-              history={history}
+              entries={entries}
+              streamingInstances={streamingInstances}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
               instanceStatus={selectedInstance?.status}
@@ -88,9 +88,9 @@ export default function App() {
           path="*"
           element={
             <EventStream
-              events={events}
-              history={[]}
+              entries={[]}
               instanceId={null}
+              isStreaming={false}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
             />
@@ -107,8 +107,8 @@ function InstanceRoute({
   selectedInstanceId,
   setSelectedInstanceId,
   send,
-  events,
-  history,
+  entries,
+  streamingInstances,
   onSendMessage,
   onAbort,
   instanceStatus,
@@ -117,8 +117,8 @@ function InstanceRoute({
   selectedInstanceId: InstanceId | null;
   setSelectedInstanceId: (id: InstanceId | null) => void;
   send: (msg: any) => void;
-  events: any[];
-  history: Map<InstanceId, unknown[]>;
+  entries: Map<InstanceId, unknown[]>;
+  streamingInstances: Set<InstanceId>;
   onSendMessage: (message: string) => void;
   onAbort: () => void;
   instanceStatus?: "idle" | "streaming";
@@ -130,7 +130,6 @@ function InstanceRoute({
   useEffect(() => {
     if (!id) return;
 
-    // 实例存在则选中
     const exists = instances.some((i) => i.id === id);
     if (exists && id !== selectedInstanceId) {
       if (selectedInstanceId) {
@@ -143,7 +142,6 @@ function InstanceRoute({
       send({ type: "history", payload: { instanceId: id } });
       setSelectedInstanceId(id);
     } else if (!exists && instances.length > 0) {
-      // 实例不存在（ID 过期），回首页
       navigate("/", { replace: true });
       setSelectedInstanceId(null);
     }
@@ -156,11 +154,14 @@ function InstanceRoute({
     navigate,
   ]);
 
+  const instanceEntries = (entries.get(id as InstanceId) ?? []) as any[];
+  const isStreaming = streamingInstances.has(id as InstanceId);
+
   return (
     <EventStream
-      events={events}
-      history={history.get(id as InstanceId) ?? []}
+      entries={instanceEntries}
       instanceId={id as InstanceId | null}
+      isStreaming={isStreaming}
       onSendMessage={onSendMessage}
       onAbort={onAbort}
       instanceStatus={instanceStatus}

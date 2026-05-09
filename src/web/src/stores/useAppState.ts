@@ -7,25 +7,40 @@ import type {
   InstanceId,
 } from "../../../protocol/types";
 
+/** 统一的 session entry（来自 getBranch 或实时事件构造） */
+export interface SessionEntry {
+  type: string;
+  id?: string;
+  parentId?: string;
+  timestamp?: string;
+  message?: {
+    role: string;
+    content: unknown;
+    [key: string]: unknown;
+  };
+  summary?: string;
+  [key: string]: unknown;
+}
+
 export interface AppState {
   instances: InstanceInfo[];
   selectedInstanceId: InstanceId | null;
-  events: Array<{
-    instanceId: InstanceId;
-    event: string;
-    data: unknown;
-    timestamp: number;
-  }>;
-  /** 实例的历史对话数据（getBranch 返回的 entries） */
-  history: Map<InstanceId, unknown[]>;
+  /** 每个实例的统一对话 entries 列表 */
+  entries: Map<InstanceId, SessionEntry[]>;
+  /** 当前正在流式输出的实例（用于 loading 指示） */
+  streamingInstances: Set<InstanceId>;
 }
 
 export function useAppState() {
   const [instances, setInstances] = useState<InstanceInfo[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] =
     useState<InstanceId | null>(null);
-  const [events, setEvents] = useState<AppState["events"]>([]);
-  const [history, setHistory] = useState<Map<InstanceId, unknown[]>>(new Map());
+  const [entries, setEntries] = useState<Map<InstanceId, SessionEntry[]>>(
+    new Map(),
+  );
+  const [streamingInstances, setStreamingInstances] = useState<Set<InstanceId>>(
+    new Set(),
+  );
 
   const handleMessage = useCallback((msg: HubToBrowserMessage) => {
     switch (msg.type) {
@@ -39,7 +54,6 @@ export function useAppState() {
           setInstances((prev) =>
             prev.filter((i) => i.id !== msg.payload.instance.id),
           );
-          // 如果选中的实例断开，清除选中
           setSelectedInstanceId((prev) =>
             prev === msg.payload.instance.id ? null : prev,
           );
@@ -52,20 +66,19 @@ export function useAppState() {
         }
         break;
       case "forwarded_event":
-        setEvents((prev) => [
-          ...prev.slice(-500), // 保留最近 500 条
-          {
-            instanceId: msg.payload.instanceId,
-            event: msg.payload.event,
-            data: msg.payload.data,
-            timestamp: msg.payload.timestamp,
-          },
-        ]);
+        handleForwardedEvent(
+          msg.payload.instanceId,
+          msg.payload.event,
+          msg.payload.data,
+        );
         break;
       case "history":
-        setHistory((prev) => {
+        setEntries((prev) => {
           const next = new Map(prev);
-          next.set(msg.payload.instanceId, msg.payload.messages);
+          next.set(
+            msg.payload.instanceId,
+            msg.payload.messages as SessionEntry[],
+          );
           return next;
         });
         break;
@@ -75,12 +88,76 @@ export function useAppState() {
     }
   }, []);
 
+  /** 处理实时事件，更新 entries 列表 */
+  function handleForwardedEvent(
+    instanceId: InstanceId,
+    event: string,
+    data: unknown,
+  ) {
+    const d = data as Record<string, unknown>;
+
+    switch (event) {
+      case "message_start": {
+        // 新消息开始，追加到列表
+        const message = d.message as SessionEntry["message"];
+        if (message) {
+          setEntries((prev) => {
+            const next = new Map(prev);
+            const list = [...(prev.get(instanceId) ?? [])];
+            list.push({
+              type: "message",
+              timestamp: new Date().toISOString(),
+              message,
+            });
+            next.set(instanceId, list);
+            return next;
+          });
+          // 标记正在流式输出
+          if (message.role === "assistant") {
+            setStreamingInstances((prev) => new Set(prev).add(instanceId));
+          }
+        }
+        break;
+      }
+      case "message_update": {
+        // 替换列表最后一条 message entry（完整快照）
+        const message = d.message as SessionEntry["message"];
+        if (message) {
+          setEntries((prev) => {
+            const next = new Map(prev);
+            const list = [...(prev.get(instanceId) ?? [])];
+            // 找到最后一条 message entry 并替换
+            for (let i = list.length - 1; i >= 0; i--) {
+              if (list[i].type === "message") {
+                list[i] = { ...list[i], message };
+                break;
+              }
+            }
+            next.set(instanceId, list);
+            return next;
+          });
+        }
+        break;
+      }
+      case "message_end": {
+        // 流式输出结束
+        setStreamingInstances((prev) => {
+          const next = new Set(prev);
+          next.delete(instanceId);
+          return next;
+        });
+        break;
+      }
+      // 其他事件暂不处理，后续可扩展
+    }
+  }
+
   return {
     instances,
     selectedInstanceId,
     setSelectedInstanceId,
-    events,
-    history,
+    entries,
+    streamingInstances,
     handleMessage,
   };
 }
