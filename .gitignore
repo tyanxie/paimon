@@ -1,6 +1,5 @@
 # 依赖
 node_modules/
-bun.lock
 
 # 构建产物
 dist/

@@ -1,6 +1,6 @@
 # Paimon
 
-Pi coding agent 的远程观察与控制面板。通过 Web 界面实时查看和操控多个 pi 实例。
+把你所有的 pi coding agent 会话搬到浏览器里——实时查看、发消息、随时介入。
 
 ## 概述
 
