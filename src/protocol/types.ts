@@ -35,7 +35,8 @@ export type ExtensionToHubMessage =
   | ExtRegisterMessage
   | ExtHeartbeatMessage
   | ExtEventMessage
-  | ExtStateMessage;
+  | ExtStateMessage
+  | ExtHistoryMessage;
 
 /** 注册 */
 export interface ExtRegisterMessage {
@@ -76,6 +77,15 @@ export interface ExtStateMessage {
   };
 }
 
+/** 历史消息响应 */
+export interface ExtHistoryMessage {
+  type: "history";
+  payload: {
+    /** session branch entries */
+    entries: unknown[];
+  };
+}
+
 // ============================================================
 // Hub → Extension 消息
 // ============================================================
@@ -85,7 +95,8 @@ export type HubToExtensionMessage =
   | HubPromptMessage
   | HubSteerMessage
   | HubAbortMessage
-  | HubPingMessage;
+  | HubPingMessage
+  | HubGetHistoryMessage;
 
 /** 注册确认，返回分配的 id */
 export interface HubRegisteredMessage {
@@ -119,6 +130,11 @@ export interface HubAbortMessage {
 /** 心跳探测 */
 export interface HubPingMessage {
   type: "ping";
+}
+
+/** 请求历史消息 */
+export interface HubGetHistoryMessage {
+  type: "get_history";
 }
 
 // ============================================================

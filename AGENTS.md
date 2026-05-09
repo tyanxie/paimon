@@ -97,8 +97,9 @@ Extension → Hub（上报）：
 
 - `register` — 注册实例（cwd、model、sessionName、pid）
 - `heartbeat` — 心跳保活
-- `event` — 转发 pi 事件（message*update、tool_execution*\* 等）
+- `event` — 转发 pi 事件（全量转发所有 28 种 pi 事件）
 - `state` — 状态变更（idle/streaming）
+- `history` — 响应历史请求（getBranch 返回的 session entries）
 
 Hub → Extension（下发）：
 
@@ -106,6 +107,7 @@ Hub → Extension（下发）：
 - `prompt` — 发送用户消息
 - `steer` — 发送 steer 消息
 - `abort` — 中止当前操作
+- `get_history` — 请求历史消息
 - `ping` — 心跳确认
 
 Hub → Browser：
@@ -140,8 +142,8 @@ Browser → Hub：
 
 ### 数据获取
 
-- **历史消息**: `ctx.sessionManager.getBranch()` 获取当前分支完整历史
-- **实时事件**: `pi.on("message_update" | "tool_execution_*" | ...)` 统一转发
+- **历史消息**: `ctx.sessionManager.getBranch()` 获取当前分支完整历史，浏览器订阅时自动请求
+- **实时事件**: 全量转发所有 pi 事件（28 种，来自 ExtensionAPI.on() 类型声明）
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
 
 ## CLI 设计

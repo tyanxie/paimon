@@ -2,7 +2,10 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { DEFAULTS } from "../../protocol/types";
-import type { HubToExtensionMessage } from "../../protocol/types";
+import type {
+  HubToExtensionMessage,
+  ExtHistoryMessage,
+} from "../../protocol/types";
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
 
@@ -10,6 +13,8 @@ export default function (pi: ExtensionAPI) {
   const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
 
   let registered = false;
+  // 保存最新的 ctx 引用，用于响应 get_history
+  let currentCtx: any = null;
 
   // 创建 Hub 客户端
   const client = new HubClient({
@@ -32,7 +37,7 @@ export default function (pi: ExtensionAPI) {
       if (msg.type === "registered") {
         registered = true;
       }
-      handleHubMessage(pi, msg);
+      handleHubMessage(pi, msg, client, () => currentCtx);
     },
   });
 
@@ -49,6 +54,7 @@ export default function (pi: ExtensionAPI) {
 
   // 转发状态变更 + 更新注册信息（确保 model 正确）
   pi.on("agent_start", async (_event, ctx) => {
+    currentCtx = ctx;
     if (ctx.model) {
       client.send({
         type: "register",
@@ -74,8 +80,9 @@ export default function (pi: ExtensionAPI) {
     }
   }, DEFAULTS.HEARTBEAT_INTERVAL);
 
-  // session_start 时发送更精确的注册信息
+  // session_start 时发送更精确的注册信息 + 更新 ctx
   pi.on("session_start", async (_event, ctx) => {
+    currentCtx = ctx;
     if (client.connected && ctx.model) {
       client.send({
         type: "register",
@@ -97,7 +104,12 @@ export default function (pi: ExtensionAPI) {
 }
 
 /** 处理 Hub 下发的指令 */
-function handleHubMessage(pi: ExtensionAPI, msg: HubToExtensionMessage): void {
+function handleHubMessage(
+  pi: ExtensionAPI,
+  msg: HubToExtensionMessage,
+  client: HubClient,
+  getCurrentCtx: () => any,
+): void {
   switch (msg.type) {
     case "prompt":
       pi.sendUserMessage(msg.payload.message);
@@ -108,6 +120,25 @@ function handleHubMessage(pi: ExtensionAPI, msg: HubToExtensionMessage): void {
     case "abort":
       (pi as any).abort?.();
       break;
+    case "get_history": {
+      const ctx = getCurrentCtx();
+      if (ctx?.sessionManager) {
+        try {
+          const entries = ctx.sessionManager.getBranch();
+          const response: ExtHistoryMessage = {
+            type: "history",
+            payload: { entries },
+          };
+          client.send(response);
+        } catch {
+          // getBranch 失败时返回空列表
+          client.send({ type: "history", payload: { entries: [] } });
+        }
+      } else {
+        client.send({ type: "history", payload: { entries: [] } });
+      }
+      break;
+    }
     case "ping":
     case "registered":
       break;

@@ -14,13 +14,14 @@ export default function App() {
     selectedInstanceId,
     setSelectedInstanceId,
     events,
+    history,
     handleMessage,
   } = useAppState();
 
   const { connected, send } = useWebSocket(handleMessage);
   const navigate = useNavigate();
 
-  // 选中实例时导航 + 订阅
+  // 选中实例时导航 + 订阅 + 请求历史
   const handleSelect = useCallback(
     (id: InstanceId) => {
       if (selectedInstanceId) {
@@ -30,6 +31,7 @@ export default function App() {
         });
       }
       send({ type: "subscribe", payload: { instanceId: id } });
+      send({ type: "history", payload: { instanceId: id } });
       setSelectedInstanceId(id);
       navigate(`/instance/${id}`);
     },
@@ -75,6 +77,7 @@ export default function App() {
               setSelectedInstanceId={setSelectedInstanceId}
               send={send}
               events={events}
+              history={history}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
               instanceStatus={selectedInstance?.status}
@@ -86,6 +89,7 @@ export default function App() {
           element={
             <EventStream
               events={events}
+              history={[]}
               instanceId={null}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
@@ -104,6 +108,7 @@ function InstanceRoute({
   setSelectedInstanceId,
   send,
   events,
+  history,
   onSendMessage,
   onAbort,
   instanceStatus,
@@ -113,6 +118,7 @@ function InstanceRoute({
   setSelectedInstanceId: (id: InstanceId | null) => void;
   send: (msg: any) => void;
   events: any[];
+  history: Map<InstanceId, unknown[]>;
   onSendMessage: (message: string) => void;
   onAbort: () => void;
   instanceStatus?: "idle" | "streaming";
@@ -134,6 +140,7 @@ function InstanceRoute({
         });
       }
       send({ type: "subscribe", payload: { instanceId: id } });
+      send({ type: "history", payload: { instanceId: id } });
       setSelectedInstanceId(id);
     } else if (!exists && instances.length > 0) {
       // 实例不存在（ID 过期），回首页
@@ -152,6 +159,7 @@ function InstanceRoute({
   return (
     <EventStream
       events={events}
+      history={history.get(id as InstanceId) ?? []}
       instanceId={id as InstanceId | null}
       onSendMessage={onSendMessage}
       onAbort={onAbort}

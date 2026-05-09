@@ -16,6 +16,8 @@ export interface AppState {
     data: unknown;
     timestamp: number;
   }>;
+  /** 实例的历史对话数据（getBranch 返回的 entries） */
+  history: Map<InstanceId, unknown[]>;
 }
 
 export function useAppState() {
@@ -23,6 +25,7 @@ export function useAppState() {
   const [selectedInstanceId, setSelectedInstanceId] =
     useState<InstanceId | null>(null);
   const [events, setEvents] = useState<AppState["events"]>([]);
+  const [history, setHistory] = useState<Map<InstanceId, unknown[]>>(new Map());
 
   const handleMessage = useCallback((msg: HubToBrowserMessage) => {
     switch (msg.type) {
@@ -60,7 +63,11 @@ export function useAppState() {
         ]);
         break;
       case "history":
-        // TODO: 处理历史消息
+        setHistory((prev) => {
+          const next = new Map(prev);
+          next.set(msg.payload.instanceId, msg.payload.messages);
+          return next;
+        });
         break;
       case "error":
         console.error("[Paimon]", msg.payload.message);
@@ -73,6 +80,7 @@ export function useAppState() {
     selectedInstanceId,
     setSelectedInstanceId,
     events,
+    history,
     handleMessage,
   };
 }

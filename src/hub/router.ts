@@ -67,6 +67,26 @@ export function handleExtensionMessage(
       }
       break;
     }
+    case "history": {
+      const id = registry.findInstanceByWs(ws);
+      if (!id) return;
+
+      // 转发给订阅了该实例的浏览器
+      const subscribers = registry.getSubscribers(id);
+      if (subscribers.length > 0) {
+        const historyMsg = JSON.stringify({
+          type: "history",
+          payload: {
+            instanceId: id,
+            messages: msg.payload.entries,
+          },
+        });
+        for (const browser of subscribers) {
+          browser.send(historyMsg);
+        }
+      }
+      break;
+    }
   }
 }
 
