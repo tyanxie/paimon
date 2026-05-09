@@ -6,8 +6,6 @@ import {
   FileText,
   Terminal,
   Pencil,
-  FolderOpen,
-  Search,
   Wrench,
   X,
   CircleX,
@@ -23,9 +21,6 @@ function getToolIcon(name: string) {
     bash: <Terminal size={14} />,
     edit: <Pencil size={14} />,
     write: <Pencil size={14} />,
-    subagent: <FolderOpen size={14} />,
-    task: <FolderOpen size={14} />,
-    iwiki: <Search size={14} />,
   };
   return iconMap[name] ?? <Wrench size={14} />;
 }
@@ -41,16 +36,7 @@ function getToolSummary(name: string, args: Record<string, any>): string {
       return args.path ?? "";
     case "write":
       return args.path ?? "";
-    case "subagent":
-      return args.task ? String(args.task).slice(0, 60) : "";
-    case "task":
-      return args.action ?? "";
     default:
-      for (const val of Object.values(args)) {
-        if (typeof val === "string" && val.length > 0) {
-          return val.slice(0, 60);
-        }
-      }
       return "";
   }
 }
@@ -117,7 +103,7 @@ export function ToolCallCard({
           </span>
         )}
         {/* 右侧状态 icon：执行中 / 失败 / 完成 */}
-        <span className="flex-shrink-0">
+        <span className="flex-shrink-0 ml-auto">
           {!isCompleted ? (
             <Loader2
               size={14}
