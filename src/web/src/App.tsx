@@ -17,7 +17,7 @@ function useSelectedInstanceId(): InstanceId | null {
 }
 
 export default function App() {
-  const { instances, entries, streamingInstances, hasMore, handleMessage } =
+  const { instances, historyEntries, streamingEntry, hasMore, handleMessage } =
     useAppState();
 
   const { connected, send } = useWebSocket(handleMessage);
@@ -86,28 +86,34 @@ export default function App() {
   }, [selectedInstanceId, send]);
 
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
-  const instanceEntries = selectedInstanceId
-    ? ((entries.get(selectedInstanceId) ?? []) as any[])
+
+  // 合并 history + streaming 供渲染
+  const instanceHistory = selectedInstanceId
+    ? (historyEntries.get(selectedInstanceId) ?? [])
     : [];
-  const isStreaming = selectedInstanceId
-    ? streamingInstances.has(selectedInstanceId)
-    : false;
+  const instanceStreaming = selectedInstanceId
+    ? (streamingEntry.get(selectedInstanceId) ?? null)
+    : null;
+  const instanceEntries = instanceStreaming
+    ? [...instanceHistory, instanceStreaming]
+    : instanceHistory;
+  const isStreaming = instanceStreaming !== null;
   const instanceHasMore = selectedInstanceId
     ? (hasMore.get(selectedInstanceId) ?? false)
     : false;
 
-  // 加载更多历史
+  // 加载更多历史（offset 只计算 historyEntries，不含 streaming）
   const handleLoadMore = useCallback(() => {
     if (!selectedInstanceId || !instanceHasMore) return;
-    const currentEntries = entries.get(selectedInstanceId) ?? [];
+    const history = historyEntries.get(selectedInstanceId) ?? [];
     send({
       type: "history",
       payload: {
         instanceId: selectedInstanceId,
-        offset: currentEntries.length,
+        offset: history.length,
       },
     });
-  }, [selectedInstanceId, instanceHasMore, entries, send]);
+  }, [selectedInstanceId, instanceHasMore, historyEntries, send]);
 
   return (
     <div className="h-screen w-screen animated-bg flex items-stretch p-3 gap-3 overflow-hidden">
