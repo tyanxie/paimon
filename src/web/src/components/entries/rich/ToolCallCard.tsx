@@ -11,6 +11,7 @@ import {
   CircleX,
   Loader2,
   ChevronRight,
+  Timer,
 } from "lucide-react";
 import type { SessionEntry } from "../../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
@@ -156,7 +157,14 @@ export function ToolCallCard({
   const isError = result?.isError ?? false;
 
   // 按工具名选择弹窗组件
-  const DetailModal = name === "read" ? ReadDetailModal : DefaultDetailModal;
+  const DetailModal =
+    name === "read"
+      ? ReadDetailModal
+      : name === "bash"
+        ? BashDetailModal
+        : name === "write"
+          ? WriteDetailModal
+          : DefaultDetailModal;
 
   return (
     <>
@@ -222,10 +230,12 @@ interface DetailModalProps {
 function ModalShell({
   name,
   onClose,
+  trailing,
   children,
 }: {
   name: string;
   onClose: () => void;
+  trailing?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -247,12 +257,15 @@ function ModalShell({
               {name}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--fill-secondary)] transition-colors text-[var(--label-secondary)]"
-          >
-            <X size={14} />
-          </button>
+          <div className="flex items-center gap-2">
+            {trailing}
+            <button
+              onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--fill-secondary)] transition-colors text-[var(--label-secondary)]"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
 
         {/* 内容区 */}
@@ -303,6 +316,116 @@ function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
             <MarkdownRenderer content={codeBlock!} />
           )
         ) : (
+          <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
+            <Loader2 size={14} className="animate-spin" />
+            <span>执行中...</span>
+          </div>
+        )}
+      </div>
+    </ModalShell>
+  );
+}
+
+/** Bash 工具专用弹窗 */
+function BashDetailModal({ name, args, result, onClose }: DetailModalProps) {
+  const command = args.command ?? "";
+  const timeout = args.timeout as number | undefined;
+
+  // command 用 bash 代码块渲染
+  const commandBlock = `\`\`\`bash\n${command}\n\`\`\``;
+  // result 用 plaintext 代码块渲染
+  const resultBlock =
+    result && !result.isError
+      ? `\`\`\`plaintext\n${result.content.trim()}\n\`\`\``
+      : null;
+
+  return (
+    <ModalShell
+      name={name}
+      onClose={onClose}
+      trailing={
+        timeout != null ? (
+          <span className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)]">
+            <Timer size={12} />
+            {timeout}s
+          </span>
+        ) : undefined
+      }
+    >
+      {/* 命令区 */}
+      <div className="px-5 pt-3 pb-3">
+        <MarkdownRenderer content={commandBlock} />
+      </div>
+
+      {/* 分隔线 */}
+      <div className="border-b border-[var(--separator)]" />
+
+      {/* 结果区 */}
+      <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 scrollbar-auto">
+        {result !== null ? (
+          result.isError ? (
+            <pre className="text-[12px] leading-[18px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
+              {result.content}
+            </pre>
+          ) : (
+            <MarkdownRenderer content={resultBlock!} />
+          )
+        ) : (
+          <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
+            <Loader2 size={14} className="animate-spin" />
+            <span>执行中...</span>
+          </div>
+        )}
+      </div>
+    </ModalShell>
+  );
+}
+
+/** Write 工具专用弹窗 */
+function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
+  const path = args.path ?? "";
+  const content = args.content ?? "";
+  const language = getLanguageFromPath(path);
+
+  // content 用代码块渲染
+  const contentBlock = `\`\`\`${language ?? ""}\n${content}\n\`\`\``;
+
+  return (
+    <ModalShell name={name} onClose={onClose}>
+      {/* 地址栏 */}
+      <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
+        <p className="text-[12px] text-[var(--label-secondary)] break-all leading-[18px] font-mono">
+          {path}
+        </p>
+      </div>
+
+      {/* 内容 */}
+      <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 space-y-3 scrollbar-auto">
+        {/* 文件内容 */}
+        <section>
+          <MarkdownRenderer content={contentBlock} />
+        </section>
+
+        {/* 结果 */}
+        {result !== null && (
+          <section>
+            <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
+              结果
+            </h4>
+            <pre
+              className={`text-[12px] leading-[18px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 ${
+                result.isError
+                  ? "text-red-400 bg-red-400/5"
+                  : "text-[var(--label-secondary)] bg-[var(--fill-tertiary)]"
+              }`}
+            >
+              {result.content}
+            </pre>
+          </section>
+        )}
+
+        {/* 执行中 */}
+        {result === null && (
           <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
             <Loader2 size={14} className="animate-spin" />
             <span>执行中...</span>

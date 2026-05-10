@@ -7,6 +7,17 @@ import { useState, useCallback } from "react";
 import type { Components } from "react-markdown";
 import { Copy, Check } from "lucide-react";
 
+/** 从 React children 中递归提取纯文本 */
+function extractText(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join("");
+  if (typeof node === "object" && "props" in node) {
+    return extractText((node as React.ReactElement<any>).props.children);
+  }
+  return "";
+}
+
 /** 代码块：带语法高亮 + 复制按钮 */
 function CodeBlock({
   language,
@@ -16,7 +27,7 @@ function CodeBlock({
   children?: React.ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
-  const code = String(children).replace(/\n$/, "");
+  const code = extractText(children).replace(/\n$/, "");
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(code);

@@ -157,7 +157,7 @@ Browser → Hub：
 - **Streaming 恢复**: 刷新页面后 `message_update` 隐式创建 streamingEntry，无需先收到 `message_start`
 - **自动滚动**: 用户在底部时自动跟随新内容；history prepend 期间暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中）
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
-- **Tool 弹窗架构**: 每个工具可拥有专属 DetailModal（如 ReadDetailModal），未定制的工具使用 DefaultDetailModal（JSON args + 纯文本 result）；共享 ModalShell 外壳组件
+- **Tool 弹窗架构**: 每个工具可拥有专属 DetailModal（ReadDetailModal / BashDetailModal / WriteDetailModal），未定制的工具使用 DefaultDetailModal（JSON args + 纯文本 result）；共享 ModalShell 外壳组件
 - **代码高亮**: Read 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型
 - **对话展示**: 统一渲染 `[...historyEntries, streamingEntry?]`，历史 prepend + streaming 实时更新，互不冲突，详见 `docs/design/conversation-rendering.md`
 
