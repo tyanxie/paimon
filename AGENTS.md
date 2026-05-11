@@ -36,7 +36,6 @@ paimon/
 │           ├── stores/             # useAppState, useSettings
 │           └── components/         # Sidebar, EventStream, Settings
 │               ├── ui/             # 通用 UI 组件 (ModalShell)
-│               ├── SessionInfoBar.tsx  # 会话信息条 (git branch + context usage)
 │               └── entries/        # 消息渲染器
 │                   ├── raw/        # 原始模式（调试用）
 │                   └── rich/       # 渲染模式（Markdown + 气泡 + Tool卡片 + ErrorCard）
@@ -163,7 +162,7 @@ Browser → Hub：
 - **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型
 - **Diff 渲染**: Edit 弹窗从 `result.details.diff` 取已生成的 unified diff，前端逐行解析前缀着色（红删绿增灰上下文），配色跟随 light/dark 主题切换
 - **API 错误展示**: 助手消息 stopReason="error" 时渲染 ErrorCard；短 detail 直接内联，长 detail (>200字符) 点击卡片弹出 ModalShell 展示完整错误信息（结构化解析 type/message/requestId）
-- **会话信息展示**: Extension 在 message_end/session_compact 时发送 contextUsage + gitBranch；Web 侧边栏渲染上下文进度条（绿/橙/红阈值），对话区 SessionInfoBar 展示 git branch + context tokens/percent
+- **会话信息展示**: Extension 在 message_end/session_compact 时发送 contextUsage + gitBranch；Web 侧边栏渲染上下文进度条（绿/橙/红阈值），输入框上方内联展示 context usage + git branch
 - **对话展示**: 统一渲染 `[...historyEntries, streamingEntry?]`，历史 prepend + streaming 实时更新，互不冲突，详见 `docs/design/conversation-rendering.md`
 
 ## CLI 设计

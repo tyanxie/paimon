@@ -1,13 +1,12 @@
 // 事件流面板：展示选中实例的对话 entries（独立玻璃面板）
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { ArrowUp, Square, ChevronsDown } from "lucide-react";
+import { ArrowUp, Square, ChevronsDown, GitBranch } from "lucide-react";
 import type { InstanceId, ContextUsageInfo } from "../../../protocol/types";
 import type { SessionEntry } from "../stores/useAppState";
 import { useMessageRenderMode } from "../stores/useSettings";
 import { RawEntryItem } from "./entries/raw";
 import { RichEntryItem } from "./entries/rich";
-import { SessionInfoBar } from "./SessionInfoBar";
 
 interface EventStreamProps {
   entries: SessionEntry[];
@@ -164,12 +163,11 @@ export function EventStream({
   return (
     <div className="flex-1 flex flex-col min-w-0 gap-3">
       {/* 对话流 */}
-      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden relative">
-        <SessionInfoBar gitBranch={gitBranch} contextUsage={contextUsage} />
+      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden relative p-4">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-5 py-4 space-y-1 scrollbar-auto"
+          className="flex-1 overflow-y-auto space-y-1 scrollbar-auto"
         >
           {hasMore && (
             <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2">
@@ -209,6 +207,19 @@ export function EventStream({
           </div>
         )}
       </main>
+
+      {/* 上下文 + 分支信息（输入框上方裸文字） */}
+      {(contextUsage || gitBranch) && (
+        <div className="flex items-center justify-between px-3 -mb-2 text-[12px] text-[var(--label-secondary)]">
+          <ContextIndicator contextUsage={contextUsage} />
+          {gitBranch && (
+            <span className="flex items-center gap-1 opacity-70">
+              <GitBranch size={10} />
+              {gitBranch}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* 输入栏（独立玻璃胶囊） */}
       <div
@@ -258,5 +269,34 @@ export function EventStream({
         </div>
       </div>
     </div>
+  );
+}
+
+/** 上下文用量指示器 */
+function ContextIndicator({
+  contextUsage,
+}: {
+  contextUsage?: ContextUsageInfo;
+}) {
+  if (!contextUsage) return null;
+
+  const { tokens, contextWindow, percent } = contextUsage;
+  if (tokens == null || percent == null) return null;
+
+  const color = percent > 90 ? "#ff4245" : percent > 60 ? "#ff9230" : "#30d158";
+
+  // 格式化 token 数（对齐 footer 插件逻辑）
+  const fmt = (n: number) => {
+    if (n < 1000) return String(n);
+    if (n < 10000) return `${(n / 1000).toFixed(1)}k`;
+    if (n < 1000000) return `${Math.round(n / 1000)}k`;
+    const m = n / 1000000;
+    return m % 1 === 0 ? `${m}M` : `${m.toFixed(1)}M`;
+  };
+
+  return (
+    <span style={{ color }}>
+      {fmt(tokens)} / {fmt(contextWindow)} ({Math.round(percent)}%)
+    </span>
   );
 }

@@ -46,7 +46,7 @@ Paimon 由两部分组成：
 - 渲染模式：Markdown 全量渲染、用户气泡、思考折叠、Tool Call 卡片配对
 - Tool 弹窗：按工具类型定制（read/write 代码高亮、bash 命令+输出分区、edit diff 视图、其他通用 JSON）
 - API 错误展示：ErrorCard 卡片 + 超长错误弹窗详情（结构化解析 status/type/message/requestId）
-- 会话信息：侧边栏上下文进度条 + 对话区顶部 SessionInfoBar（git branch / context usage）
+- 会话信息：侧边栏上下文进度条 + 输入框上方内联展示（context usage / git branch）
 
 ## 技术栈
 
