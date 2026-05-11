@@ -8,6 +8,7 @@ import {
   type Background,
   type MessageRenderMode,
 } from "../stores/useSettings";
+import { MobileNavBar } from "./ui/MobileNavBar";
 
 // ========================================
 // 配置选项
@@ -155,9 +156,10 @@ export function Settings() {
   const [messageRenderMode, setMessageRenderMode] = useMessageRenderMode();
 
   return (
-    <div className="flex-1 flex items-start justify-center p-6 overflow-y-auto scrollbar-auto">
+    <div className="flex-1 flex items-start justify-center p-4 md:p-6 overflow-y-auto scrollbar-auto">
       <div className="w-full max-w-[480px]">
-        <h1 className="text-[22px] font-semibold text-[var(--label-primary)] mb-6 px-4">
+        <MobileNavBar title="设置" />
+        <h1 className="hidden md:block text-[22px] font-semibold text-[var(--label-primary)] mb-6 px-4">
           设置
         </h1>
 

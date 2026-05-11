@@ -35,7 +35,7 @@ paimon/
 │           ├── hooks/              # useWebSocket
 │           ├── stores/             # useAppState, useSettings
 │           └── components/         # Sidebar, EventStream, Settings
-│               ├── ui/             # 通用 UI 组件 (ModalShell)
+│               ├── ui/             # 通用 UI 组件 (ModalShell, MobileNavBar)
 │               └── entries/        # 消息渲染器
 │                   ├── raw/        # 原始模式（调试用）
 │                   └── rich/       # 渲染模式（Markdown + 气泡 + Tool卡片 + ErrorCard）
@@ -89,6 +89,7 @@ paimon/
 - 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）
 - 设置页（/settings）：外观配置（主题 + 背景）+ 对话配置（渲染模式：原始/渲染），存储于 localStorage（paimon:appearance / paimon:background / paimon:messageRenderMode）
 - 代码高亮：不使用第三方 hljs 主题，自定义 CSS 变量配色（`--hljs-*`），跟随 light/dark 主题自动切换；配色低饱和度，与 macOS 26 label 色系协调
+- 响应式布局：Tailwind `md:` 断点（768px）区分移动/桌面；移动端 Sidebar 隐藏、根路由全屏实例列表、对话页 MobileNavBar 导航；不分离 Layout 组件，同一份 JSX + 响应式类
 
 ## 架构设计
 
@@ -202,6 +203,6 @@ paimon hub logs [--follow]        # 查看日志
 - [x] abort 按钮
 - [x] URL 路由保持选中状态
 - [x] Liquid Glass 浮动面板 + 动态渐变背景
-- [ ] 移动端优化（后续）
+- [x] 移动端响应式布局（v0.1）
 - [ ] tunnel 集成（后续）
 - [ ] 认证（后续）

@@ -116,13 +116,16 @@ export default function App() {
   }, [selectedInstanceId, instanceHasMore, historyEntries, send]);
 
   return (
-    <div className="h-screen w-screen animated-bg flex items-stretch p-3 gap-3 overflow-hidden">
-      <Sidebar
-        instances={instances}
-        selectedId={selectedInstanceId}
-        onSelect={handleSelect}
-        connected={connected}
-      />
+    <div className="h-screen w-screen animated-bg flex items-stretch p-2 gap-2 md:p-3 md:gap-3 overflow-hidden">
+      {/* 侧边栏：移动端隐藏 */}
+      <div className="hidden md:flex self-stretch">
+        <Sidebar
+          instances={instances}
+          selectedId={selectedInstanceId}
+          onSelect={handleSelect}
+          connected={connected}
+        />
+      </div>
       <Routes>
         <Route path="/settings" element={<Settings />} />
         <Route
@@ -139,19 +142,41 @@ export default function App() {
               onLoadMore={handleLoadMore}
               contextUsage={selectedInstance?.contextUsage}
               gitBranch={selectedInstance?.gitBranch}
+              instanceName={
+                selectedInstance?.cwd.split("/").pop() || selectedInstance?.cwd
+              }
+              instanceModel={
+                selectedInstance
+                  ? `${selectedInstance.model.provider}/${selectedInstance.model.id}`
+                  : undefined
+              }
             />
           }
         />
         <Route
           path="*"
           element={
-            <EventStream
-              entries={[]}
-              instanceId={null}
-              isStreaming={false}
-              onSendMessage={handleSendMessage}
-              onAbort={handleAbort}
-            />
+            <>
+              {/* 移动端：显示实例列表 */}
+              <div className="flex-1 md:hidden min-w-0 flex flex-col">
+                <Sidebar
+                  instances={instances}
+                  selectedId={selectedInstanceId}
+                  onSelect={handleSelect}
+                  connected={connected}
+                />
+              </div>
+              {/* 桌面端：显示空状态 */}
+              <div className="hidden md:flex flex-1 min-w-0">
+                <EventStream
+                  entries={[]}
+                  instanceId={null}
+                  isStreaming={false}
+                  onSendMessage={handleSendMessage}
+                  onAbort={handleAbort}
+                />
+              </div>
+            </>
           }
         />
       </Routes>

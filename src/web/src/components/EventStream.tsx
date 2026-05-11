@@ -7,6 +7,7 @@ import type { SessionEntry } from "../stores/useAppState";
 import { useMessageRenderMode } from "../stores/useSettings";
 import { RawEntryItem } from "./entries/raw";
 import { RichEntryItem } from "./entries/rich";
+import { MobileNavBar } from "./ui/MobileNavBar";
 
 interface EventStreamProps {
   entries: SessionEntry[];
@@ -19,6 +20,8 @@ interface EventStreamProps {
   onLoadMore?: () => void;
   contextUsage?: ContextUsageInfo;
   gitBranch?: string | null;
+  instanceName?: string;
+  instanceModel?: string;
 }
 
 export function EventStream({
@@ -32,6 +35,8 @@ export function EventStream({
   onLoadMore,
   contextUsage,
   gitBranch,
+  instanceName,
+  instanceModel,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -161,9 +166,14 @@ export function EventStream({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 gap-3">
+    <div className="flex-1 flex flex-col min-w-0 gap-2 md:gap-3">
       {/* 对话流 */}
-      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden relative p-4">
+      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden relative p-3 md:p-4">
+        {/* 移动端导航栏 */}
+        <MobileNavBar
+          title={instanceName || "Instance"}
+          subtitle={instanceModel}
+        />
         <div
           ref={scrollRef}
           onScroll={handleScroll}
