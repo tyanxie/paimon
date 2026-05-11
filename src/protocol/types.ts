@@ -85,7 +85,7 @@ export interface ExtEventMessage {
 export interface ExtStateMessage {
   type: "state";
   payload: {
-    status: "idle" | "streaming";
+    status?: "idle" | "streaming";
     /** 上下文使用情况 */
     contextUsage?: ContextUsageInfo;
     /** Git 分支名 */

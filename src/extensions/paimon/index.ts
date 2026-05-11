@@ -119,7 +119,6 @@ export default function (pi: ExtensionAPI) {
     client.send({
       type: "state",
       payload: {
-        status: "streaming",
         contextUsage: getContextUsageInfo(ctx),
       },
     });

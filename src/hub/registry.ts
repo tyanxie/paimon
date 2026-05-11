@@ -148,7 +148,7 @@ class Registry {
   updateState(
     id: InstanceId,
     state: {
-      status: "idle" | "streaming";
+      status?: "idle" | "streaming";
       contextUsage?: {
         tokens: number | null;
         contextWindow: number;
@@ -160,7 +160,9 @@ class Registry {
     const record = this.instances.get(id);
     if (!record) return;
 
-    record.info.status = state.status;
+    if (state.status !== undefined) {
+      record.info.status = state.status;
+    }
     if (state.contextUsage !== undefined) {
       record.info.contextUsage = state.contextUsage;
     }
