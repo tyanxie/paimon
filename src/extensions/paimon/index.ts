@@ -112,6 +112,19 @@ export default function (pi: ExtensionAPI) {
     });
   });
 
+  // 压缩完成后更新上下文使用情况（tokens 会变为 null）
+  pi.on("session_compact", async (_event, ctx) => {
+    currentCtx = ctx;
+    if (!client.connected) return;
+    client.send({
+      type: "state",
+      payload: {
+        status: "streaming",
+        contextUsage: getContextUsageInfo(ctx),
+      },
+    });
+  });
+
   // 心跳
   const heartbeatInterval = setInterval(() => {
     if (client.connected) {
