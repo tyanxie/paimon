@@ -113,11 +113,20 @@ function getLanguageFromPath(path: string): string | undefined {
   return extToLanguage[ext];
 }
 
+/** toolResult 结构化结果 */
+interface ToolResult {
+  /** 纯文本内容（已从 content blocks 提取） */
+  content: string;
+  isError: boolean;
+  /** 工具特定元数据（如 edit 的 diff） */
+  details?: Record<string, any>;
+}
+
 /** 从 entries 中查找匹配的 toolResult */
 function findToolResult(
   entries: SessionEntry[],
   toolCallId: string,
-): { content: string; isError: boolean } | null {
+): ToolResult | null {
   for (const entry of entries) {
     const msg = entry.message as any;
     if (msg?.role === "toolResult" && msg.toolCallId === toolCallId) {
@@ -127,7 +136,11 @@ function findToolResult(
             .map((b: any) => b.text)
             .join("\n")
         : String(msg.content ?? "");
-      return { content: text, isError: msg.isError ?? false };
+      return {
+        content: text,
+        isError: msg.isError ?? false,
+        details: msg.details ?? undefined,
+      };
     }
   }
   return null;
@@ -164,7 +177,9 @@ export function ToolCallCard({
         ? BashDetailModal
         : name === "write"
           ? WriteDetailModal
-          : DefaultDetailModal;
+          : name === "edit"
+            ? EditDetailModal
+            : DefaultDetailModal;
 
   return (
     <>
@@ -222,7 +237,7 @@ export function ToolCallCard({
 interface DetailModalProps {
   name: string;
   args: Record<string, any>;
-  result: { content: string; isError: boolean } | null;
+  result: ToolResult | null;
   onClose: () => void;
 }
 
@@ -427,6 +442,98 @@ function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
         {/* 执行中 */}
         {result === null && (
           <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
+            <Loader2 size={14} className="animate-spin" />
+            <span>执行中...</span>
+          </div>
+        )}
+      </div>
+    </ModalShell>
+  );
+}
+
+/** Diff 行解析渲染 */
+function DiffView({ diff }: { diff: string }) {
+  const lines = diff.split("\n");
+  return (
+    <pre className="text-[12px] leading-[20px] font-mono overflow-x-auto">
+      <div style={{ minWidth: "fit-content" }}>
+        {lines.map((line, i) => {
+          const prefix = line[0];
+          if (prefix === "+") {
+            return (
+              <div
+                key={i}
+                className="px-3 rounded-[2px]"
+                style={{
+                  backgroundColor: "var(--diff-add-bg)",
+                  color: "var(--diff-add-text)",
+                }}
+              >
+                {line}
+              </div>
+            );
+          }
+          if (prefix === "-") {
+            return (
+              <div
+                key={i}
+                className="px-3 rounded-[2px]"
+                style={{
+                  backgroundColor: "var(--diff-del-bg)",
+                  color: "var(--diff-del-text)",
+                }}
+              >
+                {line}
+              </div>
+            );
+          }
+          // 上下文行（空格前缀）
+          return (
+            <div
+              key={i}
+              className="px-3"
+              style={{ color: "var(--diff-context-text)" }}
+            >
+              {line}
+            </div>
+          );
+        })}
+      </div>
+    </pre>
+  );
+}
+
+/** Edit 工具专用弹窗 */
+function EditDetailModal({ name, args, result, onClose }: DetailModalProps) {
+  const path = args.path ?? "";
+  const diff = result?.details?.diff as string | undefined;
+
+  return (
+    <ModalShell name={name} onClose={onClose}>
+      {/* 地址栏 */}
+      <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
+        <p className="text-[12px] text-[var(--label-secondary)] break-all leading-[18px] font-mono">
+          {path}
+        </p>
+      </div>
+
+      {/* 内容 */}
+      <div className="flex-1 overflow-y-auto pt-3 pb-5 scrollbar-auto">
+        {result !== null ? (
+          result.isError ? (
+            <pre className="text-[12px] leading-[18px] whitespace-pre-wrap break-words rounded-[8px] mx-5 px-3 py-2 text-red-400 bg-red-400/5">
+              {result.content}
+            </pre>
+          ) : diff ? (
+            <DiffView diff={diff} />
+          ) : (
+            // fallback: 无 diff 数据时显示纯文本结果
+            <pre className="text-[12px] leading-[18px] whitespace-pre-wrap break-words mx-5 px-3 py-2 text-[var(--label-secondary)] bg-[var(--fill-tertiary)] rounded-[8px]">
+              {result.content}
+            </pre>
+          )
+        ) : (
+          <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)] px-5">
             <Loader2 size={14} className="animate-spin" />
             <span>执行中...</span>
           </div>
