@@ -85,6 +85,7 @@
   --material-thick: rgba(246, 246, 246, 0.72);
   --material-medium: rgba(246, 246, 246, 0.6);
   --material-thin: rgba(246, 246, 246, 0.48);
+  --material-modal: rgba(246, 246, 246, 0.82);
 
   /* 面板 */
   --panel-bg: var(--material-medium);
@@ -94,12 +95,15 @@
   /* 分隔 */
   --separator: rgba(0, 0, 0, 0.08);
 
+  /* 卡片/代码块背景（light 用更轻的值） */
+  --fill-card: rgba(0, 0, 0, 0.03);
+
   /* Diff 配色 */
   --diff-add-bg: rgba(48, 209, 88, 0.08);
-  --diff-add-text: rgba(36, 138, 61, 0.85);
+  --diff-add-text: var(--label-primary);
   --diff-del-bg: rgba(255, 59, 48, 0.08);
-  --diff-del-text: rgba(255, 59, 48, 0.8);
-  --diff-context-text: var(--label-tertiary);
+  --diff-del-text: var(--label-primary);
+  --diff-context-text: var(--label-secondary);
   --diff-line-num: var(--label-tertiary);
 }
 
@@ -115,6 +119,8 @@
     --material-thick: rgba(40, 40, 40, 0.8);
     --material-medium: rgba(40, 40, 40, 0.6);
     --material-thin: rgba(40, 40, 40, 0.4);
+    --material-modal: rgba(40, 40, 40, 0.82);
+    --fill-card: rgba(255, 255, 255, 0.08);
     --panel-bg: var(--material-medium);
     --panel-border: rgba(255, 255, 255, 0.08);
     --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -123,6 +129,7 @@
     --diff-add-text: rgba(48, 209, 88, 0.85);
     --diff-del-bg: rgba(255, 69, 58, 0.12);
     --diff-del-text: rgba(255, 69, 58, 0.85);
+    --diff-context-text: var(--label-secondary);
     --bg-gradient: linear-gradient(
       135deg,
       #1a1a2e 0%,
@@ -145,6 +152,8 @@
   --material-thick: rgba(40, 40, 40, 0.8);
   --material-medium: rgba(40, 40, 40, 0.6);
   --material-thin: rgba(40, 40, 40, 0.4);
+  --material-modal: rgba(40, 40, 40, 0.82);
+  --fill-card: rgba(255, 255, 255, 0.08);
   --panel-bg: var(--material-medium);
   --panel-border: rgba(255, 255, 255, 0.08);
   --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -153,6 +162,7 @@
   --diff-add-text: rgba(48, 209, 88, 0.85);
   --diff-del-bg: rgba(255, 69, 58, 0.12);
   --diff-del-text: rgba(255, 69, 58, 0.85);
+  --diff-context-text: var(--label-secondary);
 }
 
 /* ========================================

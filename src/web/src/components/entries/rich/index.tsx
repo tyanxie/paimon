@@ -204,7 +204,7 @@ function MetaEntry({ type, summary }: { type: string; summary: string }) {
           onClick={() => setShowDetail(false)}
         >
           <div
-            className="w-[90%] max-w-[640px] max-h-[80vh] rounded-[18px] bg-[var(--panel-bg)] backdrop-blur-[30px] border border-[var(--separator)] shadow-[0_8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
+            className="w-[90%] max-w-[640px] max-h-[80vh] rounded-[18px] bg-[var(--material-modal)] backdrop-blur-[30px] border border-[var(--separator)] shadow-[0_8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 标题栏 */}

@@ -36,7 +36,7 @@ function CodeBlock({
   }, [code]);
 
   return (
-    <div className="group/code relative my-2 rounded-[8px] bg-[var(--fill-secondary)] border border-[var(--separator)] overflow-hidden">
+    <div className="group/code relative my-2 rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] overflow-hidden">
       {/* 语言标签 + 复制按钮 */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--separator)]">
         <span className="text-[11px] text-[var(--label-tertiary)] font-medium">

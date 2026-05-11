@@ -186,7 +186,7 @@ export function ToolCallCard({
       {/* 折叠卡片 */}
       <button
         onClick={() => setShowModal(true)}
-        className="w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-secondary)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group"
+        className="w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group"
       >
         <span className="text-[var(--label-secondary)] group-hover:text-[var(--color-accent)] transition-colors">
           {getToolIcon(name)}
@@ -259,7 +259,7 @@ function ModalShell({
       onClick={onClose}
     >
       <div
-        className="w-[90%] max-w-[640px] max-h-[80vh] rounded-[18px] bg-[var(--panel-bg)] backdrop-blur-[30px] border border-[var(--separator)] shadow-[0_8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
+        className="w-[90%] max-w-[640px] max-h-[80vh] rounded-[18px] bg-[var(--material-modal)] backdrop-blur-[30px] border border-[var(--separator)] shadow-[0_8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
