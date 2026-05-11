@@ -24,11 +24,11 @@ export function Sidebar({
       {/* 标题区 */}
       <div className="px-4 pt-4 pb-2">
         <div className="grid grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-x-2.5 items-center">
-          <div className="row-span-2 h-0 min-h-full">
+          <div className="row-span-2">
             <img
               src="/paimon-logo.png"
               alt="Paimon"
-              className="h-full w-auto object-contain"
+              className="h-[34px] w-auto object-contain"
             />
           </div>
           <div className="flex items-center justify-between">
