@@ -211,7 +211,11 @@ export function EventStream({
       {/* 上下文 + 分支信息（输入框上方裸文字） */}
       {(contextUsage || gitBranch) && (
         <div className="flex items-center justify-between px-3 -mb-2 text-[12px] text-[var(--label-secondary)]">
-          <ContextIndicator contextUsage={contextUsage} />
+          <span>
+            {contextUsage ? (
+              <ContextIndicator contextUsage={contextUsage} />
+            ) : null}
+          </span>
           {gitBranch && (
             <span className="flex items-center gap-1 opacity-70">
               <GitBranch size={10} />

@@ -1,7 +1,10 @@
 // Pi Extension 入口：连接 Hub、转发事件、接收指令
 
 import { spawnSync } from "child_process";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { DEFAULTS } from "../../protocol/types";
 import type {
   HubToExtensionMessage,
@@ -16,7 +19,7 @@ export default function (pi: ExtensionAPI) {
 
   let registered = false;
   // 保存最新的 ctx 引用，用于响应 get_history
-  let currentCtx: any = null;
+  let currentCtx: ExtensionContext | null = null;
 
   // 创建 Hub 客户端
   const client = new HubClient({
@@ -119,6 +122,7 @@ export default function (pi: ExtensionAPI) {
     client.send({
       type: "state",
       payload: {
+        status: ctx.isIdle() ? "idle" : "streaming",
         contextUsage: getContextUsageInfo(ctx),
       },
     });
