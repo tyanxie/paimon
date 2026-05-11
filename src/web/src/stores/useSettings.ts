@@ -23,7 +23,7 @@ const KEYS = {
 const DEFAULTS = {
   appearance: "system" as Appearance,
   background: "mist" as Background,
-  messageRenderMode: "raw" as MessageRenderMode,
+  messageRenderMode: "rich" as MessageRenderMode,
 } as const;
 
 // ========================================

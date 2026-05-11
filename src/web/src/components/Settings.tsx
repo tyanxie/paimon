@@ -42,8 +42,8 @@ const BACKGROUND_OPTIONS: {
 ];
 
 const DISPLAY_MODE_OPTIONS: { value: MessageRenderMode; label: string }[] = [
-  { value: "raw", label: "原始" },
   { value: "rich", label: "渲染" },
+  { value: "raw", label: "原始" },
 ];
 
 // ========================================
