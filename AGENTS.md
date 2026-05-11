@@ -181,7 +181,7 @@ paimon hub logs [--follow]        # 查看日志
 - 日志和用户提示使用英文
 - Git 提交格式：`type(scope): 描述`（中文描述）
 - Extension 开发遵循 pi extension 规范（参考 pi docs/extensions.md）
-- **禁止自行提交**：任何 git commit 必须由用户审阅确认后才可执行，不得主动提交
+- **提交需用户确认**：每次修改完代码后，需等待用户审阅确认后才可执行 git commit
 - **文档同步**：每次功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
 
 ## 安全
