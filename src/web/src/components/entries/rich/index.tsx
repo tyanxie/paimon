@@ -2,6 +2,7 @@
 // macOS 26 Liquid Glass 设计风格
 
 import { useState } from "react";
+import { AlertCircle, ChevronRight } from "lucide-react";
 import type { SessionEntry } from "../../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
@@ -60,6 +61,8 @@ function RichMessageItem({
           content={message.content}
           entries={entries}
           streaming={streaming}
+          stopReason={(message as any).stopReason}
+          errorMessage={(message as any).errorMessage}
         />
       );
     case "toolResult":
@@ -98,11 +101,28 @@ function AssistantMessage({
   content,
   entries,
   streaming,
+  stopReason,
+  errorMessage,
 }: {
   content: unknown;
   entries: SessionEntry[];
   streaming: boolean;
+  stopReason?: string;
+  errorMessage?: string;
 }) {
+  // API 报错且无内容
+  if (
+    stopReason === "error" &&
+    errorMessage &&
+    (!Array.isArray(content) || content.length === 0)
+  ) {
+    return (
+      <div className="px-4 py-1.5">
+        <ErrorCard message={errorMessage} />
+      </div>
+    );
+  }
+
   if (!Array.isArray(content)) {
     return (
       <div className="px-4 py-1.5">
@@ -130,6 +150,10 @@ function AssistantMessage({
           autoCollapse={block.type === "thinking" && hasOutput && !isThinking}
         />
       ))}
+      {/* 部分输出 + 最终报错 */}
+      {stopReason === "error" && errorMessage && (
+        <ErrorCard message={errorMessage} />
+      )}
       {streaming && lastBlock?.type !== "thinking" && (
         <span className="inline-block w-2 h-4 bg-[var(--label-tertiary)] rounded-sm animate-pulse" />
       )}
@@ -206,5 +230,116 @@ function MetaEntry({ type, summary }: { type: string; summary: string }) {
         </ModalShell>
       )}
     </>
+  );
+}
+
+/** API 错误卡片 */
+function ErrorCard({ message }: { message: string }) {
+  const [showModal, setShowModal] = useState(false);
+
+  // 尝试提取简要信息
+  let brief = message;
+  let detail = "";
+  let errorType = "";
+  let requestId = "";
+  const jsonStart = message.indexOf("{");
+  if (jsonStart > 0) {
+    brief = message.slice(0, jsonStart).trim();
+    try {
+      const parsed = JSON.parse(message.slice(jsonStart));
+      detail = parsed?.error?.message ?? message.slice(jsonStart);
+      errorType = parsed?.error?.type ?? "";
+      // 尝试从 message 中提取 request id
+      const reqIdMatch = detail.match(/request id:\s*([\w]+)/i);
+      if (reqIdMatch) requestId = reqIdMatch[1];
+    } catch {
+      detail = message.slice(jsonStart);
+    }
+  }
+
+  const isLong = detail.length > 200;
+
+  return (
+    <>
+      <div
+        onClick={isLong ? () => setShowModal(true) : undefined}
+        className={`rounded-[10px] border border-[rgba(255,66,69,0.3)] bg-[rgba(255,66,69,0.06)] dark:bg-[rgba(255,66,69,0.1)] px-3.5 py-2.5 max-w-[640px] ${
+          isLong ? "cursor-pointer" : ""
+        }`}
+      >
+        <div className="flex items-start gap-2">
+          <AlertCircle
+            size={14}
+            className="text-[#ff4245] flex-shrink-0 mt-0.5"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[12px] font-medium text-[#ff4245]">{brief}</p>
+              {isLong && (
+                <ChevronRight
+                  size={12}
+                  className="text-[var(--label-tertiary)] flex-shrink-0"
+                />
+              )}
+            </div>
+            {detail && !isLong && (
+              <p className="text-[11px] text-[var(--label-secondary)] mt-1.5 break-all whitespace-pre-wrap">
+                {detail}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showModal && (
+        <ModalShell title="错误详情" onClose={() => setShowModal(false)}>
+          <div className="flex-1 overflow-y-auto px-5 py-6 scrollbar-auto">
+            {/* 顶部图标 + 状态码 */}
+            <div className="flex flex-col items-center text-center mb-5">
+              <div className="w-10 h-10 rounded-full bg-[rgba(255,66,69,0.1)] dark:bg-[rgba(255,66,69,0.15)] flex items-center justify-center mb-3">
+                <AlertCircle size={20} className="text-[#ff4245]" />
+              </div>
+              <p className="text-[15px] font-semibold text-[#ff4245]">
+                {brief}
+              </p>
+            </div>
+            {/* 错误信息 */}
+            <div className="rounded-[10px] bg-[var(--fill-card)] p-4 space-y-3">
+              <ErrorDetailRow label="错误信息" value={detail} />
+              {errorType && (
+                <ErrorDetailRow label="错误类型" value={errorType} />
+              )}
+              {requestId && (
+                <ErrorDetailRow label="请求 ID" value={requestId} mono />
+              )}
+            </div>
+          </div>
+        </ModalShell>
+      )}
+    </>
+  );
+}
+
+/** 错误详情行 */
+function ErrorDetailRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] text-[var(--label-tertiary)] mb-0.5">{label}</p>
+      <p
+        className={`text-[13px] text-[var(--label-primary)] break-all whitespace-pre-wrap ${
+          mono ? "font-mono text-[12px]" : ""
+        }`}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
