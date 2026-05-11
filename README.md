@@ -50,6 +50,7 @@ Paimon 由两部分组成：
 - API 错误展示：ErrorCard 卡片 + 超长错误弹窗详情（结构化解析 status/type/message/requestId）
 - 会话信息：侧边栏上下文进度条 + 输入框上方内联展示（context usage / git branch）
 - 移动端响应式布局（<768px 自动切换全屏实例列表/对话页）
+- iOS Safe Area 适配（圆角屏/Home Indicator）
 
 ## 技术栈
 
