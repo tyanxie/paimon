@@ -1,10 +1,12 @@
 // Pi Extension 入口：连接 Hub、转发事件、接收指令
 
+import { spawnSync } from "child_process";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { DEFAULTS } from "../../protocol/types";
 import type {
   HubToExtensionMessage,
   ExtHistoryMessage,
+  ContextUsageInfo,
 } from "../../protocol/types";
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
@@ -20,15 +22,30 @@ export default function (pi: ExtensionAPI) {
   const client = new HubClient({
     port,
     onConnected() {
-      // 连接成功后发送基础注册信息
+      // 连接成功后发送注册信息（优先用已缓存的 ctx）
+      const ctx = currentCtx;
       client.send({
         type: "register",
         payload: {
-          cwd: process.cwd(),
-          model: { provider: "unknown", id: "unknown" },
+          cwd: ctx?.cwd ?? process.cwd(),
+          model: ctx?.model
+            ? { provider: ctx.model.provider, id: ctx.model.id }
+            : { provider: "unknown", id: "unknown" },
+          sessionName: ctx?.sessionManager?.getSessionFile?.() ?? undefined,
           pid: process.pid,
         },
       });
+      // 连接时如果已有上下文信息，一并发送
+      if (ctx) {
+        client.send({
+          type: "state",
+          payload: {
+            status: "idle",
+            contextUsage: getContextUsageInfo(ctx),
+            gitBranch: getGitBranch(ctx.cwd ?? process.cwd()),
+          },
+        });
+      }
     },
     onDisconnected() {
       registered = false;
@@ -69,8 +86,30 @@ export default function (pi: ExtensionAPI) {
     client.send({ type: "state", payload: { status: "streaming" } });
   });
 
+  // 每次 message 结束时更新上下文使用情况 + git 分支
+  pi.on("message_end", async (_event, ctx) => {
+    currentCtx = ctx;
+    if (!client.connected) return;
+    client.send({
+      type: "state",
+      payload: {
+        status: "streaming",
+        contextUsage: getContextUsageInfo(ctx),
+        gitBranch: getGitBranch(ctx.cwd),
+      },
+    });
+  });
+
   pi.on("agent_end", async () => {
-    client.send({ type: "state", payload: { status: "idle" } });
+    const ctx = currentCtx;
+    client.send({
+      type: "state",
+      payload: {
+        status: "idle",
+        contextUsage: ctx ? getContextUsageInfo(ctx) : undefined,
+        gitBranch: ctx ? getGitBranch(ctx.cwd) : undefined,
+      },
+    });
   });
 
   // 心跳
@@ -189,5 +228,30 @@ function handleHubMessage(
     case "ping":
     case "registered":
       break;
+  }
+}
+
+/** 从 ctx 获取上下文使用信息 */
+function getContextUsageInfo(ctx: any): ContextUsageInfo | undefined {
+  const usage = ctx.getContextUsage?.();
+  if (!usage) return undefined;
+  return {
+    tokens: usage.tokens,
+    contextWindow: usage.contextWindow,
+    percent: usage.percent,
+  };
+}
+
+/** 获取当前 git 分支名 */
+function getGitBranch(cwd: string): string | null {
+  try {
+    const result = spawnSync(
+      "git",
+      ["--no-optional-locks", "symbolic-ref", "--quiet", "--short", "HEAD"],
+      { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+    return result.status === 0 ? result.stdout.trim() || null : null;
+  } catch {
+    return null;
   }
 }

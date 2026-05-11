@@ -147,12 +147,26 @@ class Registry {
   /** 更新实例状态 */
   updateState(
     id: InstanceId,
-    state: { status: "idle" | "streaming"; contextUsage?: number },
+    state: {
+      status: "idle" | "streaming";
+      contextUsage?: {
+        tokens: number | null;
+        contextWindow: number;
+        percent: number | null;
+      };
+      gitBranch?: string | null;
+    },
   ): void {
     const record = this.instances.get(id);
     if (!record) return;
 
     record.info.status = state.status;
+    if (state.contextUsage !== undefined) {
+      record.info.contextUsage = state.contextUsage;
+    }
+    if (state.gitBranch !== undefined) {
+      record.info.gitBranch = state.gitBranch;
+    }
 
     // 通知浏览器
     this.broadcastToBrowsers({

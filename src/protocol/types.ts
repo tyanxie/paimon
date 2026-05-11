@@ -8,6 +8,16 @@
 /** pi 实例唯一标识（Hub 分配） */
 export type InstanceId = string;
 
+/** 上下文使用信息 */
+export interface ContextUsageInfo {
+  /** 当前 token 数（压缩后首次响应前为 null） */
+  tokens: number | null;
+  /** 模型上下文窗口大小 */
+  contextWindow: number;
+  /** 使用率百分比（0-100，tokens 为 null 时为 null） */
+  percent: number | null;
+}
+
 /** pi 实例信息 */
 export interface InstanceInfo {
   id: InstanceId;
@@ -21,6 +31,10 @@ export interface InstanceInfo {
   pid: number;
   /** 实例状态 */
   status: "idle" | "streaming";
+  /** 上下文使用情况 */
+  contextUsage?: ContextUsageInfo;
+  /** Git 分支名（null = 非 git 仓库, "detached" = detached HEAD） */
+  gitBranch?: string | null;
   /** 注册时间 */
   connectedAt: number;
   /** 最后心跳时间 */
@@ -72,8 +86,10 @@ export interface ExtStateMessage {
   type: "state";
   payload: {
     status: "idle" | "streaming";
-    /** context window 使用率 0-1 */
-    contextUsage?: number;
+    /** 上下文使用情况 */
+    contextUsage?: ContextUsageInfo;
+    /** Git 分支名 */
+    gitBranch?: string | null;
   };
 }
 

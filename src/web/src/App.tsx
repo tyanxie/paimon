@@ -137,6 +137,8 @@ export default function App() {
               instanceStatus={selectedInstance?.status}
               hasMore={instanceHasMore}
               onLoadMore={handleLoadMore}
+              contextUsage={selectedInstance?.contextUsage}
+              gitBranch={selectedInstance?.gitBranch}
             />
           }
         />

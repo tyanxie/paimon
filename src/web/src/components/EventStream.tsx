@@ -2,11 +2,12 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { ArrowUp, Square, ChevronsDown } from "lucide-react";
-import type { InstanceId } from "../../../protocol/types";
+import type { InstanceId, ContextUsageInfo } from "../../../protocol/types";
 import type { SessionEntry } from "../stores/useAppState";
 import { useMessageRenderMode } from "../stores/useSettings";
 import { RawEntryItem } from "./entries/raw";
 import { RichEntryItem } from "./entries/rich";
+import { SessionInfoBar } from "./SessionInfoBar";
 
 interface EventStreamProps {
   entries: SessionEntry[];
@@ -17,6 +18,8 @@ interface EventStreamProps {
   instanceStatus?: "idle" | "streaming";
   hasMore?: boolean;
   onLoadMore?: () => void;
+  contextUsage?: ContextUsageInfo;
+  gitBranch?: string | null;
 }
 
 export function EventStream({
@@ -28,6 +31,8 @@ export function EventStream({
   instanceStatus,
   hasMore = false,
   onLoadMore,
+  contextUsage,
+  gitBranch,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -159,11 +164,12 @@ export function EventStream({
   return (
     <div className="flex-1 flex flex-col min-w-0 gap-3">
       {/* 对话流 */}
-      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden py-4 relative">
+      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden relative">
+        <SessionInfoBar gitBranch={gitBranch} contextUsage={contextUsage} />
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-5 space-y-1 scrollbar-auto"
+          className="flex-1 overflow-y-auto px-5 py-4 space-y-1 scrollbar-auto"
         >
           {hasMore && (
             <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2">
