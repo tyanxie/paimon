@@ -6,7 +6,7 @@ import type { SessionEntry } from "../../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
-import { X } from "lucide-react";
+import { ModalShell } from "../../ui/ModalShell";
 
 export function RichEntryItem({
   entry,
@@ -199,32 +199,11 @@ function MetaEntry({ type, summary }: { type: string; summary: string }) {
       </div>
 
       {showDetail && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowDetail(false)}
-        >
-          <div
-            className="w-[90%] max-w-[640px] max-h-[80vh] rounded-[18px] bg-[var(--material-modal)] backdrop-blur-[30px] border border-[var(--separator)] shadow-[0_8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 标题栏 */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--separator)]">
-              <span className="text-[15px] font-semibold text-[var(--label-primary)]">
-                {label}
-              </span>
-              <button
-                onClick={() => setShowDetail(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--fill-secondary)] transition-colors text-[var(--label-secondary)]"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            {/* 内容 */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-auto">
-              <MarkdownRenderer content={summary} />
-            </div>
+        <ModalShell title={label} onClose={() => setShowDetail(false)}>
+          <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-auto">
+            <MarkdownRenderer content={summary} />
           </div>
-        </div>
+        </ModalShell>
       )}
     </>
   );

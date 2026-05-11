@@ -7,12 +7,12 @@ import {
   Terminal,
   Pencil,
   Wrench,
-  X,
   CircleX,
   Loader2,
   ChevronRight,
   Timer,
 } from "lucide-react";
+import { ModalShell } from "../../ui/ModalShell";
 import type { SessionEntry } from "../../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
 
@@ -241,52 +241,13 @@ interface DetailModalProps {
   onClose: () => void;
 }
 
-/** 弹窗外壳（共用布局） */
-function ModalShell({
-  name,
-  onClose,
-  trailing,
-  children,
-}: {
-  name: string;
-  onClose: () => void;
-  trailing?: React.ReactNode;
-  children: React.ReactNode;
-}) {
+/** 工具弹窗标题（icon + name） */
+function ToolModalTitle({ name }: { name: string }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-[90%] max-w-[640px] max-h-[80vh] rounded-[18px] bg-[var(--material-modal)] backdrop-blur-[30px] border border-[var(--separator)] shadow-[0_8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--separator)]">
-          <div className="flex items-center gap-2">
-            <span className="text-[var(--label-secondary)]">
-              {getToolIcon(name)}
-            </span>
-            <span className="text-[15px] font-semibold text-[var(--label-primary)]">
-              {name}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {trailing}
-            <button
-              onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--fill-secondary)] transition-colors text-[var(--label-secondary)]"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* 内容区 */}
-        {children}
-      </div>
-    </div>
+    <>
+      <span className="text-[var(--label-secondary)]">{getToolIcon(name)}</span>
+      {name}
+    </>
   );
 }
 
@@ -312,7 +273,7 @@ function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
       : null;
 
   return (
-    <ModalShell name={name} onClose={onClose}>
+    <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
         <p className="text-[12px] text-[var(--label-secondary)] break-all leading-[18px] font-mono">
@@ -356,7 +317,7 @@ function BashDetailModal({ name, args, result, onClose }: DetailModalProps) {
 
   return (
     <ModalShell
-      name={name}
+      title={<ToolModalTitle name={name} />}
       onClose={onClose}
       trailing={
         timeout != null ? (
@@ -406,7 +367,7 @@ function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
   const contentBlock = `\`\`\`${language ?? ""}\n${content}\n\`\`\``;
 
   return (
-    <ModalShell name={name} onClose={onClose}>
+    <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
         <p className="text-[12px] text-[var(--label-secondary)] break-all leading-[18px] font-mono">
@@ -509,7 +470,7 @@ function EditDetailModal({ name, args, result, onClose }: DetailModalProps) {
   const diff = result?.details?.diff as string | undefined;
 
   return (
-    <ModalShell name={name} onClose={onClose}>
+    <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
         <p className="text-[12px] text-[var(--label-secondary)] break-all leading-[18px] font-mono">
@@ -546,7 +507,7 @@ function EditDetailModal({ name, args, result, onClose }: DetailModalProps) {
 /** 默认通用弹窗（JSON args + 纯文本 result） */
 function DefaultDetailModal({ name, args, result, onClose }: DetailModalProps) {
   return (
-    <ModalShell name={name} onClose={onClose}>
+    <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 space-y-3 scrollbar-auto">
         {/* 参数 */}
         <section>
