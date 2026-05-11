@@ -154,11 +154,13 @@ export function EventStream({
     return (
       <div className="glass-panel flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-[26px] font-light text-[var(--label-tertiary)] mb-2">
-            Paimon
-          </div>
-          <div className="text-[13px] text-[var(--label-tertiary)]">
-            Select a pi instance to observe
+          <img
+            src="/paimon-logo.png"
+            alt="Paimon"
+            className="w-16 h-16 mx-auto mb-4 opacity-80"
+          />
+          <div className="text-[14px] text-[var(--label-tertiary)] tracking-wide">
+            守望 · 交互 · 掌控
           </div>
         </div>
       </div>

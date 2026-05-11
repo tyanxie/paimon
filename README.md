@@ -1,10 +1,12 @@
 <p align="center">
   <img src="docs/design/paimon-icon-transparent.png" width="96" />
+  <br/>
+  <em>守望 · 交互 · 掌控</em>
 </p>
 
 # Paimon
 
-把你所有的 pi coding agent 会话搬到浏览器里——实时查看、发消息、随时介入。
+Pi coding agent 的远程面板——在浏览器里实时守望所有会话，随时交互介入。
 
 ## 概述
 
