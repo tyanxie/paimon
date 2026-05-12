@@ -67,6 +67,22 @@ export default function (pi: ExtensionAPI) {
   for (const eventName of FORWARDED_EVENTS) {
     pi.on(eventName as any, async (event: any) => {
       if (!client.connected) return;
+      // Copied from pi interactive-mode.js:
+      // Normalize abort errorMessage before forwarding.
+      // The TUI layer overwrites message.errorMessage after message_end fires,
+      // but our handler runs before/concurrently, so we replicate the logic here.
+      if (
+        eventName === "message_end" &&
+        event?.message?.stopReason === "aborted"
+      ) {
+        event = {
+          ...event,
+          message: {
+            ...event.message,
+            errorMessage: "Operation aborted",
+          },
+        };
+      }
       client.send(serializeEvent(eventName, event));
     });
   }
@@ -200,9 +216,11 @@ function handleHubMessage(
     case "steer":
       pi.sendUserMessage(msg.payload.message, { deliverAs: "steer" });
       break;
-    case "abort":
-      (pi as any).abort?.();
+    case "abort": {
+      const ctx = getCurrentCtx();
+      ctx?.abort();
       break;
+    }
     case "set_model": {
       const ctx = getCurrentCtx();
       if (ctx?.modelRegistry) {

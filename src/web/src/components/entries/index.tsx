@@ -112,7 +112,7 @@ function AssistantMessage({
 }) {
   // API 报错且无内容
   if (
-    stopReason === "error" &&
+    (stopReason === "error" || stopReason === "aborted") &&
     errorMessage &&
     (!Array.isArray(content) || content.length === 0)
   ) {
@@ -135,9 +135,10 @@ function AssistantMessage({
   const lastBlock = content[content.length - 1];
   const isThinking = streaming && lastBlock?.type === "thinking";
   // 如果有 text/toolCall block 出现了，说明正式输出已开始
-  const hasOutput = content.some(
-    (b: any) => b.type === "text" || b.type === "toolCall",
-  );
+  const hasOutput =
+    content.some((b: any) => b.type === "text" || b.type === "toolCall") ||
+    stopReason === "aborted" ||
+    stopReason === "error";
 
   return (
     <div className="px-4 py-1.5 space-y-2">
@@ -151,7 +152,7 @@ function AssistantMessage({
         />
       ))}
       {/* 部分输出 + 最终报错 */}
-      {stopReason === "error" && errorMessage && (
+      {(stopReason === "error" || stopReason === "aborted") && errorMessage && (
         <ErrorCard message={errorMessage} />
       )}
       {streaming && lastBlock?.type !== "thinking" && (

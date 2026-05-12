@@ -277,7 +277,7 @@ export function EventStream({
           disabled={instanceStatus === "streaming"}
           className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[13px] leading-[20px] px-4 py-[10px] outline-none overflow-hidden disabled:cursor-default"
         />
-        <div className="flex-shrink-0 pb-[6px] pr-[6px]">
+        <div className="flex-shrink-0 pb-[6px] pr-[6px] pointer-events-auto">
           {instanceStatus === "streaming" && !inputValue.trim() ? (
             <button
               onClick={onAbort}
