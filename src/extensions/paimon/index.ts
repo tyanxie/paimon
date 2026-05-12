@@ -105,6 +105,7 @@ export default function (pi: ExtensionAPI) {
           id: event.model.id,
           name: event.model.name,
         },
+        contextUsage: getContextUsageInfo(ctx),
       },
     });
   });
