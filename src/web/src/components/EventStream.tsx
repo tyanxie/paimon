@@ -220,7 +220,7 @@ export function EventStream({
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
             <button
               onClick={scrollToBottom}
-              className="w-9 h-9 rounded-full backdrop-blur-[30px] bg-[var(--fill-primary)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--fill-secondary)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+              className="w-9 h-9 rounded-full bg-[var(--btn-solid)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--btn-solid-hover)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
               title="Scroll to bottom"
             >
               <ChevronsDown size={16} />

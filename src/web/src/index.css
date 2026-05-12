@@ -105,6 +105,10 @@
   --diff-del-text: var(--label-primary);
   --diff-context-text: var(--label-secondary);
   --diff-line-num: var(--label-tertiary);
+
+  /* 实色按钮 */
+  --btn-solid: #f6f6f6;
+  --btn-solid-hover: #dddddd;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -130,6 +134,8 @@
     --diff-del-bg: rgba(255, 69, 58, 0.12);
     --diff-del-text: rgba(255, 69, 58, 0.85);
     --diff-context-text: var(--label-secondary);
+    --btn-solid: #282828;
+    --btn-solid-hover: #3d3d3d;
     --bg-gradient: linear-gradient(
       135deg,
       #1a1a2e 0%,
@@ -163,12 +169,13 @@
   --diff-del-bg: rgba(255, 69, 58, 0.12);
   --diff-del-text: rgba(255, 69, 58, 0.85);
   --diff-context-text: var(--label-secondary);
+  --btn-solid: #282828;
+  --btn-solid-hover: #3d3d3d;
 }
 
 /* ========================================
    Highlight.js 自定义主题 (macOS 26 风格)
    ======================================== */
-
 :root {
   --hljs-base: rgba(0, 0, 0, 0.85);
   --hljs-keyword: #c4344d;
