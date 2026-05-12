@@ -82,7 +82,8 @@ export function Sidebar({
                     </span>
                   </div>
                   <div className="ml-3.5 text-[11px] text-[var(--label-secondary)] truncate mt-0.5">
-                    {instance.model.provider}/{instance.model.id}
+                    {instance.model.name ||
+                      `${instance.model.provider}/${instance.model.id}`}
                   </div>
                   {/* 上下文使用率进度条 */}
                   {instance.contextUsage?.percent != null && (

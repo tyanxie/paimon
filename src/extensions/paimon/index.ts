@@ -32,7 +32,11 @@ export default function (pi: ExtensionAPI) {
         payload: {
           cwd: ctx?.cwd ?? process.cwd(),
           model: ctx?.model
-            ? { provider: ctx.model.provider, id: ctx.model.id }
+            ? {
+                provider: ctx.model.provider,
+                id: ctx.model.id,
+                name: ctx.model.name,
+              }
             : { provider: "unknown", id: "unknown" },
           sessionName: ctx?.sessionManager?.getSessionFile?.() ?? undefined,
           pid: process.pid,
@@ -80,7 +84,11 @@ export default function (pi: ExtensionAPI) {
         type: "register",
         payload: {
           cwd: ctx.cwd,
-          model: { provider: ctx.model.provider, id: ctx.model.id },
+          model: {
+            provider: ctx.model.provider,
+            id: ctx.model.id,
+            name: ctx.model.name,
+          },
           sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
           pid: process.pid,
         },
@@ -143,7 +151,11 @@ export default function (pi: ExtensionAPI) {
         type: "register",
         payload: {
           cwd: ctx.cwd,
-          model: { provider: ctx.model.provider, id: ctx.model.id },
+          model: {
+            provider: ctx.model.provider,
+            id: ctx.model.id,
+            name: ctx.model.name,
+          },
           sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
           pid: process.pid,
         },

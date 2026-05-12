@@ -24,7 +24,7 @@ export interface InstanceInfo {
   /** 工作目录 */
   cwd: string;
   /** 模型信息 */
-  model: { provider: string; id: string };
+  model: { provider: string; id: string; name?: string };
   /** 当前 session 名 */
   sessionName?: string;
   /** pi 进程 PID */
@@ -57,7 +57,7 @@ export interface ExtRegisterMessage {
   type: "register";
   payload: {
     cwd: string;
-    model: { provider: string; id: string };
+    model: { provider: string; id: string; name?: string };
     sessionName?: string;
     pid: number;
   };
