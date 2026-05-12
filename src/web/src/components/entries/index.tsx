@@ -1,15 +1,15 @@
-// Rich 模式渲染：气泡对话 + Markdown + Tool Cards
+// 会话条目渲染：气泡对话 + Markdown + Tool Cards
 // macOS 26 Liquid Glass 设计风格
 
 import { useState } from "react";
 import { AlertCircle, ChevronRight } from "lucide-react";
-import type { SessionEntry } from "../../../stores/useAppState";
+import type { SessionEntry } from "../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
-import { ModalShell } from "../../ui/ModalShell";
+import { ModalShell } from "../ui/ModalShell";
 
-export function RichEntryItem({
+export function EntryItem({
   entry,
   entries,
   isLast,
@@ -66,7 +66,7 @@ function RichMessageItem({
         />
       );
     case "toolResult":
-      // toolResult 在 Rich 模式下由 ToolCallCard 消费，直接跳过
+      // toolResult 由 ToolCallCard 消费，直接跳过
       return null;
     default:
       return null;

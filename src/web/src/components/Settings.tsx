@@ -3,10 +3,8 @@
 import {
   useAppearance,
   useBackground,
-  useMessageRenderMode,
   type Appearance,
   type Background,
-  type MessageRenderMode,
 } from "../stores/useSettings";
 import { MobileNavBar } from "./ui/MobileNavBar";
 
@@ -40,11 +38,6 @@ const BACKGROUND_OPTIONS: {
     label: "余烬",
     colors: ["#f8d4b0", "#f0b0c0", "#f8e0a0", "#e8c0d0"],
   },
-];
-
-const DISPLAY_MODE_OPTIONS: { value: MessageRenderMode; label: string }[] = [
-  { value: "rich", label: "渲染" },
-  { value: "raw", label: "原始" },
 ];
 
 // ========================================
@@ -153,7 +146,6 @@ function BackgroundPicker({
 export function Settings() {
   const [appearance, setAppearance] = useAppearance();
   const [background, setBackground] = useBackground();
-  const [messageRenderMode, setMessageRenderMode] = useMessageRenderMode();
 
   return (
     <div className="flex-1 flex items-start justify-center p-4 md:p-6 overflow-y-auto scrollbar-auto">
@@ -177,20 +169,6 @@ export function Settings() {
           </SettingRow>
           <SettingRow label="背景" showSeparator={false}>
             <BackgroundPicker value={background} onChange={setBackground} />
-          </SettingRow>
-        </section>
-
-        {/* 对话 */}
-        <div className="text-[13px] font-semibold text-[var(--label-primary)] mb-2 px-4 mt-6">
-          对话
-        </div>
-        <section className="glass-panel overflow-hidden">
-          <SettingRow label="渲染模式" showSeparator={false}>
-            <SegmentedControl
-              options={DISPLAY_MODE_OPTIONS}
-              value={messageRenderMode}
-              onChange={setMessageRenderMode}
-            />
           </SettingRow>
         </section>
       </div>

@@ -37,8 +37,10 @@ paimon/
 │           └── components/         # Sidebar, EventStream, Settings
 │               ├── ui/             # 通用 UI 组件 (ModalShell, MobileNavBar)
 │               └── entries/        # 消息渲染器
-│                   ├── raw/        # 原始模式（调试用）
-│                   └── rich/       # 渲染模式（Markdown + 气泡 + Tool卡片 + ErrorCard）
+│                   ├── index.tsx   # EntryItem 主分发组件
+│                   ├── Markdown.tsx
+│                   ├── ThinkingBlock.tsx
+│                   └── ToolCallCard.tsx
 │
 ├── docs/design/                    # 设计参考
 │   ├── macos-26-design-tokens.json # Figma Design Tokens 插件导出
@@ -87,7 +89,7 @@ paimon/
 - 系统字体栈（-apple-system / Inter）
 - 亮色/暗色双模式（基于 data-theme 属性，支持手动切换 + 跟随系统）
 - 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）
-- 设置页（/settings）：外观配置（主题 + 背景）+ 对话配置（渲染模式：原始/渲染），存储于 localStorage（paimon:appearance / paimon:background / paimon:messageRenderMode）
+- 设置页（/settings）：外观配置（主题 + 背景），存储于 localStorage（paimon:appearance / paimon:background）
 - 代码高亮：不使用第三方 hljs 主题，自定义 CSS 变量配色（`--hljs-*`），跟随 light/dark 主题自动切换；配色低饱和度，与 macOS 26 label 色系协调
 - 响应式布局：Tailwind `md:` 断点（768px）区分移动/桌面；移动端 Sidebar 隐藏、根路由全屏实例列表、对话页 MobileNavBar 导航；不分离 Layout 组件，同一份 JSX + 响应式类
 - iOS 适配：`viewport-fit=cover` + `env(safe-area-inset-bottom)` 避开圆角/Home Indicator；`maximum-scale=1` 禁止输入框自动缩放；`interactive-widget=resizes-content` + `useViewportHeight` hook 处理键盘弹出时视口缩放；内联 `<style>` 设置 html background-color 作为 safe area 兜底色（Safari 仅从内联样式读取）

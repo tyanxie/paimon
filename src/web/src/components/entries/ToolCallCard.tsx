@@ -12,8 +12,8 @@ import {
   ChevronRight,
   Timer,
 } from "lucide-react";
-import { ModalShell } from "../../ui/ModalShell";
-import type { SessionEntry } from "../../../stores/useAppState";
+import { ModalShell } from "../ui/ModalShell";
+import type { SessionEntry } from "../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
 
 /** 工具图标映射 */

@@ -4,9 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { ArrowUp, Square, ChevronsDown, GitBranch } from "lucide-react";
 import type { InstanceId, ContextUsageInfo } from "../../../protocol/types";
 import type { SessionEntry } from "../stores/useAppState";
-import { useMessageRenderMode } from "../stores/useSettings";
-import { RawEntryItem } from "./entries/raw";
-import { RichEntryItem } from "./entries/rich";
+import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
 
 interface EventStreamProps {
@@ -40,7 +38,6 @@ export function EventStream({
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [messageRenderMode] = useMessageRenderMode();
   const [inputValue, setInputValue] = useState("");
 
   // 自动滚到底部（仅当用户在底部附近时）
@@ -192,10 +189,8 @@ export function EventStream({
             </div>
           ) : (
             entries.map((entry, i) => {
-              const EntryComponent =
-                messageRenderMode === "rich" ? RichEntryItem : RawEntryItem;
               return (
-                <EntryComponent
+                <EntryItem
                   key={entry.id ?? `e-${i}`}
                   entry={entry}
                   entries={entries}
