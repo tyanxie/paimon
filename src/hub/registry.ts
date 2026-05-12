@@ -1,7 +1,12 @@
 // 实例注册表：管理已连接的 pi 实例
 
 import type { ServerWebSocket } from "bun";
-import type { InstanceId, InstanceInfo, ModelInfo } from "../protocol/types";
+import type {
+  InstanceId,
+  InstanceInfo,
+  ModelInfo,
+  ContextUsageInfo,
+} from "../protocol/types";
 import { DEFAULTS } from "../protocol/types";
 import * as log from "./logger";
 
@@ -43,6 +48,8 @@ class Registry {
       sessionName?: string;
       pid: number;
       availableModels?: ModelInfo[];
+      contextUsage?: ContextUsageInfo;
+      gitBranch?: string;
     },
   ): InstanceInfo {
     // 同一 ws 重复注册：更新已有实例信息
@@ -53,6 +60,8 @@ class Registry {
       record.info.model = payload.model;
       record.info.sessionName = payload.sessionName;
       record.info.availableModels = payload.availableModels;
+      record.info.contextUsage = payload.contextUsage;
+      record.info.gitBranch = payload.gitBranch;
       record.info.lastHeartbeat = Date.now();
       log.info(
         `Instance updated: ${existingId} (model: ${payload.model.provider}/${payload.model.id})`,
@@ -91,6 +100,8 @@ class Registry {
       pid: payload.pid,
       status: "idle",
       availableModels: payload.availableModels,
+      contextUsage: payload.contextUsage,
+      gitBranch: payload.gitBranch,
       connectedAt: now,
       lastHeartbeat: now,
     };

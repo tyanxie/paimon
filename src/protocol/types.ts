@@ -71,6 +71,10 @@ export interface ExtRegisterMessage {
     pid: number;
     /** 可用模型列表 */
     availableModels?: ModelInfo[];
+    /** 上下文用量 */
+    contextUsage?: ContextUsageInfo;
+    /** Git 分支 */
+    gitBranch?: string;
   };
 }
 

@@ -42,19 +42,12 @@ export default function (pi: ExtensionAPI) {
           sessionName: ctx?.sessionManager?.getSessionFile?.() ?? undefined,
           pid: process.pid,
           availableModels: ctx ? getAvailableModels(ctx) : undefined,
+          contextUsage: ctx ? getContextUsageInfo(ctx) : undefined,
+          gitBranch: ctx
+            ? (getGitBranch(ctx.cwd ?? process.cwd()) ?? undefined)
+            : undefined,
         },
       });
-      // 连接时如果已有上下文信息，一并发送
-      if (ctx) {
-        client.send({
-          type: "state",
-          payload: {
-            status: "idle",
-            contextUsage: getContextUsageInfo(ctx),
-            gitBranch: getGitBranch(ctx.cwd ?? process.cwd()),
-          },
-        });
-      }
     },
     onDisconnected() {
       registered = false;
@@ -178,6 +171,8 @@ export default function (pi: ExtensionAPI) {
           sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
           pid: process.pid,
           availableModels: getAvailableModels(ctx),
+          contextUsage: getContextUsageInfo(ctx),
+          gitBranch: getGitBranch(ctx.cwd) ?? undefined,
         },
       });
     }
