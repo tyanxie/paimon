@@ -86,22 +86,23 @@ export function Sidebar({
                       `${instance.model.provider}/${instance.model.id}`}
                   </div>
                   {/* 上下文使用率进度条 */}
-                  {instance.contextUsage?.percent != null && (
-                    <div className="ml-3.5 mt-1.5 h-[2px] rounded-full bg-[var(--fill-quaternary)] overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, instance.contextUsage.percent)}%`,
-                          backgroundColor:
-                            instance.contextUsage.percent >= 90
-                              ? "#ff4245"
-                              : instance.contextUsage.percent >= 60
-                                ? "#ff9230"
-                                : "#30d158",
-                        }}
-                      />
-                    </div>
-                  )}
+                  {instance.contextUsage?.percent != null &&
+                    instance.contextUsage.percent > 0 && (
+                      <div className="ml-3.5 mt-1.5 h-[3px] rounded-full bg-[var(--fill-quaternary)] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.max(2, Math.min(100, instance.contextUsage.percent))}%`,
+                            backgroundColor:
+                              instance.contextUsage.percent >= 90
+                                ? "#ff4245"
+                                : instance.contextUsage.percent >= 60
+                                  ? "#ff9230"
+                                  : "#30d158",
+                          }}
+                        />
+                      </div>
+                    )}
                 </button>
               </li>
             ))}
