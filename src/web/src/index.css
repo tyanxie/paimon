@@ -393,10 +393,15 @@ pre code.hljs {
   );
 }
 
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   color: var(--label-primary);
-  overflow: hidden;
 }
 
 button,

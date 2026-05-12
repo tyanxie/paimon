@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { useViewportHeight } from "./hooks/useViewportHeight";
 import { useAppState } from "./stores/useAppState";
 import { Sidebar } from "./components/Sidebar";
 import { EventStream } from "./components/EventStream";
@@ -22,6 +23,7 @@ export default function App() {
 
   const { connected, send } = useWebSocket(handleMessage);
   const navigate = useNavigate();
+  useViewportHeight();
   const selectedInstanceId = useSelectedInstanceId();
 
   // 订阅管理：监听 URL 派生的 selectedInstanceId 变化
@@ -116,7 +118,7 @@ export default function App() {
   }, [selectedInstanceId, instanceHasMore, historyEntries, send]);
 
   return (
-    <div className="h-screen w-screen animated-bg flex items-stretch p-2 gap-2 md:p-3 md:gap-3 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+    <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-stretch p-2 gap-2 md:p-3 md:gap-3 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       {/* 侧边栏：移动端隐藏 */}
       <div className="hidden md:flex self-stretch">
         <Sidebar
