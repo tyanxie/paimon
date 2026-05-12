@@ -10,6 +10,7 @@ import type {
   HubToExtensionMessage,
   ExtHistoryMessage,
   ContextUsageInfo,
+  ModelInfo,
 } from "../../protocol/types";
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
@@ -40,6 +41,7 @@ export default function (pi: ExtensionAPI) {
             : { provider: "unknown", id: "unknown" },
           sessionName: ctx?.sessionManager?.getSessionFile?.() ?? undefined,
           pid: process.pid,
+          availableModels: ctx ? getAvailableModels(ctx) : undefined,
         },
       });
       // 连接时如果已有上下文信息，一并发送
@@ -91,10 +93,27 @@ export default function (pi: ExtensionAPI) {
           },
           sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
           pid: process.pid,
+          availableModels: getAvailableModels(ctx),
         },
       });
     }
     client.send({ type: "state", payload: { status: "streaming" } });
+  });
+
+  // 模型切换时同步给 Hub
+  pi.on("model_select", async (event, ctx) => {
+    currentCtx = ctx;
+    if (!client.connected) return;
+    client.send({
+      type: "state",
+      payload: {
+        model: {
+          provider: event.model.provider,
+          id: event.model.id,
+          name: event.model.name,
+        },
+      },
+    });
   });
 
   // 每次 message 结束时更新上下文使用情况 + git 分支
@@ -158,6 +177,7 @@ export default function (pi: ExtensionAPI) {
           },
           sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
           pid: process.pid,
+          availableModels: getAvailableModels(ctx),
         },
       });
     }
@@ -187,6 +207,23 @@ function handleHubMessage(
     case "abort":
       (pi as any).abort?.();
       break;
+    case "set_model": {
+      const ctx = getCurrentCtx();
+      if (ctx?.modelRegistry) {
+        const model = ctx.modelRegistry.find(
+          msg.payload.provider,
+          msg.payload.id,
+        );
+        if (model) {
+          pi.setModel(model).then((ok) => {
+            if (ok) {
+              ctx.ui?.notify(`Model: ${model.id}`, "info");
+            }
+          });
+        }
+      }
+      break;
+    }
     case "get_history": {
       const ctx = getCurrentCtx();
       if (ctx?.sessionManager) {
@@ -281,5 +318,19 @@ function getGitBranch(cwd: string): string | null {
     return result.status === 0 ? result.stdout.trim() || null : null;
   } catch {
     return null;
+  }
+}
+
+/** 获取可用模型列表 */
+function getAvailableModels(ctx: any): ModelInfo[] {
+  try {
+    const models = ctx.modelRegistry?.getAvailable?.() ?? [];
+    return models.map((m: any) => ({
+      provider: m.provider,
+      id: m.id,
+      name: m.name,
+    }));
+  } catch {
+    return [];
   }
 }

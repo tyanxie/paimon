@@ -35,7 +35,7 @@ paimon/
 │           ├── hooks/              # useWebSocket
 │           ├── stores/             # useAppState, useSettings
 │           └── components/         # Sidebar, EventStream, Settings
-│               ├── ui/             # 通用 UI 组件 (ModalShell, MobileNavBar)
+│               ├── ui/             # 通用 UI 组件 (ModalShell, MobileNavBar, ModelSelector)
 │               └── entries/        # 消息渲染器
 │                   ├── index.tsx   # EntryItem 主分发组件
 │                   ├── Markdown.tsx
@@ -109,10 +109,10 @@ paimon/
 
 Extension → Hub（上报）：
 
-- `register` — 注册实例（cwd、model、sessionName、pid）
+- `register` — 注册实例（cwd、model、sessionName、pid、availableModels）
 - `heartbeat` — 心跳保活
 - `event` — 转发 pi 事件（仅前端实际使用的 message_start/update/end）
-- `state` — 状态变更（status/contextUsage/gitBranch，各字段均可选，按需更新）
+- `state` — 状态变更（status/contextUsage/gitBranch/model，各字段均可选，按需更新）
 - `history` — 响应历史请求（getBranch 返回的 session entries，按 turn 分页）
 
 Hub → Extension（下发）：
@@ -121,6 +121,7 @@ Hub → Extension（下发）：
 - `prompt` — 发送用户消息
 - `steer` — 发送 steer 消息
 - `abort` — 中止当前操作
+- `set_model` — 切换模型（provider + id）
 - `get_history` — 请求历史消息（支持 offset/limit 分页）
 - `ping` — 心跳确认
 
@@ -138,6 +139,7 @@ Browser → Hub：
 - `subscribe` / `unsubscribe` — 订阅/取消实例事件流
 - `history` — 请求实例历史（支持 offset/limit 分页）
 - `prompt` / `steer` / `abort` — 操作指令
+- `set_model` — 切换实例模型（provider + id）
 
 ### Hub 存活探测
 

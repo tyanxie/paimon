@@ -87,6 +87,17 @@ export default function App() {
     });
   }, [selectedInstanceId, send]);
 
+  const handleSetModel = useCallback(
+    (provider: string, id: string) => {
+      if (!selectedInstanceId) return;
+      send({
+        type: "set_model",
+        payload: { instanceId: selectedInstanceId, provider, id },
+      });
+    },
+    [selectedInstanceId, send],
+  );
+
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
   // 合并 history + streaming 供渲染
@@ -139,6 +150,7 @@ export default function App() {
               isStreaming={isStreaming}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
+              onSetModel={handleSetModel}
               instanceStatus={selectedInstance?.status}
               hasMore={instanceHasMore}
               onLoadMore={handleLoadMore}
@@ -147,11 +159,8 @@ export default function App() {
               instanceName={
                 selectedInstance?.cwd.split("/").pop() || selectedInstance?.cwd
               }
-              instanceModel={
-                selectedInstance
-                  ? `${selectedInstance.model.provider}/${selectedInstance.model.id}`
-                  : undefined
-              }
+              instanceModel={selectedInstance?.model}
+              availableModels={selectedInstance?.availableModels}
             />
           }
         />

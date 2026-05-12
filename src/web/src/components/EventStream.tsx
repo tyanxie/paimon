@@ -2,10 +2,15 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { ArrowUp, Square, ChevronsDown, GitBranch } from "lucide-react";
-import type { InstanceId, ContextUsageInfo } from "../../../protocol/types";
+import type {
+  InstanceId,
+  ContextUsageInfo,
+  ModelInfo,
+} from "../../../protocol/types";
 import type { SessionEntry } from "../stores/useAppState";
 import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
+import { ModelSelector } from "./ui/ModelSelector";
 
 interface EventStreamProps {
   entries: SessionEntry[];
@@ -13,13 +18,15 @@ interface EventStreamProps {
   isStreaming: boolean;
   onSendMessage: (message: string) => void;
   onAbort: () => void;
+  onSetModel?: (provider: string, id: string) => void;
   instanceStatus?: "idle" | "streaming";
   hasMore?: boolean;
   onLoadMore?: () => void;
   contextUsage?: ContextUsageInfo;
   gitBranch?: string | null;
   instanceName?: string;
-  instanceModel?: string;
+  instanceModel?: ModelInfo;
+  availableModels?: ModelInfo[];
 }
 
 export function EventStream({
@@ -28,6 +35,7 @@ export function EventStream({
   isStreaming,
   onSendMessage,
   onAbort,
+  onSetModel,
   instanceStatus,
   hasMore = false,
   onLoadMore,
@@ -35,6 +43,7 @@ export function EventStream({
   gitBranch,
   instanceName,
   instanceModel,
+  availableModels,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -171,7 +180,12 @@ export function EventStream({
         {/* 移动端导航栏 */}
         <MobileNavBar
           title={instanceName || "Instance"}
-          subtitle={instanceModel}
+          subtitle={
+            instanceModel
+              ? instanceModel.name ||
+                `${instanceModel.provider}/${instanceModel.id}`
+              : undefined
+          }
         />
         <div
           ref={scrollRef}
@@ -215,20 +229,29 @@ export function EventStream({
         )}
       </main>
 
-      {/* 上下文 + 分支信息（输入框上方裸文字） */}
-      {(contextUsage || gitBranch) && (
+      {/* 上下文 + 模型 + 分支信息（输入框上方） */}
+      {(contextUsage || instanceModel || gitBranch) && (
         <div className="flex items-center justify-between px-3 -mb-2 text-[12px] text-[var(--label-secondary)]">
           <span>
             {contextUsage ? (
               <ContextIndicator contextUsage={contextUsage} />
             ) : null}
           </span>
-          {gitBranch && (
-            <span className="flex items-center gap-1 opacity-70">
-              <GitBranch size={10} />
-              {gitBranch}
-            </span>
-          )}
+          <span className="flex items-center gap-2.5">
+            {instanceModel && (
+              <ModelSelector
+                currentModel={instanceModel}
+                availableModels={availableModels}
+                onSelect={onSetModel}
+              />
+            )}
+            {gitBranch && (
+              <span className="flex items-center gap-1 opacity-70">
+                <GitBranch size={10} />
+                {gitBranch}
+              </span>
+            )}
+          </span>
         </div>
       )}
 

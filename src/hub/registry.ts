@@ -1,7 +1,7 @@
 // 实例注册表：管理已连接的 pi 实例
 
 import type { ServerWebSocket } from "bun";
-import type { InstanceId, InstanceInfo } from "../protocol/types";
+import type { InstanceId, InstanceInfo, ModelInfo } from "../protocol/types";
 import { DEFAULTS } from "../protocol/types";
 import * as log from "./logger";
 
@@ -39,9 +39,10 @@ class Registry {
     ws: ServerWebSocket<WsData>,
     payload: {
       cwd: string;
-      model: { provider: string; id: string };
+      model: ModelInfo;
       sessionName?: string;
       pid: number;
+      availableModels?: ModelInfo[];
     },
   ): InstanceInfo {
     // 同一 ws 重复注册：更新已有实例信息
@@ -51,6 +52,7 @@ class Registry {
       record.info.cwd = payload.cwd;
       record.info.model = payload.model;
       record.info.sessionName = payload.sessionName;
+      record.info.availableModels = payload.availableModels;
       record.info.lastHeartbeat = Date.now();
       log.info(
         `Instance updated: ${existingId} (model: ${payload.model.provider}/${payload.model.id})`,
@@ -88,6 +90,7 @@ class Registry {
       sessionName: payload.sessionName,
       pid: payload.pid,
       status: "idle",
+      availableModels: payload.availableModels,
       connectedAt: now,
       lastHeartbeat: now,
     };
@@ -155,6 +158,7 @@ class Registry {
         percent: number | null;
       };
       gitBranch?: string | null;
+      model?: ModelInfo;
     },
   ): void {
     const record = this.instances.get(id);
@@ -168,6 +172,9 @@ class Registry {
     }
     if (state.gitBranch !== undefined) {
       record.info.gitBranch = state.gitBranch;
+    }
+    if (state.model !== undefined) {
+      record.info.model = state.model;
     }
 
     // 通知浏览器

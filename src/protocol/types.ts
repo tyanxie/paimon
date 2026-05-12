@@ -8,6 +8,13 @@
 /** pi 实例唯一标识（Hub 分配） */
 export type InstanceId = string;
 
+/** 模型信息 */
+export interface ModelInfo {
+  provider: string;
+  id: string;
+  name?: string;
+}
+
 /** 上下文使用信息 */
 export interface ContextUsageInfo {
   /** 当前 token 数（压缩后首次响应前为 null） */
@@ -24,7 +31,7 @@ export interface InstanceInfo {
   /** 工作目录 */
   cwd: string;
   /** 模型信息 */
-  model: { provider: string; id: string; name?: string };
+  model: ModelInfo;
   /** 当前 session 名 */
   sessionName?: string;
   /** pi 进程 PID */
@@ -35,6 +42,8 @@ export interface InstanceInfo {
   contextUsage?: ContextUsageInfo;
   /** Git 分支名（null = 非 git 仓库, "detached" = detached HEAD） */
   gitBranch?: string | null;
+  /** 可用模型列表 */
+  availableModels?: ModelInfo[];
   /** 注册时间 */
   connectedAt: number;
   /** 最后心跳时间 */
@@ -57,9 +66,11 @@ export interface ExtRegisterMessage {
   type: "register";
   payload: {
     cwd: string;
-    model: { provider: string; id: string; name?: string };
+    model: ModelInfo;
     sessionName?: string;
     pid: number;
+    /** 可用模型列表 */
+    availableModels?: ModelInfo[];
   };
 }
 
@@ -90,6 +101,8 @@ export interface ExtStateMessage {
     contextUsage?: ContextUsageInfo;
     /** Git 分支名 */
     gitBranch?: string | null;
+    /** 模型变更 */
+    model?: ModelInfo;
   };
 }
 
@@ -113,6 +126,7 @@ export type HubToExtensionMessage =
   | HubPromptMessage
   | HubSteerMessage
   | HubAbortMessage
+  | HubSetModelMessage
   | HubPingMessage
   | HubGetHistoryMessage;
 
@@ -145,6 +159,15 @@ export interface HubAbortMessage {
   type: "abort";
 }
 
+/** 切换模型 */
+export interface HubSetModelMessage {
+  type: "set_model";
+  payload: {
+    provider: string;
+    id: string;
+  };
+}
+
 /** 心跳探测 */
 export interface HubPingMessage {
   type: "ping";
@@ -171,6 +194,7 @@ export type BrowserToHubMessage =
   | BrowserPromptMessage
   | BrowserSteerMessage
   | BrowserAbortMessage
+  | BrowserSetModelMessage
   | BrowserListMessage
   | BrowserHistoryMessage;
 
@@ -213,6 +237,16 @@ export interface BrowserAbortMessage {
   type: "abort";
   payload: {
     instanceId: InstanceId;
+  };
+}
+
+/** 切换实例模型 */
+export interface BrowserSetModelMessage {
+  type: "set_model";
+  payload: {
+    instanceId: InstanceId;
+    provider: string;
+    id: string;
   };
 }
 

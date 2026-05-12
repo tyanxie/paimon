@@ -181,5 +181,27 @@ export function handleBrowserMessage(
       }
       break;
     }
+    case "set_model": {
+      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
+      if (instanceWs) {
+        instanceWs.send(
+          JSON.stringify({
+            type: "set_model",
+            payload: { provider: msg.payload.provider, id: msg.payload.id },
+          }),
+        );
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            payload: {
+              message: `Instance ${msg.payload.instanceId} not found`,
+              code: "INSTANCE_NOT_FOUND",
+            },
+          }),
+        );
+      }
+      break;
+    }
   }
 }
