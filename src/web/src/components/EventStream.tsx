@@ -1,16 +1,66 @@
 // 事件流面板：展示选中实例的对话 entries（独立玻璃面板）
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useLayoutEffect, useState, useCallback } from "react";
 import { ArrowUp, Square, ChevronsDown, GitBranch } from "lucide-react";
 import type {
   InstanceId,
   ContextUsageInfo,
   ModelInfo,
 } from "../../../protocol/types";
-import type { SessionEntry } from "../stores/useAppState";
+import {
+  getSessionEntryRenderKey,
+  type SessionEntry,
+} from "../stores/useAppState";
 import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
 import { ModelSelector } from "./ui/ModelSelector";
+
+const DEBUG_SCROLL = true;
+const LOAD_MORE_SUPPRESS_MS = 350;
+
+function logScroll(label: string, data: Record<string, unknown>) {
+  if (!DEBUG_SCROLL) return;
+  console.log(`[PaimonScroll] ${label}`, data);
+}
+
+export function calculatePrependScrollTop({
+  previousScrollTop,
+  previousScrollHeight,
+  nextScrollHeight,
+}: {
+  previousScrollTop: number;
+  previousScrollHeight: number;
+  nextScrollHeight: number;
+}) {
+  return previousScrollTop + nextScrollHeight - previousScrollHeight;
+}
+
+export function getSafeScrollTop(rawScrollTop: number) {
+  return Math.max(0, rawScrollTop);
+}
+
+export function shouldLoadMoreFromScroll({
+  rawScrollTop,
+  hasMore,
+  canLoadMore,
+  isLoadingMore,
+  isSuppressed,
+}: {
+  rawScrollTop: number;
+  hasMore: boolean;
+  canLoadMore: boolean;
+  isLoadingMore: boolean;
+  isSuppressed: boolean;
+}) {
+  return (
+    rawScrollTop >= 0 &&
+    getSafeScrollTop(rawScrollTop) < 100 &&
+    hasMore &&
+    canLoadMore &&
+    !isLoadingMore &&
+    !isSuppressed
+  );
+}
 
 interface EventStreamProps {
   entries: SessionEntry[];
@@ -47,6 +97,8 @@ export function EventStream({
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
   const [inputValue, setInputValue] = useState("");
 
   // 自动滚到底部（仅当用户在底部附近时）
@@ -55,37 +107,143 @@ export function EventStream({
   // 标记正在调整 scroll 位置（prepend 场景），期间不更新 isAtBottom
   const adjustingScrollRef = useRef(false);
 
-  useEffect(() => {
-    if (scrollRef.current && isAtBottomRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [entries]);
-
   // 加载更多：滚动到顶部触发
   const loadingMoreRef = useRef(false);
+  const prevScrollTopRef = useRef(0);
   const prevScrollHeightRef = useRef(0);
   const prevEntriesLengthRef = useRef(entries.length);
+  const firstEntryKeyBeforeLoadRef = useRef<string | undefined>(undefined);
+  const suppressLoadMoreUntilRef = useRef(0);
+
+  // 此 effect 需要先于 prepend restore 执行，依赖 loadingMoreRef 在本轮渲染中尚未被清除。
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    if (loadingMoreRef.current) {
+      logScroll("auto-bottom skipped", {
+        instanceId,
+        entriesLength: entries.length,
+        scrollTop: el.scrollTop,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+        loadingMore: loadingMoreRef.current,
+        isAtBottom: isAtBottomRef.current,
+      });
+      return;
+    }
+
+    if (isAtBottomRef.current) {
+      logScroll("auto-bottom apply", {
+        instanceId,
+        entriesLength: entries.length,
+        beforeTop: el.scrollTop,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+      });
+      el.scrollTop = el.scrollHeight;
+      logScroll("auto-bottom after", {
+        instanceId,
+        afterTop: el.scrollTop,
+        maxTop: el.scrollHeight - el.clientHeight,
+      });
+    }
+  }, [entries, instanceId]);
 
   // entries 变化后：调整滚动位置 + 重置 loading 状态
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+
+    logScroll("entries layout effect", {
+      instanceId,
+      entriesLength: entries.length,
+      prevEntriesLength: prevEntriesLengthRef.current,
+      hasMore,
+      loadingMore: loadingMoreRef.current,
+      scrollTop: el?.scrollTop,
+      scrollHeight: el?.scrollHeight,
+      clientHeight: el?.clientHeight,
+      maxTop: el ? el.scrollHeight - el.clientHeight : undefined,
+      prevTop: prevScrollTopRef.current,
+      prevHeight: prevScrollHeightRef.current,
+      firstKeyBeforeLoad: firstEntryKeyBeforeLoadRef.current,
+      currentFirstKey: entries[0]
+        ? getSessionEntryRenderKey(entries[0])
+        : undefined,
+    });
+
     if (
       loadingMoreRef.current &&
+      el &&
       entries.length > prevEntriesLengthRef.current
     ) {
-      const el = scrollRef.current;
-      if (el) {
+      const currentFirstKey = entries[0]
+        ? getSessionEntryRenderKey(entries[0])
+        : undefined;
+      const didPrepend =
+        !firstEntryKeyBeforeLoadRef.current ||
+        currentFirstKey !== firstEntryKeyBeforeLoadRef.current;
+
+      if (didPrepend) {
         adjustingScrollRef.current = true;
-        const newHeight = el.scrollHeight;
-        el.scrollTop += newHeight - prevScrollHeightRef.current;
+        const targetTop = calculatePrependScrollTop({
+          previousScrollTop: prevScrollTopRef.current,
+          previousScrollHeight: prevScrollHeightRef.current,
+          nextScrollHeight: el.scrollHeight,
+        });
+        logScroll("prepend restore apply", {
+          instanceId,
+          prevTop: prevScrollTopRef.current,
+          prevHeight: prevScrollHeightRef.current,
+          newHeight: el.scrollHeight,
+          clientHeight: el.clientHeight,
+          maxTop: el.scrollHeight - el.clientHeight,
+          targetTop,
+          beforeTop: el.scrollTop,
+          didPrepend,
+          entriesLength: entries.length,
+          prevEntriesLength: prevEntriesLengthRef.current,
+        });
+        el.scrollTop = targetTop;
+        suppressLoadMoreUntilRef.current =
+          performance.now() + LOAD_MORE_SUPPRESS_MS;
+        logScroll("prepend restore after", {
+          instanceId,
+          afterTop: el.scrollTop,
+          maxTop: el.scrollHeight - el.clientHeight,
+          suppressUntil: suppressLoadMoreUntilRef.current,
+        });
+        loadingMoreRef.current = false;
+        firstEntryKeyBeforeLoadRef.current = undefined;
         // 下一帧恢复 scroll 监听
         requestAnimationFrame(() => {
           adjustingScrollRef.current = false;
         });
+      } else {
+        // 等待 history 响应期间如果只是底部新增消息，更新基准高度，避免后续 prepend 过度补偿
+        prevScrollHeightRef.current = el.scrollHeight;
+        logScroll("non-prepend growth while loading", {
+          instanceId,
+          entriesLength: entries.length,
+          scrollHeight: el.scrollHeight,
+          scrollTop: el.scrollTop,
+        });
       }
-      loadingMoreRef.current = false;
     }
+
+    if (loadingMoreRef.current && !hasMore) {
+      logScroll("loading reset because hasMore false", {
+        instanceId,
+        entriesLength: entries.length,
+        scrollTop: el?.scrollTop,
+        scrollHeight: el?.scrollHeight,
+      });
+      loadingMoreRef.current = false;
+      firstEntryKeyBeforeLoadRef.current = undefined;
+    }
+
     prevEntriesLengthRef.current = entries.length;
-  }, [entries]);
+  }, [entries, hasMore, instanceId]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -94,23 +252,74 @@ export function EventStream({
     // 调整 scroll 位置期间不更新 isAtBottom 状态
     if (adjustingScrollRef.current) return;
 
+    const rawScrollTop = el.scrollTop;
+    const safeScrollTop = getSafeScrollTop(rawScrollTop);
+    const isSuppressed = performance.now() < suppressLoadMoreUntilRef.current;
+
+    if (rawScrollTop < 0) {
+      isAtBottomRef.current = false;
+      setShowScrollBtn(true);
+      logScroll("ignore safari overscroll", {
+        instanceId,
+        rawTop: rawScrollTop,
+        isSuppressed,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+      });
+      return;
+    }
+
     // 检测是否在底部（60px 容差）
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    const atBottom = el.scrollHeight - safeScrollTop - el.clientHeight < 60;
     isAtBottomRef.current = atBottom;
     setShowScrollBtn(!atBottom);
 
+    const willLoadMore = shouldLoadMoreFromScroll({
+      rawScrollTop,
+      hasMore,
+      canLoadMore: !!onLoadMore,
+      isLoadingMore: loadingMoreRef.current,
+      isSuppressed,
+    });
+
+    logScroll("scroll", {
+      instanceId,
+      scrollTop: rawScrollTop,
+      safeScrollTop,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      maxTop: el.scrollHeight - el.clientHeight,
+      atBottom,
+      hasMore,
+      loadingMore: loadingMoreRef.current,
+      isSuppressed,
+      willLoadMore,
+      entriesLength: entriesRef.current.length,
+    });
+
     // 滚动到顶部加载更多
-    if (
-      el.scrollTop < 100 &&
-      hasMore &&
-      onLoadMore &&
-      !loadingMoreRef.current
-    ) {
+    if (willLoadMore && onLoadMore) {
       loadingMoreRef.current = true;
+      prevScrollTopRef.current = safeScrollTop;
       prevScrollHeightRef.current = el.scrollHeight;
+      const currentEntries = entriesRef.current;
+      firstEntryKeyBeforeLoadRef.current = currentEntries[0]
+        ? getSessionEntryRenderKey(currentEntries[0])
+        : undefined;
+      logScroll("load-more trigger", {
+        instanceId,
+        prevTop: prevScrollTopRef.current,
+        rawTop: rawScrollTop,
+        prevHeight: prevScrollHeightRef.current,
+        clientHeight: el.clientHeight,
+        maxTop: el.scrollHeight - el.clientHeight,
+        firstKeyBeforeLoad: firstEntryKeyBeforeLoadRef.current,
+        entriesLength: currentEntries.length,
+        atBottom,
+      });
       onLoadMore();
     }
-  }, [hasMore, onLoadMore]);
+  }, [hasMore, instanceId, onLoadMore]);
 
   // 快速滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -190,6 +399,7 @@ export function EventStream({
         <div
           ref={scrollRef}
           onScroll={handleScroll}
+          style={{ overflowAnchor: "none" }}
           className="flex-1 overflow-y-auto space-y-1 scrollbar-auto"
         >
           {hasMore && (
@@ -205,7 +415,7 @@ export function EventStream({
             entries.map((entry, i) => {
               return (
                 <EntryItem
-                  key={entry.id ?? `e-${i}`}
+                  key={getSessionEntryRenderKey(entry)}
                   entry={entry}
                   entries={entries}
                   isLast={i === entries.length - 1}

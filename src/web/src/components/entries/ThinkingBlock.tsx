@@ -13,7 +13,7 @@ export function ThinkingBlock({
   streaming: boolean;
   autoCollapse: boolean;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(autoCollapse);
   const hasAutoCollapsed = useRef(false);
 
   // 自动折叠：当 autoCollapse 变为 true 时折叠一次
