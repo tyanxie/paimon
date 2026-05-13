@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/design/paimon-icon-transparent.png" width="96" />
+  <img src="docs/design/paimon-logo.png" width="120" />
   <br/>
   <em>守望 · 交互 · 掌控</em>
 </p>
