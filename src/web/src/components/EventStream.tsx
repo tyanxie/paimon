@@ -15,13 +15,10 @@ import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
 import { ModelSelector } from "./ui/ModelSelector";
 
-const DEBUG_SCROLL = true;
 const LOAD_MORE_SUPPRESS_MS = 350;
-
-function logScroll(label: string, data: Record<string, unknown>) {
-  if (!DEBUG_SCROLL) return;
-  console.log(`[PaimonScroll] ${label}`, data);
-}
+const ENTRY_KEY_ATTR = "data-entry-key";
+const ANCHOR_RESTORE_EPSILON = 0.5;
+const ANCHOR_WARMUP_FRAMES = 3;
 
 export function calculatePrependScrollTop({
   previousScrollTop,
@@ -62,6 +59,28 @@ export function shouldLoadMoreFromScroll({
   );
 }
 
+interface ScrollAnchorSnapshot {
+  entryKey?: string;
+  element?: Element;
+  elementTop?: number;
+  entryTop?: number;
+  fallbackScrollTop: number;
+  fallbackScrollHeight: number;
+}
+
+interface AnchorRestoreResult {
+  mode: "deep" | "entry" | "diff" | "none";
+  delta: number;
+  adjusted: boolean;
+}
+
+interface AnchorPinSession {
+  snapshot: ScrollAnchorSnapshot;
+  observer: ResizeObserver | null;
+  rafId: number | null;
+  warmupFrame: number;
+}
+
 interface EventStreamProps {
   entries: SessionEntry[];
   instanceId: InstanceId | null;
@@ -77,6 +96,171 @@ interface EventStreamProps {
   instanceName?: string;
   instanceModel?: ModelInfo;
   availableModels?: ModelInfo[];
+}
+
+function getEntryKey(entryElement: Element) {
+  return entryElement.getAttribute(ENTRY_KEY_ATTR) ?? undefined;
+}
+
+function getEntryElementFromElement(container: HTMLElement, element: Element) {
+  const entryElement = element.closest<HTMLElement>(`[${ENTRY_KEY_ATTR}]`);
+  if (!entryElement || !container.contains(entryElement)) return null;
+  return entryElement;
+}
+
+function findEntryElementByKey(container: HTMLElement, entryKey: string) {
+  const entryElements = container.querySelectorAll<HTMLElement>(
+    `[${ENTRY_KEY_ATTR}]`,
+  );
+  for (const entryElement of entryElements) {
+    if (getEntryKey(entryElement) === entryKey) return entryElement;
+  }
+  return null;
+}
+
+function getRelativeTop(containerRect: DOMRect, element: Element) {
+  return element.getBoundingClientRect().top - containerRect.top;
+}
+
+function findFirstVisibleEntry(container: HTMLElement) {
+  const containerRect = container.getBoundingClientRect();
+  const thresholdTop = containerRect.top + 8;
+  const entryElements = container.querySelectorAll<HTMLElement>(
+    `[${ENTRY_KEY_ATTR}]`,
+  );
+
+  for (const entryElement of entryElements) {
+    const rect = entryElement.getBoundingClientRect();
+    if (rect.bottom > thresholdTop && rect.top < containerRect.bottom) {
+      return entryElement;
+    }
+  }
+
+  return null;
+}
+
+function captureScrollAnchor(container: HTMLElement): ScrollAnchorSnapshot {
+  const snapshot: ScrollAnchorSnapshot = {
+    fallbackScrollTop: getSafeScrollTop(container.scrollTop),
+    fallbackScrollHeight: container.scrollHeight,
+  };
+  const containerRect = container.getBoundingClientRect();
+  const entryElement = findFirstVisibleEntry(container);
+  if (!entryElement) return snapshot;
+
+  const entryKey = getEntryKey(entryElement);
+  if (!entryKey) return snapshot;
+
+  const entryRect = entryElement.getBoundingClientRect();
+  const probeY = Math.min(
+    Math.max(containerRect.top + 12, entryRect.top + 8),
+    Math.min(entryRect.bottom - 1, containerRect.bottom - 1),
+  );
+  const points = [
+    {
+      x: containerRect.left + containerRect.width / 2,
+      y: probeY,
+    },
+    { x: containerRect.left + 24, y: probeY },
+    { x: containerRect.right - 24, y: probeY },
+  ];
+
+  for (const point of points) {
+    const elements = document.elementsFromPoint(point.x, point.y);
+    for (const element of elements) {
+      if (element === container || !container.contains(element)) continue;
+
+      const deepEntryElement = getEntryElementFromElement(container, element);
+      if (!deepEntryElement || deepEntryElement !== entryElement) continue;
+
+      const elementRect = element.getBoundingClientRect();
+      if (
+        elementRect.bottom <= containerRect.top ||
+        elementRect.top >= containerRect.bottom
+      ) {
+        continue;
+      }
+
+      return {
+        ...snapshot,
+        entryKey,
+        element,
+        elementTop: getRelativeTop(containerRect, element),
+        entryTop: getRelativeTop(containerRect, entryElement),
+      };
+    }
+  }
+
+  return {
+    ...snapshot,
+    entryKey,
+    entryTop: getRelativeTop(containerRect, entryElement),
+  };
+}
+
+function applyScrollDelta(container: HTMLElement, delta: number) {
+  if (Math.abs(delta) <= ANCHOR_RESTORE_EPSILON) {
+    return false;
+  }
+  container.scrollTop += delta;
+  return true;
+}
+
+function restoreScrollAnchor(
+  container: HTMLElement,
+  snapshot: ScrollAnchorSnapshot,
+  { allowDiffFallback }: { allowDiffFallback: boolean },
+): AnchorRestoreResult {
+  const containerRect = container.getBoundingClientRect();
+
+  if (
+    snapshot.element &&
+    snapshot.elementTop != null &&
+    snapshot.element.isConnected &&
+    container.contains(snapshot.element)
+  ) {
+    const entryElement = getEntryElementFromElement(container, snapshot.element);
+    const entryKey = entryElement ? getEntryKey(entryElement) : undefined;
+    if (!snapshot.entryKey || entryKey === snapshot.entryKey) {
+      const delta = getRelativeTop(containerRect, snapshot.element) -
+        snapshot.elementTop;
+      return {
+        mode: "deep",
+        delta,
+        adjusted: applyScrollDelta(container, delta),
+      };
+    }
+  }
+
+  if (snapshot.entryKey && snapshot.entryTop != null) {
+    const entryElement = findEntryElementByKey(container, snapshot.entryKey);
+    if (entryElement) {
+      const delta = getRelativeTop(containerRect, entryElement) -
+        snapshot.entryTop;
+      return {
+        mode: "entry",
+        delta,
+        adjusted: applyScrollDelta(container, delta),
+      };
+    }
+  }
+
+  if (allowDiffFallback) {
+    const targetTop = calculatePrependScrollTop({
+      previousScrollTop: snapshot.fallbackScrollTop,
+      previousScrollHeight: snapshot.fallbackScrollHeight,
+      nextScrollHeight: container.scrollHeight,
+    });
+    const delta = targetTop - container.scrollTop;
+    container.scrollTop = targetTop;
+    return {
+      mode: "diff",
+      delta,
+      adjusted: Math.abs(delta) > ANCHOR_RESTORE_EPSILON,
+    };
+  }
+
+  return { mode: "none", delta: 0, adjusted: false };
 }
 
 export function EventStream({
@@ -96,6 +280,7 @@ export function EventStream({
   availableModels,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
@@ -106,14 +291,156 @@ export function EventStream({
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   // 标记正在调整 scroll 位置（prepend 场景），期间不更新 isAtBottom
   const adjustingScrollRef = useRef(false);
+  const programmaticScrollRef = useRef(false);
+  const programmaticScrollFrameRef = useRef<number | null>(null);
 
   // 加载更多：滚动到顶部触发
   const loadingMoreRef = useRef(false);
-  const prevScrollTopRef = useRef(0);
-  const prevScrollHeightRef = useRef(0);
+  const loadMoreAnchorRef = useRef<ScrollAnchorSnapshot | null>(null);
   const prevEntriesLengthRef = useRef(entries.length);
   const firstEntryKeyBeforeLoadRef = useRef<string | undefined>(undefined);
   const suppressLoadMoreUntilRef = useRef(0);
+  const anchorPinRef = useRef<AnchorPinSession | null>(null);
+
+  const runProgrammaticScroll = useCallback((action: () => void) => {
+    if (programmaticScrollFrameRef.current != null) {
+      cancelAnimationFrame(programmaticScrollFrameRef.current);
+    }
+
+    programmaticScrollRef.current = true;
+    adjustingScrollRef.current = true;
+    action();
+
+    programmaticScrollFrameRef.current = requestAnimationFrame(() => {
+      programmaticScrollRef.current = false;
+      adjustingScrollRef.current = false;
+      programmaticScrollFrameRef.current = null;
+    });
+  }, []);
+
+  const stopAnchorPin = useCallback(() => {
+    const session = anchorPinRef.current;
+    if (!session) return;
+
+    if (session.rafId != null) {
+      cancelAnimationFrame(session.rafId);
+    }
+    session.observer?.disconnect();
+    anchorPinRef.current = null;
+  }, []);
+
+  const restorePinnedAnchor = useCallback(
+    () => {
+      const el = scrollRef.current;
+      const session = anchorPinRef.current;
+      if (!el || !session) return;
+
+      let result: AnchorRestoreResult = {
+        mode: "none",
+        delta: 0,
+        adjusted: false,
+      };
+      runProgrammaticScroll(() => {
+        result = restoreScrollAnchor(el, session.snapshot, {
+          allowDiffFallback: false,
+        });
+      });
+
+      if (result.mode === "none") {
+        stopAnchorPin();
+      }
+    },
+    [runProgrammaticScroll, stopAnchorPin],
+  );
+
+  const schedulePinnedAnchorRestore = useCallback(
+    () => {
+      const session = anchorPinRef.current;
+      if (!session || session.rafId != null) return;
+
+      session.rafId = requestAnimationFrame(() => {
+        const current = anchorPinRef.current;
+        if (!current || current !== session) return;
+
+        current.rafId = null;
+        restorePinnedAnchor();
+      });
+    },
+    [restorePinnedAnchor],
+  );
+
+  const startAnchorPin = useCallback(
+    (snapshot: ScrollAnchorSnapshot) => {
+      const el = scrollRef.current;
+      const contentEl = contentRef.current;
+      if (!el || !contentEl || !snapshot.entryKey) return;
+
+      stopAnchorPin();
+
+      const session: AnchorPinSession = {
+        snapshot,
+        observer: null,
+        rafId: null,
+        warmupFrame: 0,
+      };
+      anchorPinRef.current = session;
+
+      if (typeof ResizeObserver !== "undefined") {
+        const observer = new ResizeObserver(() => {
+          schedulePinnedAnchorRestore();
+        });
+        observer.observe(contentEl);
+        const entryElement = findEntryElementByKey(el, snapshot.entryKey);
+        if (entryElement && entryElement !== contentEl) {
+          observer.observe(entryElement);
+        }
+        session.observer = observer;
+      }
+
+      const runWarmup = () => {
+        const current = anchorPinRef.current;
+        if (!current || current !== session) return;
+        if (current.warmupFrame >= ANCHOR_WARMUP_FRAMES) return;
+
+        current.rafId = requestAnimationFrame(() => {
+          const latest = anchorPinRef.current;
+          if (!latest || latest !== session) return;
+
+          latest.rafId = null;
+          latest.warmupFrame += 1;
+          restorePinnedAnchor();
+          runWarmup();
+        });
+      };
+
+      runWarmup();
+    },
+    [restorePinnedAnchor, schedulePinnedAnchorRestore, stopAnchorPin],
+  );
+
+  useLayoutEffect(() => {
+    loadingMoreRef.current = false;
+    loadMoreAnchorRef.current = null;
+    firstEntryKeyBeforeLoadRef.current = undefined;
+    suppressLoadMoreUntilRef.current = 0;
+    prevEntriesLengthRef.current = entriesRef.current.length;
+    isAtBottomRef.current = true;
+    setShowScrollBtn(false);
+
+    return () => {
+      stopAnchorPin();
+      if (programmaticScrollFrameRef.current != null) {
+        cancelAnimationFrame(programmaticScrollFrameRef.current);
+        programmaticScrollFrameRef.current = null;
+      }
+      programmaticScrollRef.current = false;
+      adjustingScrollRef.current = false;
+      loadingMoreRef.current = false;
+      loadMoreAnchorRef.current = null;
+      firstEntryKeyBeforeLoadRef.current = undefined;
+      suppressLoadMoreUntilRef.current = 0;
+    };
+  }, [instanceId, stopAnchorPin]);
 
   // 此 effect 需要先于 prepend restore 执行，依赖 loadingMoreRef 在本轮渲染中尚未被清除。
   useLayoutEffect(() => {
@@ -121,56 +448,20 @@ export function EventStream({
     if (!el) return;
 
     if (loadingMoreRef.current) {
-      logScroll("auto-bottom skipped", {
-        instanceId,
-        entriesLength: entries.length,
-        scrollTop: el.scrollTop,
-        scrollHeight: el.scrollHeight,
-        clientHeight: el.clientHeight,
-        loadingMore: loadingMoreRef.current,
-        isAtBottom: isAtBottomRef.current,
-      });
       return;
     }
 
     if (isAtBottomRef.current) {
-      logScroll("auto-bottom apply", {
-        instanceId,
-        entriesLength: entries.length,
-        beforeTop: el.scrollTop,
-        scrollHeight: el.scrollHeight,
-        clientHeight: el.clientHeight,
-      });
-      el.scrollTop = el.scrollHeight;
-      logScroll("auto-bottom after", {
-        instanceId,
-        afterTop: el.scrollTop,
-        maxTop: el.scrollHeight - el.clientHeight,
+      stopAnchorPin();
+      runProgrammaticScroll(() => {
+        el.scrollTop = el.scrollHeight;
       });
     }
-  }, [entries, instanceId]);
+  }, [entries, instanceId, runProgrammaticScroll, stopAnchorPin]);
 
   // entries 变化后：调整滚动位置 + 重置 loading 状态
   useLayoutEffect(() => {
     const el = scrollRef.current;
-
-    logScroll("entries layout effect", {
-      instanceId,
-      entriesLength: entries.length,
-      prevEntriesLength: prevEntriesLengthRef.current,
-      hasMore,
-      loadingMore: loadingMoreRef.current,
-      scrollTop: el?.scrollTop,
-      scrollHeight: el?.scrollHeight,
-      clientHeight: el?.clientHeight,
-      maxTop: el ? el.scrollHeight - el.clientHeight : undefined,
-      prevTop: prevScrollTopRef.current,
-      prevHeight: prevScrollHeightRef.current,
-      firstKeyBeforeLoad: firstEntryKeyBeforeLoadRef.current,
-      currentFirstKey: entries[0]
-        ? getSessionEntryRenderKey(entries[0])
-        : undefined,
-    });
 
     if (
       loadingMoreRef.current &&
@@ -185,88 +476,70 @@ export function EventStream({
         currentFirstKey !== firstEntryKeyBeforeLoadRef.current;
 
       if (didPrepend) {
-        adjustingScrollRef.current = true;
-        const targetTop = calculatePrependScrollTop({
-          previousScrollTop: prevScrollTopRef.current,
-          previousScrollHeight: prevScrollHeightRef.current,
-          nextScrollHeight: el.scrollHeight,
-        });
-        logScroll("prepend restore apply", {
-          instanceId,
-          prevTop: prevScrollTopRef.current,
-          prevHeight: prevScrollHeightRef.current,
-          newHeight: el.scrollHeight,
-          clientHeight: el.clientHeight,
-          maxTop: el.scrollHeight - el.clientHeight,
-          targetTop,
-          beforeTop: el.scrollTop,
-          didPrepend,
-          entriesLength: entries.length,
-          prevEntriesLength: prevEntriesLengthRef.current,
-        });
-        el.scrollTop = targetTop;
+        const snapshot = loadMoreAnchorRef.current;
+        let result: AnchorRestoreResult = {
+          mode: "none",
+          delta: 0,
+          adjusted: false,
+        };
+
+        if (snapshot) {
+          runProgrammaticScroll(() => {
+            result = restoreScrollAnchor(el, snapshot, {
+              allowDiffFallback: true,
+            });
+          });
+        }
+
         suppressLoadMoreUntilRef.current =
           performance.now() + LOAD_MORE_SUPPRESS_MS;
-        logScroll("prepend restore after", {
-          instanceId,
-          afterTop: el.scrollTop,
-          maxTop: el.scrollHeight - el.clientHeight,
-          suppressUntil: suppressLoadMoreUntilRef.current,
-        });
+
+        if (snapshot && snapshot.entryKey && result.mode !== "none") {
+          startAnchorPin(snapshot);
+        }
+
         loadingMoreRef.current = false;
+        loadMoreAnchorRef.current = null;
         firstEntryKeyBeforeLoadRef.current = undefined;
-        // 下一帧恢复 scroll 监听
-        requestAnimationFrame(() => {
-          adjustingScrollRef.current = false;
-        });
       } else {
-        // 等待 history 响应期间如果只是底部新增消息，更新基准高度，避免后续 prepend 过度补偿
-        prevScrollHeightRef.current = el.scrollHeight;
-        logScroll("non-prepend growth while loading", {
-          instanceId,
-          entriesLength: entries.length,
-          scrollHeight: el.scrollHeight,
-          scrollTop: el.scrollTop,
-        });
+        // 等待 history 响应期间如果只是底部新增消息，更新 fallback 基准高度，避免后续 diff fallback 过度补偿
+        if (loadMoreAnchorRef.current) {
+          loadMoreAnchorRef.current = {
+            ...loadMoreAnchorRef.current,
+            fallbackScrollHeight: el.scrollHeight,
+          };
+        }
       }
     }
 
     if (loadingMoreRef.current && !hasMore) {
-      logScroll("loading reset because hasMore false", {
-        instanceId,
-        entriesLength: entries.length,
-        scrollTop: el?.scrollTop,
-        scrollHeight: el?.scrollHeight,
-      });
       loadingMoreRef.current = false;
+      loadMoreAnchorRef.current = null;
       firstEntryKeyBeforeLoadRef.current = undefined;
     }
 
     prevEntriesLengthRef.current = entries.length;
-  }, [entries, hasMore, instanceId]);
+  }, [entries, hasMore, instanceId, runProgrammaticScroll, startAnchorPin]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-
-    // 调整 scroll 位置期间不更新 isAtBottom 状态
-    if (adjustingScrollRef.current) return;
 
     const rawScrollTop = el.scrollTop;
     const safeScrollTop = getSafeScrollTop(rawScrollTop);
     const isSuppressed = performance.now() < suppressLoadMoreUntilRef.current;
 
     if (rawScrollTop < 0) {
-      isAtBottomRef.current = false;
-      setShowScrollBtn(true);
-      logScroll("ignore safari overscroll", {
-        instanceId,
-        rawTop: rawScrollTop,
-        isSuppressed,
-        scrollHeight: el.scrollHeight,
-        clientHeight: el.clientHeight,
-      });
       return;
+    }
+
+    // 调整 scroll 位置期间不更新 isAtBottom 状态，也不把程序化滚动误判为用户滚动
+    if (adjustingScrollRef.current || programmaticScrollRef.current) {
+      return;
+    }
+
+    if (anchorPinRef.current) {
+      stopAnchorPin();
     }
 
     // 检测是否在底部（60px 容差）
@@ -282,53 +555,31 @@ export function EventStream({
       isSuppressed,
     });
 
-    logScroll("scroll", {
-      instanceId,
-      scrollTop: rawScrollTop,
-      safeScrollTop,
-      scrollHeight: el.scrollHeight,
-      clientHeight: el.clientHeight,
-      maxTop: el.scrollHeight - el.clientHeight,
-      atBottom,
-      hasMore,
-      loadingMore: loadingMoreRef.current,
-      isSuppressed,
-      willLoadMore,
-      entriesLength: entriesRef.current.length,
-    });
-
     // 滚动到顶部加载更多
     if (willLoadMore && onLoadMore) {
+      stopAnchorPin();
       loadingMoreRef.current = true;
-      prevScrollTopRef.current = safeScrollTop;
-      prevScrollHeightRef.current = el.scrollHeight;
       const currentEntries = entriesRef.current;
+      const snapshot = captureScrollAnchor(el);
+      loadMoreAnchorRef.current = snapshot;
       firstEntryKeyBeforeLoadRef.current = currentEntries[0]
         ? getSessionEntryRenderKey(currentEntries[0])
         : undefined;
-      logScroll("load-more trigger", {
-        instanceId,
-        prevTop: prevScrollTopRef.current,
-        rawTop: rawScrollTop,
-        prevHeight: prevScrollHeightRef.current,
-        clientHeight: el.clientHeight,
-        maxTop: el.scrollHeight - el.clientHeight,
-        firstKeyBeforeLoad: firstEntryKeyBeforeLoadRef.current,
-        entriesLength: currentEntries.length,
-        atBottom,
-      });
       onLoadMore();
     }
-  }, [hasMore, instanceId, onLoadMore]);
+  }, [hasMore, instanceId, onLoadMore, stopAnchorPin]);
 
   // 快速滚动到底部
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      stopAnchorPin();
+      runProgrammaticScroll(() => {
+        scrollRef.current!.scrollTop = scrollRef.current!.scrollHeight;
+      });
       isAtBottomRef.current = true;
       setShowScrollBtn(false);
     }
-  }, []);
+  }, [runProgrammaticScroll, stopAnchorPin]);
 
   // textarea 自动调整高度
   const handleInputChange = useCallback(
@@ -400,30 +651,34 @@ export function EventStream({
           ref={scrollRef}
           onScroll={handleScroll}
           style={{ overflowAnchor: "none" }}
-          className="flex-1 overflow-y-auto space-y-1 scrollbar-auto"
+          className="flex-1 overflow-y-auto scrollbar-auto"
         >
-          {hasMore && (
-            <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2">
-              Loading earlier messages...
-            </div>
-          )}
-          {entries.length === 0 && !hasMore ? (
-            <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
-              Waiting for messages...
-            </div>
-          ) : (
-            entries.map((entry, i) => {
-              return (
-                <EntryItem
-                  key={getSessionEntryRenderKey(entry)}
-                  entry={entry}
-                  entries={entries}
-                  isLast={i === entries.length - 1}
-                  isStreaming={isStreaming}
-                />
-              );
-            })
-          )}
+          <div ref={contentRef} className="space-y-1">
+            {hasMore && (
+              <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2">
+                Loading earlier messages...
+              </div>
+            )}
+            {entries.length === 0 && !hasMore ? (
+              <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
+                Waiting for messages...
+              </div>
+            ) : (
+              entries.map((entry, i) => {
+                const key = getSessionEntryRenderKey(entry);
+                return (
+                  <div key={key} data-entry-key={key}>
+                    <EntryItem
+                      entry={entry}
+                      entries={entries}
+                      isLast={i === entries.length - 1}
+                      isStreaming={isStreaming}
+                    />
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
         {/* 快速滚动到底部按钮 */}
         {showScrollBtn && (

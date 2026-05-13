@@ -142,18 +142,6 @@ export function useAppState() {
           return next;
         });
 
-        console.log("[PaimonScroll] history received", {
-          instanceId,
-          newEntriesLength: newEntries.length,
-          hasMore: more,
-          firstNewKey: newEntries[0]
-            ? getSessionEntryRenderKey(newEntries[0])
-            : undefined,
-          lastNewKey: newEntries.at(-1)
-            ? getSessionEntryRenderKey(newEntries.at(-1)!)
-            : undefined,
-        });
-
         // history 只含已完成消息，prepend 到 historyEntries 开头
         setHistoryEntries((prev) => {
           const next = new Map(prev);

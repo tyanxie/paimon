@@ -163,7 +163,7 @@ Browser → Hub：
 - **分页加载**: 按 turn 分组（每个 user message 开始新 turn），支持 offset + limit 参数，滚动到顶部加载更多
 - **前端数据分层**: `historyEntries`（已完成消息，来自 history API + message_end）与 `streamingEntry`（当前 streaming 消息）分离存储，message_end 时从 streaming 移入 history。offset 只计算 historyEntries 长度，精确匹配 extension 侧 getBranch() 条目数
 - **Streaming 恢复**: 刷新页面后 `message_update` 隐式创建 streamingEntry，无需先收到 `message_start`
-- **自动滚动**: 用户在底部时自动跟随新内容；history prepend 期间通过稳定 entry key、禁用滚动锚定和 scrollTop 补偿保持当前可见内容位置，并暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中）
+- **自动滚动**: 用户在底部时自动跟随新内容；history prepend 期间通过稳定 entry key、禁用浏览器滚动锚定、deep visible anchor / entry anchor 恢复和 ResizeObserver anchor pin 保持当前可见内容位置，并暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中）
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
 - **Tool 弹窗架构**: 每个工具可拥有专属 DetailModal（ReadDetailModal / BashDetailModal / WriteDetailModal / EditDetailModal），未定制的工具使用 DefaultDetailModal（JSON args + 纯文本 result）；共享 ModalShell 外壳组件
 - **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型
