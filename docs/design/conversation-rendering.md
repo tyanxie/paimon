@@ -38,10 +38,11 @@ ImageContent    { type: "image", data: string, mimeType: string }
 
 ## 统一 Entry 列表
 
-浏览器维护一个 `Entry[]` 列表，由两个来源共同填充：
+浏览器只维护当前实例的 `Entry[]` 列表，由两个来源共同填充：
 
-1. **历史加载**：subscribe 时请求 `get_history` → 获得完整 `SessionEntry[]`，作为初始值
-2. **实时事件**：通过 `forwarded_event` 增量更新列表
+1. **历史刷新**：subscribe / 切换实例时请求 `get_history` → 获得当前页 `SessionEntry[]`，替换现有列表
+2. **历史分页**：滚动到顶部时带 offset 请求更早 history，响应后 prepend 到列表开头
+3. **实时事件**：通过 `forwarded_event` 增量更新列表
 
 ### 实时事件处理
 
@@ -101,9 +102,10 @@ ImageContent    { type: "image", data: string, mimeType: string }
 
 ## 自动滚动
 
-依赖 `entries` 引用（每次 state 更新都是新数组），自动 scroll to bottom。
+依赖当前视图状态区分 refresh、prepend 和实时更新。
 覆盖场景：
 
-- 历史加载完成 → 滚到底
-- 新 entry 追加 → 滚到底
-- message_update 内容增长 → 滚到底
+- 实例切换 / 历史刷新完成 → 滚到底
+- 新 entry 追加 → 用户在底部附近时滚到底
+- message_update 内容增长 → 用户在底部附近时滚到底
+- 加载更早历史 prepend → 通过可见内容 anchor 恢复当前位置，不滚到底

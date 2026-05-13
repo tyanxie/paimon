@@ -26,6 +26,19 @@ export interface SessionEntry {
 
 type RenderKeySource = "history" | "streaming" | "live";
 
+export type ConversationLoadState = "idle" | "refreshing" | "loadingMore" | "error";
+
+export interface ConversationState {
+  currentInstanceId: InstanceId | null;
+  entries: SessionEntry[];
+  streamingEntry: SessionEntry | null;
+  hasMore: boolean;
+  loadState: ConversationLoadState;
+  errorMessage: string | null;
+  shouldScrollToBottom: boolean;
+  drafts: Map<InstanceId, string>;
+}
+
 type NextRenderKey = (
   instanceId: InstanceId,
   source: RenderKeySource,
@@ -78,6 +91,111 @@ export function createSessionMessageEntry(
   );
 }
 
+export function createConversationState(): ConversationState {
+  return {
+    currentInstanceId: null,
+    entries: [],
+    streamingEntry: null,
+    hasMore: false,
+    loadState: "idle",
+    errorMessage: null,
+    shouldScrollToBottom: false,
+    drafts: new Map(),
+  };
+}
+
+export function getInstanceDraft(
+  drafts: Map<InstanceId, string>,
+  instanceId: InstanceId | null,
+): string {
+  if (!instanceId) return "";
+  return drafts.get(instanceId) ?? "";
+}
+
+export function setInstanceDraft(
+  drafts: Map<InstanceId, string>,
+  instanceId: InstanceId,
+  value: string,
+): Map<InstanceId, string> {
+  const next = new Map(drafts);
+  if (value) {
+    next.set(instanceId, value);
+  } else {
+    next.delete(instanceId);
+  }
+  return next;
+}
+
+export function beginInstanceRefresh(
+  state: ConversationState,
+  instanceId: InstanceId,
+): ConversationState {
+  return {
+    ...state,
+    currentInstanceId: instanceId,
+    entries: [],
+    streamingEntry: null,
+    hasMore: false,
+    loadState: "refreshing",
+    errorMessage: null,
+    shouldScrollToBottom: false,
+  };
+}
+
+export function beginLoadMore(state: ConversationState): ConversationState {
+  if (!state.currentInstanceId || !state.hasMore || state.loadState !== "idle") {
+    return state;
+  }
+
+  return {
+    ...state,
+    loadState: "loadingMore",
+    errorMessage: null,
+    shouldScrollToBottom: false,
+  };
+}
+
+export function applyHistoryResponse(
+  state: ConversationState,
+  instanceId: InstanceId,
+  messages: SessionEntry[],
+  hasMore: boolean,
+): ConversationState {
+  if (state.currentInstanceId !== instanceId) return state;
+
+  if (state.loadState === "loadingMore") {
+    return {
+      ...state,
+      entries: [...messages, ...state.entries],
+      hasMore,
+      loadState: "idle",
+      errorMessage: null,
+      shouldScrollToBottom: false,
+    };
+  }
+
+  return {
+    ...state,
+    entries: messages,
+    hasMore,
+    loadState: "idle",
+    errorMessage: null,
+    shouldScrollToBottom: true,
+  };
+}
+
+export function applyConversationError(
+  state: ConversationState,
+  message: string,
+): ConversationState {
+  return {
+    ...state,
+    loadState: "error",
+    errorMessage: message,
+    shouldScrollToBottom: false,
+  };
+}
+
 export function useAppState() {
   const renderKeySeqRef = useRef(0);
   const nextRenderKey = useCallback<NextRenderKey>((instanceId, source) => {
@@ -85,20 +203,33 @@ export function useAppState() {
   }, []);
 
   const [instances, setInstances] = useState<InstanceInfo[]>([]);
+  const [conversation, setConversation] = useState<ConversationState>(() =>
+    createConversationState(),
+  );
 
-  // 已完成的历史消息（来自 history 响应 + message_end 追加）
-  const [historyEntries, setHistoryEntries] = useState<
-    Map<InstanceId, SessionEntry[]>
-  >(new Map());
+  const startInstanceRefresh = useCallback((instanceId: InstanceId) => {
+    setConversation((prev) => beginInstanceRefresh(prev, instanceId));
+  }, []);
 
-  // 当前正在 streaming 的消息（每实例至多一条）
-  const [streamingEntry, setStreamingEntry] = useState<
-    Map<InstanceId, SessionEntry | null>
-  >(new Map());
+  const startLoadMore = useCallback(() => {
+    setConversation((prev) => beginLoadMore(prev));
+  }, []);
 
-  // 每个实例是否还有更早的历史可加载
-  const [hasMore, setHasMore] = useState<Map<InstanceId, boolean>>(new Map());
+  const setDraft = useCallback((instanceId: InstanceId, value: string) => {
+    setConversation((prev) => ({
+      ...prev,
+      drafts: setInstanceDraft(prev.drafts, instanceId, value),
+    }));
+  }, []);
 
+  const clearScrollToBottom = useCallback(() => {
+    setConversation((prev) => {
+      if (!prev.shouldScrollToBottom) return prev;
+      return { ...prev, shouldScrollToBottom: false };
+    });
+  }, []);
+
+  // handleForwardedEvent 只依赖稳定的 setConversation 与 nextRenderKey；如果后续加入非稳定依赖，需要同步更新这里的 deps。
   const handleMessage = useCallback((msg: HubToBrowserMessage) => {
     switch (msg.type) {
       case "instance_list":
@@ -106,7 +237,14 @@ export function useAppState() {
         break;
       case "instance_update":
         if (msg.payload.action === "connected") {
-          setInstances((prev) => [...prev, msg.payload.instance]);
+          setInstances((prev) => {
+            if (prev.some((i) => i.id === msg.payload.instance.id)) {
+              return prev.map((i) =>
+                i.id === msg.payload.instance.id ? msg.payload.instance : i,
+              );
+            }
+            return [...prev, msg.payload.instance];
+          });
         } else if (msg.payload.action === "disconnected") {
           setInstances((prev) =>
             prev.filter((i) => i.id !== msg.payload.instance.id),
@@ -136,23 +274,14 @@ export function useAppState() {
         );
         const more = (msg.payload as any).hasMore ?? false;
 
-        setHasMore((prev) => {
-          const next = new Map(prev);
-          next.set(instanceId, more);
-          return next;
-        });
-
-        // history 只含已完成消息，prepend 到 historyEntries 开头
-        setHistoryEntries((prev) => {
-          const next = new Map(prev);
-          const existing = prev.get(instanceId) ?? [];
-          next.set(instanceId, [...newEntries, ...existing]);
-          return next;
-        });
+        setConversation((prev) =>
+          applyHistoryResponse(prev, instanceId, newEntries, more),
+        );
         break;
       }
       case "error":
         console.error("[Paimon]", msg.payload.message);
+        setConversation((prev) => applyConversationError(prev, msg.payload.message));
         break;
     }
   }, [nextRenderKey]);
@@ -168,77 +297,67 @@ export function useAppState() {
     switch (event) {
       case "message_start": {
         const message = d.message as SessionEntry["message"];
-        if (!message) break;
+        if (!message || message.role !== "assistant") break;
 
-        if (message.role === "assistant") {
-          // assistant 消息进入 streaming 阶段
-          setStreamingEntry((prev) => {
-            const next = new Map(prev);
-            next.set(
+        // assistant 消息进入 streaming 阶段
+        setConversation((prev) => {
+          if (prev.currentInstanceId !== instanceId) return prev;
+          return {
+            ...prev,
+            streamingEntry: createSessionMessageEntry(
               instanceId,
-              createSessionMessageEntry(
-                instanceId,
-                message,
-                "streaming",
-                nextRenderKey,
-              ),
-            );
-            return next;
-          });
-        }
-        // user / toolResult 的 message_start 不处理，等 message_end 时直接入 history
+              message,
+              "streaming",
+              nextRenderKey,
+            ),
+          };
+        });
         break;
       }
       case "message_update": {
         const message = d.message as SessionEntry["message"];
         if (!message) break;
 
-        setStreamingEntry((prev) => {
-          const current = prev.get(instanceId);
-          if (current) {
-            // 已有 streaming entry：更新内容
-            const next = new Map(prev);
-            next.set(instanceId, { ...current, message });
-            return next;
-          } else {
-            // 刷新后场景：隐式创建 streaming entry
-            const next = new Map(prev);
-            next.set(
-              instanceId,
-              createSessionMessageEntry(
-                instanceId,
-                message,
-                "streaming",
-                nextRenderKey,
-              ),
-            );
-            return next;
+        setConversation((prev) => {
+          if (prev.currentInstanceId !== instanceId) return prev;
+          if (prev.streamingEntry) {
+            return {
+              ...prev,
+              streamingEntry: { ...prev.streamingEntry, message },
+            };
           }
+
+          // 刷新后场景：隐式创建 streaming entry
+          return {
+            ...prev,
+            streamingEntry: createSessionMessageEntry(
+              instanceId,
+              message,
+              "streaming",
+              nextRenderKey,
+            ),
+          };
         });
         break;
       }
       case "message_end": {
         const message = d.message as SessionEntry["message"];
 
-        // 清除 streaming entry
-        setStreamingEntry((prev) => {
-          const next = new Map(prev);
-          next.set(instanceId, null);
-          return next;
-        });
+        setConversation((prev) => {
+          if (prev.currentInstanceId !== instanceId) return prev;
+          const nextEntries = message
+            ? [
+                ...prev.entries,
+                createSessionMessageEntry(instanceId, message, "live", nextRenderKey),
+              ]
+            : prev.entries;
 
-        // 将完成的消息 append 到 historyEntries
-        if (message) {
-          setHistoryEntries((prev) => {
-            const next = new Map(prev);
-            const list = [...(prev.get(instanceId) ?? [])];
-            list.push(
-              createSessionMessageEntry(instanceId, message, "live", nextRenderKey),
-            );
-            next.set(instanceId, list);
-            return next;
-          });
-        }
+          return {
+            ...prev,
+            streamingEntry: null,
+            entries: nextEntries,
+          };
+        });
         break;
       }
     }
@@ -246,9 +365,19 @@ export function useAppState() {
 
   return {
     instances,
-    historyEntries,
-    streamingEntry,
-    hasMore,
+    entries: conversation.entries,
+    streamingEntry: conversation.streamingEntry,
+    hasMore: conversation.hasMore,
+    loadState: conversation.loadState,
+    errorMessage: conversation.errorMessage,
+    currentInstanceId: conversation.currentInstanceId,
+    shouldScrollToBottom: conversation.shouldScrollToBottom,
+    draft: getInstanceDraft(conversation.drafts, conversation.currentInstanceId),
+    drafts: conversation.drafts,
     handleMessage,
+    startInstanceRefresh,
+    startLoadMore,
+    setDraft,
+    clearScrollToBottom,
   };
 }

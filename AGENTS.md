@@ -160,17 +160,18 @@ Browser → Hub：
 
 - **历史消息**: `ctx.sessionManager.getBranch()` 获取当前分支完整历史，浏览器订阅时自动请求
 - **重要：`getBranch()` 只返回已完成的消息**（`appendMessage` 在 `message_end` 时才调用），正在 streaming 的消息不在其中
-- **分页加载**: 按 turn 分组（每个 user message 开始新 turn），支持 offset + limit 参数，滚动到顶部加载更多
-- **前端数据分层**: `historyEntries`（已完成消息，来自 history API + message_end）与 `streamingEntry`（当前 streaming 消息）分离存储，message_end 时从 streaming 移入 history。offset 只计算 historyEntries 长度，精确匹配 extension 侧 getBranch() 条目数
+- **分页加载**: 按 turn 分组（每个 user message 开始新 turn），支持 offset + limit 参数；实例切换/刷新请求不带 offset，加载更早历史时 offset 取当前已完成 entries 长度
+- **前端数据分层**: Web 侧只保存当前实例的已完成 `entries` 与当前 `streamingEntry`，实例切换时清空对话区并重新请求 history；history 刷新响应 replace entries，加载更早历史响应 prepend entries
+- **草稿隔离**: 输入框草稿按实例 ID 存储，切换实例时显示目标实例草稿；发送成功后只清空当前实例草稿
 - **Streaming 恢复**: 刷新页面后 `message_update` 隐式创建 streamingEntry，无需先收到 `message_start`
-- **自动滚动**: 用户在底部时自动跟随新内容；history prepend 期间通过稳定 entry key、禁用浏览器滚动锚定、deep visible anchor / entry anchor 恢复和 ResizeObserver anchor pin 保持当前可见内容位置，并暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中）
+- **自动滚动**: 实例切换/刷新 history 首包完成后自动滚到底部；用户在底部时自动跟随新内容；history prepend 期间通过稳定 entry key、禁用浏览器滚动锚定、deep visible anchor / entry anchor 恢复和 ResizeObserver anchor pin 保持当前可见内容位置，并暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中）
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
 - **Tool 弹窗架构**: 每个工具可拥有专属 DetailModal（ReadDetailModal / BashDetailModal / WriteDetailModal / EditDetailModal），未定制的工具使用 DefaultDetailModal（JSON args + 纯文本 result）；共享 ModalShell 外壳组件
 - **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型
 - **Diff 渲染**: Edit 弹窗从 `result.details.diff` 取已生成的 unified diff，前端逐行解析前缀着色（红删绿增灰上下文），配色跟随 light/dark 主题切换
 - **API 错误展示**: 助手消息 stopReason="error" 时渲染 ErrorCard；短 detail 直接内联，长 detail (>200字符) 点击卡片弹出 ModalShell 展示完整错误信息（结构化解析 type/message/requestId）
 - **会话信息展示**: Extension 在 message_end/session_compact 时发送 contextUsage + gitBranch；Web 侧边栏渲染上下文进度条（绿/橙/红阈值），输入框上方内联展示 context usage + git branch
-- **对话展示**: 统一渲染 `[...historyEntries, streamingEntry?]`，历史 prepend + streaming 实时更新，互不冲突，详见 `docs/design/conversation-rendering.md`
+- **对话展示**: 统一渲染 `[...entries, streamingEntry?]`，刷新 replace、历史 prepend 与 streaming 实时更新互不冲突，详见 `docs/design/conversation-rendering.md`
 
 ## CLI 设计
 

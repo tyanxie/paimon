@@ -9,6 +9,7 @@ import type {
 } from "../../../protocol/types";
 import {
   getSessionEntryRenderKey,
+  type ConversationLoadState,
   type SessionEntry,
 } from "../stores/useAppState";
 import { EntryItem } from "./entries";
@@ -85,6 +86,12 @@ interface EventStreamProps {
   entries: SessionEntry[];
   instanceId: InstanceId | null;
   isStreaming: boolean;
+  loadState: ConversationLoadState;
+  errorMessage: string | null;
+  shouldScrollToBottom: boolean;
+  onScrollToBottomHandled: () => void;
+  inputValue: string;
+  onInputChange: (value: string) => void;
   onSendMessage: (message: string) => void;
   onAbort: () => void;
   onSetModel?: (provider: string, id: string) => void;
@@ -267,6 +274,12 @@ export function EventStream({
   entries,
   instanceId,
   isStreaming,
+  loadState,
+  errorMessage,
+  shouldScrollToBottom,
+  onScrollToBottomHandled,
+  inputValue,
+  onInputChange,
   onSendMessage,
   onAbort,
   onSetModel,
@@ -284,7 +297,7 @@ export function EventStream({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
-  const [inputValue, setInputValue] = useState("");
+  const isRefreshing = loadState === "refreshing";
 
   // 自动滚到底部（仅当用户在底部附近时）
   const isAtBottomRef = useRef(true);
@@ -459,6 +472,30 @@ export function EventStream({
     }
   }, [entries, instanceId, runProgrammaticScroll, stopAnchorPin]);
 
+  useLayoutEffect(() => {
+    if (!shouldScrollToBottom) return;
+
+    const el = scrollRef.current;
+    if (!el) {
+      onScrollToBottomHandled();
+      return;
+    }
+
+    stopAnchorPin();
+    runProgrammaticScroll(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    isAtBottomRef.current = true;
+    setShowScrollBtn(false);
+    onScrollToBottomHandled();
+  }, [
+    shouldScrollToBottom,
+    entries,
+    runProgrammaticScroll,
+    stopAnchorPin,
+    onScrollToBottomHandled,
+  ]);
+
   // entries 变化后：调整滚动位置 + 重置 loading 状态
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -581,24 +618,32 @@ export function EventStream({
     }
   }, [runProgrammaticScroll, stopAnchorPin]);
 
+  const resizeTextarea = useCallback((el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    const newHeight = Math.min(el.scrollHeight, 150);
+    el.style.height = `${newHeight}px`;
+    el.style.overflowY = el.scrollHeight > 150 ? "auto" : "hidden";
+  }, []);
+
+  useLayoutEffect(() => {
+    if (textareaRef.current) {
+      resizeTextarea(textareaRef.current);
+    }
+  }, [inputValue, resizeTextarea]);
+
   // textarea 自动调整高度
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setInputValue(e.target.value);
-      const el = e.target;
-      el.style.height = "auto";
-      const newHeight = Math.min(el.scrollHeight, 150);
-      el.style.height = `${newHeight}px`;
-      el.style.overflowY = el.scrollHeight > 150 ? "auto" : "hidden";
+      onInputChange(e.target.value);
+      resizeTextarea(e.target);
     },
-    [],
+    [onInputChange, resizeTextarea],
   );
 
   // 发送消息
   const handleSend = useCallback(() => {
     if (!inputValue.trim()) return;
     onSendMessage(inputValue.trim());
-    setInputValue("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -651,17 +696,31 @@ export function EventStream({
           ref={scrollRef}
           onScroll={handleScroll}
           style={{ overflowAnchor: "none" }}
+          aria-busy={isRefreshing}
           className="flex-1 overflow-y-auto scrollbar-auto"
         >
           <div ref={contentRef} className="space-y-1">
-            {hasMore && (
+            {loadState === "loadingMore" && (
               <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2">
                 Loading earlier messages...
               </div>
             )}
-            {entries.length === 0 && !hasMore ? (
+            {isRefreshing ? (
+              <RefreshingConversationSkeleton />
+            ) : loadState === "error" ? (
+              <div className="mx-auto mt-8 max-w-[520px] rounded-[12px] border border-[var(--separator)] bg-[var(--fill-card)] px-4 py-3 text-center">
+                <div className="text-[13px] text-[var(--label-primary)]">
+                  Failed to load conversation
+                </div>
+                {errorMessage && (
+                  <div className="mt-1 text-[12px] text-[var(--label-secondary)] break-words">
+                    {errorMessage}
+                  </div>
+                )}
+              </div>
+            ) : entries.length === 0 && !hasMore ? (
               <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
-                Waiting for messages...
+                No messages yet
               </div>
             ) : (
               entries.map((entry, i) => {
@@ -767,6 +826,22 @@ export function EventStream({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function RefreshingConversationSkeleton() {
+  return (
+    <div className="space-y-3 pt-3" aria-label="Loading conversation">
+      {[0, 1, 2, 3].map((item) => (
+        <div key={item} className="space-y-1.5 animate-pulse">
+          <div className="h-3 w-20 rounded-full bg-[var(--fill-tertiary)]" />
+          <div className="max-w-[680px] space-y-1.5 rounded-[10px] border border-[var(--separator)] bg-[var(--fill-card)] p-3">
+            <div className="h-3 w-[82%] rounded-full bg-[var(--fill-secondary)]" />
+            <div className="h-3 w-[64%] rounded-full bg-[var(--fill-tertiary)]" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

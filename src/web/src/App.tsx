@@ -18,8 +18,21 @@ function useSelectedInstanceId(): InstanceId | null {
 }
 
 export default function App() {
-  const { instances, historyEntries, streamingEntry, hasMore, handleMessage } =
-    useAppState();
+  const {
+    instances,
+    entries,
+    streamingEntry,
+    hasMore,
+    loadState,
+    errorMessage,
+    draft,
+    shouldScrollToBottom,
+    handleMessage,
+    startInstanceRefresh,
+    startLoadMore,
+    setDraft,
+    clearScrollToBottom,
+  } = useAppState();
 
   const { connected, send } = useWebSocket(handleMessage);
   const navigate = useNavigate();
@@ -47,9 +60,10 @@ export default function App() {
       subscribedRef.current = null;
     }
 
-    // 订阅新实例
+    // 订阅新实例，并把右侧对话区切入刷新态
     const exists = instances.some((i) => i.id === selectedInstanceId);
     if (exists) {
+      startInstanceRefresh(selectedInstanceId);
       send({
         type: "subscribe",
         payload: { instanceId: selectedInstanceId },
@@ -58,7 +72,7 @@ export default function App() {
       send({ type: "history", payload: { instanceId: selectedInstanceId } });
     }
     // exists 为 false 时不更新 ref，等 instances 加载后重试
-  }, [selectedInstanceId, instances, connected, send]);
+  }, [selectedInstanceId, instances, connected, send, startInstanceRefresh]);
 
   // 点击侧边栏实例：只导航，订阅由 useEffect 自动响应
   const handleSelect = useCallback(
@@ -75,8 +89,17 @@ export default function App() {
         type: "prompt",
         payload: { instanceId: selectedInstanceId, message },
       });
+      setDraft(selectedInstanceId, "");
     },
-    [selectedInstanceId, send],
+    [selectedInstanceId, send, setDraft],
+  );
+
+  const handleDraftChange = useCallback(
+    (value: string) => {
+      if (!selectedInstanceId) return;
+      setDraft(selectedInstanceId, value);
+    },
+    [selectedInstanceId, setDraft],
   );
 
   const handleAbort = useCallback(() => {
@@ -101,32 +124,22 @@ export default function App() {
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
   // 合并 history + streaming 供渲染
-  const instanceHistory = selectedInstanceId
-    ? (historyEntries.get(selectedInstanceId) ?? [])
-    : [];
-  const instanceStreaming = selectedInstanceId
-    ? (streamingEntry.get(selectedInstanceId) ?? null)
-    : null;
-  const instanceEntries = instanceStreaming
-    ? [...instanceHistory, instanceStreaming]
-    : instanceHistory;
-  const isStreaming = instanceStreaming !== null;
-  const instanceHasMore = selectedInstanceId
-    ? (hasMore.get(selectedInstanceId) ?? false)
-    : false;
+  const instanceEntries = streamingEntry ? [...entries, streamingEntry] : entries;
+  const isStreaming = streamingEntry !== null;
 
-  // 加载更多历史（offset 只计算 historyEntries，不含 streaming）
+  // 加载更多历史（offset 只计算已完成 entries，不含 streaming）
   const handleLoadMore = useCallback(() => {
-    if (!selectedInstanceId || !instanceHasMore) return;
-    const history = historyEntries.get(selectedInstanceId) ?? [];
+    if (!selectedInstanceId || !hasMore || loadState !== "idle") return;
+    const offset = entries.length;
+    startLoadMore();
     send({
       type: "history",
       payload: {
         instanceId: selectedInstanceId,
-        offset: history.length,
+        offset,
       },
     });
-  }, [selectedInstanceId, instanceHasMore, historyEntries, send]);
+  }, [selectedInstanceId, hasMore, loadState, entries.length, startLoadMore, send]);
 
   return (
     <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-stretch p-2 gap-2 md:p-3 md:gap-3 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
@@ -148,11 +161,17 @@ export default function App() {
               entries={instanceEntries}
               instanceId={selectedInstanceId}
               isStreaming={isStreaming}
+              loadState={loadState}
+              errorMessage={errorMessage}
+              shouldScrollToBottom={shouldScrollToBottom}
+              onScrollToBottomHandled={clearScrollToBottom}
+              inputValue={draft}
+              onInputChange={handleDraftChange}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
               onSetModel={handleSetModel}
               instanceStatus={selectedInstance?.status}
-              hasMore={instanceHasMore}
+              hasMore={hasMore}
               onLoadMore={handleLoadMore}
               contextUsage={selectedInstance?.contextUsage}
               gitBranch={selectedInstance?.gitBranch}
@@ -183,6 +202,12 @@ export default function App() {
                   entries={[]}
                   instanceId={null}
                   isStreaming={false}
+                  loadState="idle"
+                  errorMessage={null}
+                  shouldScrollToBottom={false}
+                  onScrollToBottomHandled={clearScrollToBottom}
+                  inputValue=""
+                  onInputChange={() => {}}
                   onSendMessage={handleSendMessage}
                   onAbort={handleAbort}
                 />
