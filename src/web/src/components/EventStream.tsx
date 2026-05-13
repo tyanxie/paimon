@@ -12,6 +12,7 @@ import {
   type ConversationLoadState,
   type SessionEntry,
 } from "../stores/useAppState";
+import { useLogoSrc } from "../hooks/useLogoSrc";
 import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
 import { ModelSelector } from "./ui/ModelSelector";
@@ -295,6 +296,7 @@ export function EventStream({
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const logoSrc = useLogoSrc();
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const isRefreshing = loadState === "refreshing";
@@ -666,7 +668,7 @@ export function EventStream({
       <div className="glass-panel flex-1 flex items-center justify-center">
         <div className="text-center">
           <img
-            src="/paimon-logo.png"
+            src={logoSrc}
             alt="Paimon"
             className="w-16 h-16 mx-auto mb-4 opacity-80"
           />

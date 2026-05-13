@@ -3,6 +3,7 @@
 import { Settings as SettingsIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 import type { InstanceInfo, InstanceId } from "../../../protocol/types";
+import { useLogoSrc } from "../hooks/useLogoSrc";
 
 interface SidebarProps {
   instances: InstanceInfo[];
@@ -18,6 +19,7 @@ export function Sidebar({
   connected,
 }: SidebarProps) {
   const navigate = useNavigate();
+  const logoSrc = useLogoSrc();
 
   return (
     <aside className="glass-panel w-[240px] md:w-[240px] flex-shrink-0 flex flex-col overflow-hidden max-md:w-full max-md:flex-1">
@@ -26,7 +28,7 @@ export function Sidebar({
         <div className="grid grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-x-2.5 items-center">
           <div className="row-span-2">
             <img
-              src="/paimon-logo.png"
+              src={logoSrc}
               alt="Paimon"
               className="h-[34px] w-auto object-contain"
             />

@@ -32,7 +32,7 @@ paimon/
 │           ├── main.tsx            # React 入口
 │           ├── App.tsx             # 根组件
 │           ├── index.css           # Tailwind + macOS 26 tokens
-│           ├── hooks/              # useWebSocket
+│           ├── hooks/              # useWebSocket, useLogoSrc
 │           ├── stores/             # useAppState, useSettings
 │           └── components/         # Sidebar, EventStream, Settings
 │               ├── ui/             # 通用 UI 组件 (ModalShell, MobileNavBar, ModelSelector)
@@ -46,7 +46,7 @@ paimon/
 │   ├── macos-26-design-tokens.json # Figma Design Tokens 插件导出
 │   ├── macos-26-figma-raw-data.md  # Figma API 原始数据缓存
 │   ├── macos-26-tokens.md          # 整理后的设计规范速查表
-│   ├── paimon-logo.png             # 当前 logo（Python 脚本生成）
+│   ├── logos/                      # 按 data-bg/data-theme 分组的 logo 产物
 │   └── generate-logo.py            # logo 生成脚本
 │
 ├── package.json                    # 依赖 + bin + pi extension 声明
@@ -88,7 +88,7 @@ paimon/
 - 面板间 gap 12px，外层 padding 12px，背景可透出
 - 系统字体栈（-apple-system / Inter）
 - 亮色/暗色双模式（基于 data-theme 属性，支持手动切换 + 跟随系统）
-- 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）
+- 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）；logo 按 data-bg + data-theme 使用对应四色渐变版本
 - 设置页（/settings）：外观配置（主题 + 背景），存储于 localStorage（paimon:appearance / paimon:background）
 - 代码高亮：不使用第三方 hljs 主题，自定义 CSS 变量配色（`--hljs-*`），跟随 light/dark 主题自动切换；配色低饱和度，与 macOS 26 label 色系协调
 - 响应式布局：Tailwind `md:` 断点（768px）区分移动/桌面；移动端 Sidebar 隐藏、根路由全屏实例列表、对话页 MobileNavBar 导航；不分离 Layout 组件，同一份 JSX + 响应式类
