@@ -82,7 +82,7 @@ paimon/
 
 - 浮动面板布局：Sidebar 保持毛玻璃导航面板；右侧对话区为开放渐变画布，顶部实例/分支信息与底部 composer 作为同宽悬浮毛玻璃控件浮在内容之上
 - 动态渐变背景：animated gradient 20s 循环，亮暗双模式各有配色
-- 毛玻璃效果（backdrop-filter: blur(30px) + 半透明底色 + 0.5px 边框）
+- 毛玻璃效果（backdrop-filter: blur(30px) + 半透明底色 + 0.5px 边框）；Popover 使用 `glass-popover` 对齐 `glass-panel` 材质
 - 大圆角卡片（window 26px / panel 18px / item 8px）
 - 柔和阴影（panel: `0 8px 40px rgba(0,0,0,0.08)`）
 - 面板间 gap 12px，外层 padding 12px，背景可透出

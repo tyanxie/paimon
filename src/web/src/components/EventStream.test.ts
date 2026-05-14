@@ -20,6 +20,7 @@ Object.assign(globalThis, {
 });
 
 const { getConversationScrollSpacing } = await import("./EventStream");
+const css = await Bun.file(new URL("../index.css", import.meta.url)).text();
 
 describe("EventStream 间距计算", () => {
   test("对话内容底部安全高度基于底部浮层可见高度，并扣除 safe area", () => {
@@ -58,5 +59,18 @@ describe("EventStream 间距计算", () => {
       paddingBottom: 110,
       scrollButtonBottom: 114,
     });
+  });
+});
+
+describe("玻璃样式", () => {
+  test("popover 对齐 panel 材质并保留 backdrop-filter 兼容声明顺序", () => {
+    const rule = css.match(/\.glass-popover\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+
+    expect(css).not.toContain("--material-popover:");
+    expect(rule).toContain("background: var(--panel-bg);");
+    expect(rule.indexOf("-webkit-backdrop-filter: blur(30px);")).toBeGreaterThan(-1);
+    expect(rule.indexOf("backdrop-filter: blur(30px);")).toBeGreaterThan(
+      rule.indexOf("-webkit-backdrop-filter: blur(30px);"),
+    );
   });
 });
