@@ -17,9 +17,10 @@ export function MobileNavBar({
   const navigate = useNavigate();
 
   return (
-    <div className="md:hidden flex items-center gap-2 -mx-1 -mt-1 mb-3 pb-2 border-b border-[var(--separator)]">
+    <div className="md:hidden flex items-center gap-2">
       <button
         onClick={() => navigate(backTo)}
+        aria-label="Back to instances"
         className="flex items-center text-[var(--label-secondary)] active:opacity-60 transition-opacity"
       >
         <ChevronLeft size={20} />

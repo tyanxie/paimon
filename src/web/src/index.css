@@ -27,6 +27,9 @@
   --spacing-sidebar: 240px;
   --size-control-height: 36px;
 
+  /* 安全区 */
+  --bottom-safe-gap: max(0.75rem, env(safe-area-inset-bottom));
+
   /* 字体 */
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro", sans-serif;
 
@@ -432,8 +435,8 @@ button,
 
 .glass-panel {
   background: var(--panel-bg);
-  backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
   border-radius: 18px;
   border: 0.5px solid var(--panel-border);
   box-shadow: var(--panel-shadow);

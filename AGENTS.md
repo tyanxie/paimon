@@ -80,7 +80,7 @@ paimon/
 
 ### 核心视觉规范
 
-- 浮动面板布局：sidebar 和 content 是独立的玻璃面板，浮在背景之上
+- 浮动面板布局：Sidebar 保持毛玻璃导航面板；右侧对话区为开放渐变画布，顶部实例/分支信息与底部输入框作为悬浮毛玻璃控件浮在内容之上
 - 动态渐变背景：animated gradient 20s 循环，亮暗双模式各有配色
 - 毛玻璃效果（backdrop-filter: blur(30px) + 半透明底色 + 0.5px 边框）
 - 大圆角卡片（window 26px / panel 18px / item 8px）
@@ -170,7 +170,7 @@ Browser → Hub：
 - **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型
 - **Diff 渲染**: Edit 弹窗从 `result.details.diff` 取已生成的 unified diff，前端逐行解析前缀着色（红删绿增灰上下文），配色跟随 light/dark 主题切换
 - **API 错误展示**: 助手消息 stopReason="error" 时渲染 ErrorCard；短 detail 直接内联，长 detail (>200字符) 点击卡片弹出 ModalShell 展示完整错误信息（结构化解析 type/message/requestId）
-- **会话信息展示**: Extension 在 message_end/session_compact 时发送 contextUsage + gitBranch；Web 侧边栏渲染上下文进度条（绿/橙/红阈值），输入框上方内联展示 context usage + git branch
+- **会话信息展示**: Extension 在 message_end/session_compact 时发送 contextUsage + gitBranch；Web 侧边栏渲染上下文进度条（绿/橙/红阈值），顶部悬浮栏展示 instance name 与 git branch，输入框上方内联展示 context usage + model
 - **对话展示**: 统一渲染 `[...entries, streamingEntry?]`，刷新 replace、历史 prepend 与 streaming 实时更新互不冲突，详见 `docs/design/conversation-rendering.md`
 
 ## CLI 设计

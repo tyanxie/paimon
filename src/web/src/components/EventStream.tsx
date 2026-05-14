@@ -1,4 +1,4 @@
-// 事件流面板：展示选中实例的对话 entries（独立玻璃面板）
+// 事件流画布：展示选中实例的对话 entries
 
 import { useRef, useLayoutEffect, useState, useCallback } from "react";
 import { ArrowUp, Square, ChevronsDown, GitBranch } from "lucide-react";
@@ -21,6 +21,26 @@ const LOAD_MORE_SUPPRESS_MS = 350;
 const ENTRY_KEY_ATTR = "data-entry-key";
 const ANCHOR_RESTORE_EPSILON = 0.5;
 const ANCHOR_WARMUP_FRAMES = 3;
+
+export function getConversationScrollSpacing({
+  topChromeHeight,
+  bottomChromeHeight,
+  bottomSafeGap = 0,
+}: {
+  topChromeHeight: number;
+  bottomChromeHeight: number;
+  bottomSafeGap?: number;
+}) {
+  const bottomChromeAboveViewport = Math.max(
+    0,
+    bottomChromeHeight - bottomSafeGap,
+  );
+  return {
+    paddingTop: Math.max(24, topChromeHeight - 4),
+    paddingBottom: Math.max(40, bottomChromeAboveViewport - 4),
+    scrollButtonBottom: bottomChromeAboveViewport + 12,
+  };
+}
 
 export function calculatePrependScrollTop({
   previousScrollTop,
@@ -296,10 +316,21 @@ export function EventStream({
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const topChromeRef = useRef<HTMLDivElement>(null);
+  const bottomChromeRef = useRef<HTMLDivElement>(null);
+  const bottomSafeGapRef = useRef<HTMLDivElement>(null);
   const logoSrc = useLogoSrc();
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const isRefreshing = loadState === "refreshing";
+  const [topChromeHeight, setTopChromeHeight] = useState(64);
+  const [bottomChromeHeight, setBottomChromeHeight] = useState(96);
+  const [bottomSafeGap, setBottomSafeGap] = useState(12);
+  const scrollSpacing = getConversationScrollSpacing({
+    topChromeHeight,
+    bottomChromeHeight,
+    bottomSafeGap,
+  });
 
   // 自动滚到底部（仅当用户在底部附近时）
   const isAtBottomRef = useRef(true);
@@ -316,6 +347,42 @@ export function EventStream({
   const firstEntryKeyBeforeLoadRef = useRef<string | undefined>(undefined);
   const suppressLoadMoreUntilRef = useRef(0);
   const anchorPinRef = useRef<AnchorPinSession | null>(null);
+
+  useLayoutEffect(() => {
+    const observeHeight = (
+      element: HTMLElement | null,
+      setHeight: (height: number) => void,
+    ) => {
+      if (!element) return () => undefined;
+
+      const updateHeight = () => {
+        setHeight(Math.ceil(element.getBoundingClientRect().height));
+      };
+      updateHeight();
+
+      if (typeof ResizeObserver === "undefined") return () => undefined;
+
+      const observer = new ResizeObserver(updateHeight);
+      observer.observe(element);
+      return () => observer.disconnect();
+    };
+
+    const cleanupTop = observeHeight(topChromeRef.current, setTopChromeHeight);
+    const cleanupBottom = observeHeight(
+      bottomChromeRef.current,
+      setBottomChromeHeight,
+    );
+    const cleanupSafeGap = observeHeight(
+      bottomSafeGapRef.current,
+      setBottomSafeGap,
+    );
+
+    return () => {
+      cleanupTop();
+      cleanupBottom();
+      cleanupSafeGap();
+    };
+  }, [instanceId]);
 
   const runProgrammaticScroll = useCallback((action: () => void) => {
     if (programmaticScrollFrameRef.current != null) {
@@ -665,7 +732,7 @@ export function EventStream({
 
   if (!instanceId) {
     return (
-      <div className="glass-panel flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <img
             src={logoSrc}
@@ -680,28 +747,48 @@ export function EventStream({
     );
   }
 
+  const title = instanceName || "Instance";
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 gap-2 md:gap-3">
-      {/* 对话流 */}
-      <main className="glass-panel flex-1 flex flex-col min-h-0 overflow-hidden relative p-3 md:p-4">
-        {/* 移动端导航栏 */}
-        <MobileNavBar
-          title={instanceName || "Instance"}
-          subtitle={
-            instanceModel
-              ? instanceModel.name ||
-                `${instanceModel.provider}/${instanceModel.id}`
-              : undefined
-          }
-        />
+    <div className="relative flex-1 min-w-0 overflow-hidden">
+      <main className="absolute inset-0 flex min-h-0 flex-col overflow-hidden">
+        {/* 顶部悬浮信息栏 */}
+        <div className="pointer-events-none absolute left-0 right-0 top-0 z-20 px-3 pt-3 md:px-4 md:pt-4">
+          <div
+            ref={topChromeRef}
+            className="glass-panel pointer-events-auto mx-auto w-full max-w-[920px] px-3 py-2 md:px-4 md:py-2.5"
+            role="region"
+            aria-label="Instance info"
+          >
+            <div className="hidden md:block min-w-0">
+              <div className="truncate text-[13px] font-medium text-[var(--label-primary)]">
+                {title}
+              </div>
+              {gitBranch && (
+                <div className="mt-1 flex min-w-0 items-center gap-1 text-[11px] text-[var(--label-tertiary)]">
+                  <GitBranch size={11} className="shrink-0 opacity-70" />
+                  <span className="truncate">{gitBranch}</span>
+                </div>
+              )}
+            </div>
+            <MobileNavBar title={title} subtitle={gitBranch ?? undefined} />
+          </div>
+        </div>
         <div
           ref={scrollRef}
           onScroll={handleScroll}
           style={{ overflowAnchor: "none" }}
           aria-busy={isRefreshing}
-          className="flex-1 overflow-y-auto scrollbar-auto"
+          className="absolute bottom-[var(--bottom-safe-gap)] left-0 right-0 top-6 overflow-y-auto scrollbar-auto px-3 md:bottom-0 md:top-7 md:px-4"
         >
-          <div ref={contentRef} className="space-y-1">
+          <div
+            ref={contentRef}
+            style={{
+              paddingTop: scrollSpacing.paddingTop,
+              paddingBottom: scrollSpacing.paddingBottom,
+            }}
+            className="mx-auto max-w-[920px] space-y-1"
+          >
             {loadState === "loadingMore" && (
               <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2">
                 Loading earlier messages...
@@ -743,7 +830,10 @@ export function EventStream({
         </div>
         {/* 快速滚动到底部按钮 */}
         {showScrollBtn && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+          <div
+            style={{ bottom: scrollSpacing.scrollButtonBottom }}
+            className="absolute left-1/2 z-30 -translate-x-1/2"
+          >
             <button
               onClick={scrollToBottom}
               className="w-9 h-9 rounded-full bg-[var(--btn-solid)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--btn-solid-hover)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
@@ -753,81 +843,86 @@ export function EventStream({
             </button>
           </div>
         )}
-      </main>
 
-      {/* 上下文 + 模型 + 分支信息（输入框上方） */}
-      {(contextUsage || instanceModel || gitBranch) && (
-        <div className="flex items-center justify-between px-3 -mb-2 text-[12px] text-[var(--label-secondary)]">
-          <span>
-            {contextUsage ? (
-              <ContextIndicator contextUsage={contextUsage} />
-            ) : null}
-          </span>
-          <span className="flex items-center gap-2.5">
-            {instanceModel && (
-              <ModelSelector
-                currentModel={instanceModel}
-                availableModels={availableModels}
-                onSelect={onSetModel}
-              />
+        {/* 底部悬浮输入区 */}
+        <div
+          ref={bottomChromeRef}
+          className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 px-3 pb-0 md:px-4"
+        >
+          <div className="pointer-events-auto mx-auto w-full max-w-[820px]">
+            {/* 上下文 + 模型信息（输入框上方） */}
+            {(contextUsage || instanceModel) && (
+              <div className="mb-1.5 flex items-center justify-between px-3 text-[12px] text-[var(--label-secondary)]">
+                <span>
+                  {contextUsage ? <ContextIndicator contextUsage={contextUsage} /> : null}
+                </span>
+                <span className="flex items-center gap-2.5">
+                  {instanceModel && (
+                    <ModelSelector
+                      currentModel={instanceModel}
+                      availableModels={availableModels}
+                      onSelect={onSetModel}
+                    />
+                  )}
+                </span>
+              </div>
             )}
-            {gitBranch && (
-              <span className="flex items-center gap-1 opacity-70">
-                <GitBranch size={10} />
-                {gitBranch}
-              </span>
-            )}
-          </span>
-        </div>
-      )}
 
-      {/* 输入栏（独立玻璃胶囊） */}
-      <div
-        className={`relative flex items-end rounded-[20px] overflow-hidden glass-panel ${
-          instanceStatus === "streaming"
-            ? "glass-panel-disabled"
-            : "glass-panel-input"
-        }`}
-      >
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          placeholder={
-            instanceStatus === "streaming"
-              ? "Agent is running..."
-              : "Send a message..."
-          }
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          disabled={instanceStatus === "streaming"}
-          className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[13px] leading-[20px] px-4 py-[10px] outline-none overflow-hidden disabled:cursor-default"
-        />
-        <div className="flex-shrink-0 pb-[6px] pr-[6px] pointer-events-auto">
-          {instanceStatus === "streaming" && !inputValue.trim() ? (
-            <button
-              onClick={onAbort}
-              className="w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
-              title="Stop"
-            >
-              <Square size={12} fill="currentColor" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSend}
-              disabled={!inputValue.trim()}
-              className={`w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
-                inputValue.trim()
-                  ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
-                  : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
+            {/* 输入栏（独立毛玻璃胶囊） */}
+            <div
+              className={`relative flex items-end rounded-[20px] overflow-hidden glass-panel ${
+                instanceStatus === "streaming"
+                  ? "glass-panel-disabled"
+                  : "glass-panel-input"
               }`}
-              title="Send"
             >
-              <ArrowUp size={16} strokeWidth={2.5} />
-            </button>
-          )}
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                placeholder={
+                  instanceStatus === "streaming"
+                    ? "Agent is running..."
+                    : "Send a message..."
+                }
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                disabled={instanceStatus === "streaming"}
+                className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[13px] leading-[20px] px-4 py-[10px] outline-none overflow-hidden disabled:cursor-default"
+              />
+              <div className="flex-shrink-0 pb-[6px] pr-[6px] pointer-events-auto">
+                {instanceStatus === "streaming" && !inputValue.trim() ? (
+                  <button
+                    onClick={onAbort}
+                    className="w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
+                    title="Stop"
+                  >
+                    <Square size={12} fill="currentColor" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSend}
+                    disabled={!inputValue.trim()}
+                    className={`w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
+                      inputValue.trim()
+                        ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
+                        : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
+                    }`}
+                    title="Send"
+                  >
+                    <ArrowUp size={16} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div
+              ref={bottomSafeGapRef}
+              className="h-[var(--bottom-safe-gap)] md:h-0"
+              aria-hidden="true"
+            />
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
