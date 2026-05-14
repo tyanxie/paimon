@@ -31,8 +31,8 @@ describe("EventStream 间距计算", () => {
       }),
     ).toEqual({
       paddingTop: 60,
-      paddingBottom: 92,
-      scrollButtonBottom: 108,
+      paddingBottom: 108,
+      scrollButtonBottom: 112,
     });
 
     expect(
@@ -43,8 +43,8 @@ describe("EventStream 间距计算", () => {
       }),
     ).toEqual({
       paddingTop: 60,
-      paddingBottom: 176,
-      scrollButtonBottom: 192,
+      paddingBottom: 192,
+      scrollButtonBottom: 196,
     });
 
     expect(
@@ -55,8 +55,8 @@ describe("EventStream 间距计算", () => {
       }),
     ).toEqual({
       paddingTop: 60,
-      paddingBottom: 94,
-      scrollButtonBottom: 110,
+      paddingBottom: 110,
+      scrollButtonBottom: 114,
     });
   });
 });

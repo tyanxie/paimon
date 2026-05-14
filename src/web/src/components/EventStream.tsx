@@ -37,8 +37,8 @@ export function getConversationScrollSpacing({
   );
   return {
     paddingTop: Math.max(24, topChromeHeight - 4),
-    paddingBottom: Math.max(40, bottomChromeAboveViewport - 4),
-    scrollButtonBottom: bottomChromeAboveViewport + 12,
+    paddingBottom: Math.max(40, bottomChromeAboveViewport + 12),
+    scrollButtonBottom: bottomChromeAboveViewport + 16,
   };
 }
 
@@ -410,6 +410,16 @@ export function EventStream({
     session.observer?.disconnect();
     anchorPinRef.current = null;
   }, []);
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !isAtBottomRef.current) return;
+
+    stopAnchorPin();
+    runProgrammaticScroll(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [bottomChromeHeight, runProgrammaticScroll, stopAnchorPin]);
 
   const restorePinnedAnchor = useCallback(
     () => {
@@ -849,70 +859,71 @@ export function EventStream({
           ref={bottomChromeRef}
           className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 px-3 pb-0 md:px-4"
         >
-          <div className="pointer-events-auto mx-auto w-full max-w-[820px]">
-            {/* 上下文 + 模型信息（输入框上方） */}
-            {(contextUsage || instanceModel) && (
-              <div className="mb-1.5 flex items-center justify-between px-3 text-[12px] text-[var(--label-secondary)]">
-                <span>
-                  {contextUsage ? <ContextIndicator contextUsage={contextUsage} /> : null}
-                </span>
-                <span className="flex items-center gap-2.5">
-                  {instanceModel && (
-                    <ModelSelector
-                      currentModel={instanceModel}
-                      availableModels={availableModels}
-                      onSelect={onSetModel}
-                    />
-                  )}
-                </span>
-              </div>
-            )}
-
-            {/* 输入栏（独立毛玻璃胶囊） */}
+          <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
             <div
-              className={`relative flex items-end rounded-[20px] overflow-hidden glass-panel ${
+              className={`glass-panel px-3 py-2 md:px-4 ${
                 instanceStatus === "streaming"
                   ? "glass-panel-disabled"
                   : "glass-panel-input"
               }`}
             >
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                placeholder={
-                  instanceStatus === "streaming"
-                    ? "Agent is running..."
-                    : "Send a message..."
-                }
-                value={inputValue}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                disabled={instanceStatus === "streaming"}
-                className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[13px] leading-[20px] px-4 py-[10px] outline-none overflow-hidden disabled:cursor-default"
-              />
-              <div className="flex-shrink-0 pb-[6px] pr-[6px] pointer-events-auto">
-                {instanceStatus === "streaming" && !inputValue.trim() ? (
-                  <button
-                    onClick={onAbort}
-                    className="w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
-                    title="Stop"
-                  >
-                    <Square size={12} fill="currentColor" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleSend}
-                    disabled={!inputValue.trim()}
-                    className={`w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
-                      inputValue.trim()
-                        ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
-                        : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
-                    }`}
-                    title="Send"
-                  >
-                    <ArrowUp size={16} strokeWidth={2.5} />
-                  </button>
-                )}
+              {/* 上下文 + 模型信息 */}
+              {(contextUsage || instanceModel) && (
+                <div className="mb-1.5 flex items-center justify-between gap-3 px-1 text-[12px] text-[var(--label-secondary)]">
+                  <span className="min-w-0 truncate">
+                    {contextUsage ? <ContextIndicator contextUsage={contextUsage} /> : null}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2.5">
+                    {instanceModel && (
+                      <ModelSelector
+                        currentModel={instanceModel}
+                        availableModels={availableModels}
+                        onSelect={onSetModel}
+                      />
+                    )}
+                  </span>
+                </div>
+              )}
+
+              <div className="relative flex items-end overflow-hidden rounded-[14px] border border-[var(--separator)] bg-transparent">
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  placeholder={
+                    instanceStatus === "streaming"
+                      ? "Agent is running..."
+                      : "Send a message..."
+                  }
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  disabled={instanceStatus === "streaming"}
+                  className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[13px] leading-[20px] px-3 py-[9px] outline-none overflow-hidden disabled:cursor-default md:px-4 md:py-[10px]"
+                />
+                <div className="flex-shrink-0 pb-[5px] pr-[5px] pointer-events-auto md:pb-[6px] md:pr-[6px]">
+                  {instanceStatus === "streaming" && !inputValue.trim() ? (
+                    <button
+                      onClick={onAbort}
+                      className="w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
+                      title="Stop"
+                    >
+                      <Square size={12} fill="currentColor" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleSend}
+                      disabled={!inputValue.trim()}
+                      className={`w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
+                        inputValue.trim()
+                          ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
+                          : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
+                      }`}
+                      title="Send"
+                    >
+                      <ArrowUp size={16} strokeWidth={2.5} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div
