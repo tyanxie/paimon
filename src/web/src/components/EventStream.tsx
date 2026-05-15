@@ -56,6 +56,15 @@ export function calculatePrependScrollTop({
   return previousScrollTop + nextScrollHeight - previousScrollHeight;
 }
 
+export function getComposerButtonMode({
+  instanceStatus,
+}: {
+  instanceStatus?: "idle" | "streaming";
+  inputValue: string;
+}) {
+  return instanceStatus === "streaming" ? "stop" : "send";
+}
+
 export function getSafeScrollTop(rawScrollTop: number) {
   return Math.max(0, rawScrollTop);
 }
@@ -325,6 +334,7 @@ export function EventStream({
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const isRefreshing = loadState === "refreshing";
+  const composerButtonMode = getComposerButtonMode({ instanceStatus, inputValue });
   const [topChromeHeight, setTopChromeHeight] = useState(64);
   const [bottomChromeHeight, setBottomChromeHeight] = useState(96);
   const [bottomSafeGap, setBottomSafeGap] = useState(12);
@@ -723,12 +733,12 @@ export function EventStream({
 
   // 发送消息
   const handleSend = useCallback(() => {
-    if (!inputValue.trim()) return;
+    if (instanceStatus === "streaming" || !inputValue.trim()) return;
     onSendMessage(inputValue.trim());
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [inputValue, onSendMessage]);
+  }, [inputValue, instanceStatus, onSendMessage]);
 
   // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
   const handleKeyDown = useCallback(
@@ -864,16 +874,19 @@ export function EventStream({
           <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
             <div
               className={`glass-panel px-3 py-2 md:px-4 ${
-                instanceStatus === "streaming"
-                  ? "glass-panel-disabled"
-                  : "glass-panel-input"
+                instanceStatus === "streaming" ? "" : "glass-panel-input"
               }`}
             >
-              {/* 上下文 + 模型信息 */}
-              {(contextUsage || instanceModel) && (
+              {/* 状态 + 上下文 + 模型信息 */}
+              {(instanceStatus || contextUsage || instanceModel) && (
                 <div className="mb-1.5 flex items-center justify-between gap-3 px-1 text-[12px] text-[var(--label-secondary)]">
-                  <span className="min-w-0 truncate">
-                    {contextUsage ? <ContextIndicator contextUsage={contextUsage} /> : null}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ComposerStatusIndicator status={instanceStatus} />
+                    {contextUsage ? (
+                      <span className="min-w-0 truncate">
+                        <ContextIndicator contextUsage={contextUsage} />
+                      </span>
+                    ) : null}
                   </span>
                   <span className="flex shrink-0 items-center gap-2.5">
                     {instanceModel && (
@@ -903,7 +916,7 @@ export function EventStream({
                   className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[13px] leading-[20px] px-3 py-[9px] outline-none overflow-hidden disabled:cursor-default md:px-4 md:py-[10px]"
                 />
                 <div className="flex-shrink-0 pb-[5px] pr-[5px] pointer-events-auto md:pb-[6px] md:pr-[6px]">
-                  {instanceStatus === "streaming" && !inputValue.trim() ? (
+                  {composerButtonMode === "stop" ? (
                     <button
                       onClick={onAbort}
                       className="w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
@@ -953,6 +966,40 @@ function RefreshingConversationSkeleton() {
         </div>
       ))}
     </div>
+  );
+}
+
+export function ComposerStatusIndicator({
+  status,
+}: {
+  status?: "idle" | "streaming";
+}) {
+  if (!status) return null;
+
+  const isRunning = status === "streaming";
+
+  return (
+    <span
+      className={`flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 ${
+        isRunning
+          ? "bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] text-[var(--color-accent)]"
+          : "bg-green-500/10 text-green-500"
+      }`}
+      title={isRunning ? "执行中" : "在线"}
+      role="status"
+      aria-live="polite"
+      aria-label={isRunning ? "执行中" : "在线"}
+    >
+      <span
+        aria-hidden="true"
+        className={`h-2 w-2 rounded-full ${
+          isRunning
+            ? "motion-safe:animate-pulse bg-[var(--color-accent)]"
+            : "bg-green-500"
+        }`}
+      />
+      <span>{isRunning ? "执行中" : "在线"}</span>
+    </span>
   );
 }
 
