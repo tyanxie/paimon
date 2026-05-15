@@ -94,6 +94,7 @@ paimon/
 - 响应式布局：Tailwind `md:` 断点（768px）区分移动/桌面；移动端 Sidebar 隐藏、根路由全屏实例列表、对话页 MobileNavBar 导航；不分离 Layout 组件，同一份 JSX + 响应式类
 - iOS 适配：`viewport-fit=cover` + `env(safe-area-inset-bottom)` 避开圆角/Home Indicator；`maximum-scale=1` 禁止输入框自动缩放；`interactive-widget=resizes-content` + `useViewportHeight` hook 处理键盘弹出时视口缩放；内联 `<style>` 设置 html background-color 作为 safe area 兜底色（Safari 仅从内联样式读取）
 - Sidebar logo 使用固定高度（`h-[34px]`）匹配标题两行文字，避免 `display:none` 转换时百分比高度解析失败
+- 文本选择策略：对话正文、代码块、工具详情、顶部/底部会话信息、Modal 标题等有复制价值的内容保持可选；Sidebar、按钮、Tool 折叠卡、加载/空状态占位等纯控件禁用误选
 
 ## 架构设计
 

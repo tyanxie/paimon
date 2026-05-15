@@ -126,7 +126,7 @@ export function ModelSelector({
                   {gi > 0 && (
                     <div className="mx-3 my-1 h-px bg-[var(--fill-tertiary)]" />
                   )}
-                  <div className="px-3 pt-2 pb-1 text-[11px] font-bold text-[var(--label-tertiary)] uppercase">
+                  <div className="px-3 pt-2 pb-1 text-[11px] font-bold text-[var(--label-tertiary)] uppercase select-none">
                     {provider}
                   </div>
                   {models.map((m) => {
@@ -138,17 +138,17 @@ export function ModelSelector({
                           if (!active) onSelect?.(m.provider, m.id);
                           setOpen(false);
                         }}
-                        className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
+                        className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors select-none ${
                           active
                             ? "bg-[var(--fill-tertiary)]"
                             : "hover:bg-[var(--fill-quaternary)]"
                         }`}
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="text-[13px] text-[var(--label-primary)] truncate">
+                          <div className="text-[13px] text-[var(--label-primary)] truncate select-text">
                             {m.name || m.id}
                           </div>
-                          <div className="text-[11px] text-[var(--label-tertiary)] truncate">
+                          <div className="text-[11px] text-[var(--label-tertiary)] truncate select-text">
                             {m.id}
                           </div>
                         </div>
@@ -180,10 +180,10 @@ export function ModelSelector({
         } transition-colors`}
       >
         {/* PC: provider/id, Mobile: name */}
-        <span className="hidden md:inline">
+        <span className="hidden md:inline select-text">
           {currentModel.provider}/{currentModel.id}
         </span>
-        <span className="md:hidden">
+        <span className="md:hidden select-text">
           {currentModel.name || currentModel.id}
         </span>
         {canSelect && (

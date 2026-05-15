@@ -186,7 +186,7 @@ export function ToolCallCard({
       {/* 折叠卡片 */}
       <button
         onClick={() => setShowModal(true)}
-        className="w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group"
+        className="w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group select-none"
       >
         <span className="text-[var(--label-secondary)] group-hover:text-[var(--color-accent)] transition-colors">
           {getToolIcon(name)}
@@ -245,7 +245,7 @@ interface DetailModalProps {
 function ToolModalTitle({ name }: { name: string }) {
   return (
     <>
-      <span className="text-[var(--label-secondary)]">{getToolIcon(name)}</span>
+      <span className="text-[var(--label-secondary)] select-none">{getToolIcon(name)}</span>
       {name}
     </>
   );

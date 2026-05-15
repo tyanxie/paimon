@@ -755,7 +755,7 @@ export function EventStream({
   if (!instanceId) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center select-none">
           <img
             src={logoSrc}
             alt="Paimon"
@@ -783,13 +783,13 @@ export function EventStream({
             aria-label="Instance info"
           >
             <div className="hidden md:block min-w-0">
-              <div className="truncate text-[13px] font-medium text-[var(--label-primary)]">
+              <div className="truncate text-[13px] font-medium text-[var(--label-primary)] select-text">
                 {title}
               </div>
               {gitBranch && (
                 <div className="mt-1 flex min-w-0 items-center gap-1 text-[11px] text-[var(--label-tertiary)]">
-                  <GitBranch size={11} className="shrink-0 opacity-70" />
-                  <span className="truncate">{gitBranch}</span>
+                  <GitBranch size={11} className="shrink-0 opacity-70 select-none" />
+                  <span className="truncate select-text">{gitBranch}</span>
                 </div>
               )}
             </div>
@@ -812,7 +812,7 @@ export function EventStream({
             className="mx-auto max-w-[920px] space-y-1"
           >
             {loadState === "loadingMore" && (
-              <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2">
+              <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2 select-none">
                 Loading earlier messages...
               </div>
             )}
@@ -820,17 +820,17 @@ export function EventStream({
               <RefreshingConversationSkeleton />
             ) : loadState === "error" ? (
               <div className="mx-auto mt-8 max-w-[520px] rounded-[12px] border border-[var(--separator)] bg-[var(--fill-card)] px-4 py-3 text-center">
-                <div className="text-[13px] text-[var(--label-primary)]">
+                <div className="text-[13px] text-[var(--label-primary)] select-none">
                   Failed to load conversation
                 </div>
                 {errorMessage && (
-                  <div className="mt-1 text-[12px] text-[var(--label-secondary)] break-words">
+                  <div className="mt-1 text-[12px] text-[var(--label-secondary)] break-words select-text">
                     {errorMessage}
                   </div>
                 )}
               </div>
             ) : entries.length === 0 && !hasMore ? (
-              <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8">
+              <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8 select-none">
                 No messages yet
               </div>
             ) : (
@@ -858,7 +858,7 @@ export function EventStream({
           >
             <button
               onClick={scrollToBottom}
-              className="w-9 h-9 rounded-full bg-[var(--btn-solid)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--btn-solid-hover)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+              className="select-none w-9 h-9 rounded-full bg-[var(--btn-solid)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--btn-solid-hover)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
               title="Scroll to bottom"
             >
               <ChevronsDown size={16} />
@@ -919,7 +919,7 @@ export function EventStream({
                   {composerButtonMode === "stop" ? (
                     <button
                       onClick={onAbort}
-                      className="w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
+                      className="select-none w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
                       title="Stop"
                     >
                       <Square size={12} fill="currentColor" />
@@ -928,7 +928,7 @@ export function EventStream({
                     <button
                       onClick={handleSend}
                       disabled={!inputValue.trim()}
-                      className={`w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
+                      className={`select-none w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
                         inputValue.trim()
                           ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
                           : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
@@ -955,7 +955,7 @@ export function EventStream({
 
 function RefreshingConversationSkeleton() {
   return (
-    <div className="space-y-3 pt-3" aria-label="Loading conversation">
+    <div className="space-y-3 pt-3 select-none" aria-label="Loading conversation">
       {[0, 1, 2, 3].map((item) => (
         <div key={item} className="space-y-1.5 animate-pulse">
           <div className="h-3 w-20 rounded-full bg-[var(--fill-tertiary)]" />
@@ -998,7 +998,7 @@ export function ComposerStatusIndicator({
             : "bg-green-500"
         }`}
       />
-      <span>{isRunning ? "执行中" : "在线"}</span>
+      <span className="select-text">{isRunning ? "执行中" : "在线"}</span>
     </span>
   );
 }
@@ -1026,7 +1026,7 @@ function ContextIndicator({
   };
 
   return (
-    <span style={{ color }}>
+    <span className="select-text" style={{ color }}>
       {fmt(tokens)} / {fmt(contextWindow)} ({Math.round(percent)}%)
     </span>
   );

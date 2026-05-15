@@ -55,7 +55,7 @@ function SegmentedControl<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex rounded-[8px] bg-[var(--fill-secondary)] p-[2px]">
+    <div className="flex rounded-[8px] bg-[var(--fill-secondary)] p-[2px] select-none">
       {options.map((opt) => (
         <button
           key={opt.value}
@@ -85,7 +85,7 @@ function SettingRow({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-2.5">
+      <div className="flex items-center justify-between px-4 py-2.5 select-none">
         <span className="text-[13px] font-semibold text-[var(--label-primary)]">
           {label}
         </span>
@@ -107,7 +107,7 @@ function BackgroundPicker({
   onChange: (v: Background) => void;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 select-none">
       {BACKGROUND_OPTIONS.map((opt) => (
         <button
           key={opt.value}
@@ -151,12 +151,12 @@ export function Settings() {
     <div className="flex-1 flex items-start justify-center p-4 md:p-6 overflow-y-auto scrollbar-auto">
       <div className="w-full max-w-[480px]">
         <MobileNavBar title="设置" />
-        <h1 className="hidden md:block text-[22px] font-semibold text-[var(--label-primary)] mb-6 px-4">
+        <h1 className="hidden md:block text-[22px] font-semibold text-[var(--label-primary)] mb-6 px-4 select-none">
           设置
         </h1>
 
         {/* 外观 */}
-        <div className="text-[13px] font-semibold text-[var(--label-primary)] mb-2 px-4">
+        <div className="text-[13px] font-semibold text-[var(--label-primary)] mb-2 px-4 select-none">
           外观
         </div>
         <section className="glass-panel overflow-hidden">

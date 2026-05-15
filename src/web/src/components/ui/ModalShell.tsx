@@ -25,14 +25,14 @@ export function ModalShell({
       >
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--separator)]">
-          <div className="flex items-center gap-2 text-[15px] font-semibold text-[var(--label-primary)]">
+          <div className="flex items-center gap-2 text-[15px] font-semibold text-[var(--label-primary)] select-text">
             {title}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 select-text">
             {trailing}
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--fill-secondary)] transition-colors text-[var(--label-secondary)]"
+              className="select-none w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--fill-secondary)] transition-colors text-[var(--label-secondary)]"
             >
               <X size={14} />
             </button>

@@ -22,7 +22,7 @@ export function Sidebar({
   const logoSrc = useLogoSrc();
 
   return (
-    <aside className="glass-panel w-[240px] md:w-[240px] flex-shrink-0 flex flex-col overflow-hidden max-md:w-full max-md:flex-1">
+    <aside className="glass-panel select-none w-[240px] md:w-[240px] flex-shrink-0 flex flex-col overflow-hidden max-md:w-full max-md:flex-1">
       {/* 标题区 */}
       <div className="px-4 pt-4 pb-2">
         <div className="grid grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-x-2.5 items-center">

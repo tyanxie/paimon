@@ -48,6 +48,7 @@ Paimon 由两部分组成：
 - 外观设置（主题：浅色/深色/跟随系统，背景：雾/极光/余烬）
 - 对话渲染：Markdown 全量渲染、用户气泡、思考折叠、Tool Call 卡片配对
 - Tool 弹窗：按工具类型定制（read/write 代码高亮、bash 命令+输出分区、edit diff 视图、其他通用 JSON）
+- 文本选择策略：对话正文、代码块、工具详情、会话信息可复制；导航、按钮、加载占位等纯控件禁用误选
 - API 错误展示：ErrorCard 卡片 + 超长错误弹窗详情（结构化解析 status/type/message/requestId）
 - 会话信息：侧边栏上下文进度条 + 顶部悬浮栏展示 instance name / git branch + 底部 composer 内展示 context usage / 模型
 - 模型切换：底部 composer 内模型名可点击，弹出 Popover 按 provider 分组选择，实时同步

@@ -21,16 +21,16 @@ export function MobileNavBar({
       <button
         onClick={() => navigate(backTo)}
         aria-label="Back to instances"
-        className="flex items-center text-[var(--label-secondary)] active:opacity-60 transition-opacity"
+        className="flex select-none items-center text-[var(--label-secondary)] active:opacity-60 transition-opacity"
       >
         <ChevronLeft size={20} />
       </button>
       <div className="flex-1 min-w-0">
-        <div className="text-[14px] font-medium text-[var(--label-primary)] truncate">
+        <div className="text-[14px] font-medium text-[var(--label-primary)] truncate select-text">
           {title}
         </div>
         {subtitle && (
-          <div className="text-[11px] text-[var(--label-tertiary)] truncate">
+          <div className="text-[11px] text-[var(--label-tertiary)] truncate select-text">
             {subtitle}
           </div>
         )}
