@@ -35,10 +35,12 @@ export function getConversationScrollSpacing({
     0,
     bottomChromeHeight - bottomSafeGap,
   );
+  const paddingBottom = Math.max(40, bottomChromeAboveViewport + 12);
+
   return {
     paddingTop: Math.max(24, topChromeHeight - 4),
-    paddingBottom: Math.max(40, bottomChromeAboveViewport + 12),
-    scrollButtonBottom: bottomChromeAboveViewport + 16,
+    paddingBottom,
+    scrollButtonBottom: bottomSafeGap + paddingBottom,
   };
 }
 

@@ -164,7 +164,7 @@ Browser → Hub：
 - **前端数据分层**: Web 侧只保存当前实例的已完成 `entries` 与当前 `streamingEntry`，实例切换时清空对话区并重新请求 history；history 刷新响应 replace entries，加载更早历史响应 prepend entries
 - **草稿隔离**: 输入框草稿按实例 ID 存储，切换实例时显示目标实例草稿；发送成功后只清空当前实例草稿
 - **Streaming 恢复**: 刷新页面后 `message_update` 隐式创建 streamingEntry，无需先收到 `message_start`
-- **自动滚动**: 实例切换/刷新 history 首包完成后自动滚到底部；用户在底部时自动跟随新内容；history prepend 期间通过稳定 entry key、禁用浏览器滚动锚定、deep visible anchor / entry anchor 恢复和 ResizeObserver anchor pin 保持当前可见内容位置，并暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中）
+- **自动滚动**: 实例切换/刷新 history 首包完成后自动滚到底部；用户在底部时自动跟随新内容；history prepend 期间通过稳定 entry key、禁用浏览器滚动锚定、deep visible anchor / entry anchor 恢复和 ResizeObserver anchor pin 保持当前可见内容位置，并暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中，按底部 composer 可见高度 + iOS Safe Area 定位）
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
 - **Tool 弹窗架构**: 每个工具可拥有专属 DetailModal（ReadDetailModal / BashDetailModal / WriteDetailModal / EditDetailModal），未定制的工具使用 DefaultDetailModal（JSON args + 纯文本 result）；共享 ModalShell 外壳组件
 - **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型

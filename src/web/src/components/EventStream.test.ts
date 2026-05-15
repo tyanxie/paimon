@@ -23,7 +23,7 @@ const { getConversationScrollSpacing } = await import("./EventStream");
 const css = await Bun.file(new URL("../index.css", import.meta.url)).text();
 
 describe("EventStream 间距计算", () => {
-  test("对话内容底部安全高度基于底部浮层可见高度，并扣除 safe area", () => {
+  test("滚动到底部按钮底边与对话内容底部留白对齐", () => {
     expect(
       getConversationScrollSpacing({
         topChromeHeight: 64,
@@ -33,7 +33,7 @@ describe("EventStream 间距计算", () => {
     ).toEqual({
       paddingTop: 60,
       paddingBottom: 108,
-      scrollButtonBottom: 112,
+      scrollButtonBottom: 108,
     });
 
     expect(
@@ -45,7 +45,7 @@ describe("EventStream 间距计算", () => {
     ).toEqual({
       paddingTop: 60,
       paddingBottom: 192,
-      scrollButtonBottom: 196,
+      scrollButtonBottom: 192,
     });
 
     expect(
@@ -57,7 +57,7 @@ describe("EventStream 间距计算", () => {
     ).toEqual({
       paddingTop: 60,
       paddingBottom: 110,
-      scrollButtonBottom: 114,
+      scrollButtonBottom: 144,
     });
   });
 });
