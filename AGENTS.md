@@ -87,6 +87,7 @@ paimon/
 - 柔和阴影（panel: `0 8px 40px rgba(0,0,0,0.08)`）
 - 面板间 gap 12px，外层 padding 12px，背景可透出
 - 系统字体栈（-apple-system / Inter）
+- 字号层级：外围控件延续 macOS 紧凑但更舒适的密度；对话正文/输入框/代码块等阅读核心区采用略大的字号与行高；顶部会话标题、Sidebar 实例列表、对话流辅助卡片与设置页主控件小幅增强以保持层级协调；桌面 Sidebar 收紧行高与列表间距，移动端实例选择页保留更大的触控区域
 - 亮色/暗色双模式（基于 data-theme 属性，支持手动切换 + 跟随系统）
 - 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）；logo 按 data-bg + data-theme 使用对应四色渐变版本
 - 设置页（/settings）：外观配置（主题 + 背景），存储于 localStorage（paimon:appearance / paimon:background）

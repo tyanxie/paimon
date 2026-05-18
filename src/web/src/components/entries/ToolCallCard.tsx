@@ -191,11 +191,11 @@ export function ToolCallCard({
         <span className="text-[var(--label-secondary)] group-hover:text-[var(--color-accent)] transition-colors">
           {getToolIcon(name)}
         </span>
-        <span className="text-[12px] font-medium text-[var(--label-primary)]">
+        <span className="text-[13px] font-medium text-[var(--label-primary)]">
           {name}
         </span>
         {summary && (
-          <span className="text-[11px] text-[var(--label-tertiary)] truncate flex-1 min-w-0">
+          <span className="text-[12px] text-[var(--label-tertiary)] truncate flex-1 min-w-0">
             {summary}
           </span>
         )}
@@ -245,7 +245,9 @@ interface DetailModalProps {
 function ToolModalTitle({ name }: { name: string }) {
   return (
     <>
-      <span className="text-[var(--label-secondary)] select-none">{getToolIcon(name)}</span>
+      <span className="text-[var(--label-secondary)] select-none">
+        {getToolIcon(name)}
+      </span>
       {name}
     </>
   );
@@ -276,7 +278,7 @@ function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
     <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
-        <p className="text-[12px] text-[var(--label-secondary)] break-all leading-[18px] font-mono">
+        <p className="text-[13px] text-[var(--label-secondary)] break-all leading-[20px] font-mono">
           {addressText}
         </p>
       </div>
@@ -285,7 +287,7 @@ function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
       <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 scrollbar-auto">
         {result !== null ? (
           result.isError ? (
-            <pre className="text-[12px] leading-[18px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
+            <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
               {result.content}
             </pre>
           ) : (
@@ -340,7 +342,7 @@ function BashDetailModal({ name, args, result, onClose }: DetailModalProps) {
       <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 scrollbar-auto">
         {result !== null ? (
           result.isError ? (
-            <pre className="text-[12px] leading-[18px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
+            <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
               {result.content}
             </pre>
           ) : (
@@ -370,7 +372,7 @@ function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
     <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
-        <p className="text-[12px] text-[var(--label-secondary)] break-all leading-[18px] font-mono">
+        <p className="text-[13px] text-[var(--label-secondary)] break-all leading-[20px] font-mono">
           {path}
         </p>
       </div>
@@ -389,7 +391,7 @@ function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
               结果
             </h4>
             <pre
-              className={`text-[12px] leading-[18px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 ${
+              className={`text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 ${
                 result.isError
                   ? "text-red-400 bg-red-400/5"
                   : "text-[var(--label-secondary)] bg-[var(--fill-tertiary)]"
@@ -416,7 +418,7 @@ function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
 function DiffView({ diff }: { diff: string }) {
   const lines = diff.split("\n");
   return (
-    <pre className="text-[12px] leading-[20px] font-mono overflow-x-auto">
+    <pre className="text-[13px] leading-[20px] font-mono overflow-x-auto">
       <div style={{ minWidth: "fit-content" }}>
         {lines.map((line, i) => {
           const prefix = line[0];
@@ -473,7 +475,7 @@ function EditDetailModal({ name, args, result, onClose }: DetailModalProps) {
     <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
-        <p className="text-[12px] text-[var(--label-secondary)] break-all leading-[18px] font-mono">
+        <p className="text-[13px] text-[var(--label-secondary)] break-all leading-[20px] font-mono">
           {path}
         </p>
       </div>
@@ -482,14 +484,14 @@ function EditDetailModal({ name, args, result, onClose }: DetailModalProps) {
       <div className="flex-1 overflow-y-auto pt-3 pb-5 scrollbar-auto">
         {result !== null ? (
           result.isError ? (
-            <pre className="text-[12px] leading-[18px] whitespace-pre-wrap break-words rounded-[8px] mx-5 px-3 py-2 text-red-400 bg-red-400/5">
+            <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] mx-5 px-3 py-2 text-red-400 bg-red-400/5">
               {result.content}
             </pre>
           ) : diff ? (
             <DiffView diff={diff} />
           ) : (
             // fallback: 无 diff 数据时显示纯文本结果
-            <pre className="text-[12px] leading-[18px] whitespace-pre-wrap break-words mx-5 px-3 py-2 text-[var(--label-secondary)] bg-[var(--fill-tertiary)] rounded-[8px]">
+            <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words mx-5 px-3 py-2 text-[var(--label-secondary)] bg-[var(--fill-tertiary)] rounded-[8px]">
               {result.content}
             </pre>
           )
@@ -514,7 +516,7 @@ function DefaultDetailModal({ name, args, result, onClose }: DetailModalProps) {
           <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
             参数
           </h4>
-          <pre className="text-[12px] leading-[18px] text-[var(--label-secondary)] whitespace-pre-wrap break-words bg-[var(--fill-tertiary)] rounded-[8px] px-3 py-2 overflow-x-auto">
+          <pre className="text-[13px] leading-[20px] text-[var(--label-secondary)] whitespace-pre-wrap break-words bg-[var(--fill-tertiary)] rounded-[8px] px-3 py-2 overflow-x-auto">
             {JSON.stringify(args, null, 2)}
           </pre>
         </section>
@@ -526,7 +528,7 @@ function DefaultDetailModal({ name, args, result, onClose }: DetailModalProps) {
               结果
             </h4>
             <pre
-              className={`text-[12px] leading-[18px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 overflow-x-auto ${
+              className={`text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 overflow-x-auto ${
                 result.isError
                   ? "text-red-400 bg-red-400/5"
                   : "text-[var(--label-secondary)] bg-[var(--fill-tertiary)]"

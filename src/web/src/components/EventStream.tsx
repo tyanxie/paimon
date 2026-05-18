@@ -783,7 +783,7 @@ export function EventStream({
             aria-label="Instance info"
           >
             <div className="hidden md:block min-w-0">
-              <div className="truncate text-[13px] font-medium text-[var(--label-primary)] select-text">
+              <div className="truncate text-[14px] leading-[20px] font-medium text-[var(--label-primary)] select-text">
                 {title}
               </div>
               {gitBranch && (
@@ -913,7 +913,7 @@ export function EventStream({
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
                   disabled={instanceStatus === "streaming"}
-                  className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[13px] leading-[20px] px-3 py-[9px] outline-none overflow-hidden disabled:cursor-default md:px-4 md:py-[10px]"
+                  className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[16px] leading-[24px] px-3 py-[9px] outline-none overflow-hidden disabled:cursor-default md:px-4 md:py-[10px] md:text-[14px] md:leading-[22px]"
                 />
                 <div className="flex-shrink-0 pb-[5px] pr-[5px] pointer-events-auto md:pb-[6px] md:pr-[6px]">
                   {composerButtonMode === "stop" ? (

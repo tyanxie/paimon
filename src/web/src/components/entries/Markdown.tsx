@@ -51,7 +51,7 @@ function CodeBlock({
         </button>
       </div>
       {/* 代码内容 */}
-      <pre className="px-3 py-2.5 overflow-x-auto text-[12px] leading-[18px]">
+      <pre className="px-3 py-2.5 overflow-x-auto text-[13px] leading-[20px]">
         <code>{children}</code>
       </pre>
     </div>
@@ -77,7 +77,7 @@ const components: Components = {
     // 行内代码
     return (
       <code
-        className="px-1.5 py-0.5 rounded-[4px] bg-[var(--fill-secondary)] text-[12px] font-mono"
+        className="px-1.5 py-0.5 rounded-[4px] bg-[var(--fill-secondary)] text-[13px] font-mono"
         {...props}
       >
         {children}
@@ -91,7 +91,7 @@ const components: Components = {
   // 段落
   p({ children }) {
     return (
-      <p className="text-[13px] leading-[20px] text-[var(--label-primary)] mb-2 last:mb-0">
+      <p className="text-[14px] leading-[22px] text-[var(--label-primary)] mb-2 last:mb-0">
         {children}
       </p>
     );
@@ -99,21 +99,21 @@ const components: Components = {
   // 标题
   h1({ children }) {
     return (
-      <h1 className="text-[17px] leading-[22px] font-semibold text-[var(--label-primary)] mt-4 mb-2">
+      <h1 className="text-[20px] leading-[26px] font-semibold text-[var(--label-primary)] mt-4 mb-2">
         {children}
       </h1>
     );
   },
   h2({ children }) {
     return (
-      <h2 className="text-[15px] leading-[20px] font-semibold text-[var(--label-primary)] mt-3 mb-1.5">
+      <h2 className="text-[17px] leading-[23px] font-semibold text-[var(--label-primary)] mt-3 mb-1.5">
         {children}
       </h2>
     );
   },
   h3({ children }) {
     return (
-      <h3 className="text-[13px] leading-[18px] font-semibold text-[var(--label-primary)] mt-2 mb-1">
+      <h3 className="text-[15px] leading-[21px] font-semibold text-[var(--label-primary)] mt-2 mb-1">
         {children}
       </h3>
     );
@@ -121,25 +121,25 @@ const components: Components = {
   // 列表
   ul({ children }) {
     return (
-      <ul className="text-[13px] leading-[20px] text-[var(--label-primary)] pl-5 mb-2 list-disc space-y-0.5">
+      <ul className="text-[14px] leading-[22px] text-[var(--label-primary)] pl-5 mb-2 list-disc space-y-0.5">
         {children}
       </ul>
     );
   },
   ol({ children }) {
     return (
-      <ol className="text-[13px] leading-[20px] text-[var(--label-primary)] pl-5 mb-2 list-decimal space-y-0.5">
+      <ol className="text-[14px] leading-[22px] text-[var(--label-primary)] pl-5 mb-2 list-decimal space-y-0.5">
         {children}
       </ol>
     );
   },
   li({ children }) {
-    return <li className="text-[13px] leading-[20px]">{children}</li>;
+    return <li className="text-[14px] leading-[22px]">{children}</li>;
   },
   // 引用块
   blockquote({ children }) {
     return (
-      <blockquote className="pl-3 border-l-2 border-[var(--color-accent)] text-[13px] text-[var(--label-secondary)] my-2">
+      <blockquote className="pl-3 border-l-2 border-[var(--color-accent)] text-[14px] leading-[22px] text-[var(--label-secondary)] my-2">
         {children}
       </blockquote>
     );
@@ -148,7 +148,7 @@ const components: Components = {
   table({ children }) {
     return (
       <div className="overflow-x-auto my-2 rounded-[8px] border border-[var(--separator)]">
-        <table className="w-full text-[12px]">{children}</table>
+        <table className="w-full text-[13px]">{children}</table>
       </div>
     );
   },

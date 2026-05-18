@@ -88,7 +88,7 @@ function UserBubble({ content }: { content: unknown }) {
   return (
     <div className="flex justify-end px-4 py-1.5">
       <div className="max-w-[80%] px-3.5 py-2 rounded-[16px] rounded-br-[4px] bg-[var(--color-accent)] text-white">
-        <p className="text-[13px] leading-[18px] whitespace-pre-wrap break-words">
+        <p className="text-[14px] leading-[21px] whitespace-pre-wrap break-words">
           {text}
         </p>
       </div>
@@ -335,8 +335,8 @@ function ErrorDetailRow({
     <div>
       <p className="text-[11px] text-[var(--label-tertiary)] mb-0.5">{label}</p>
       <p
-        className={`text-[13px] text-[var(--label-primary)] break-all whitespace-pre-wrap ${
-          mono ? "font-mono text-[12px]" : ""
+        className={`text-[14px] leading-[22px] text-[var(--label-primary)] break-all whitespace-pre-wrap ${
+          mono ? "font-mono text-[13px] leading-[20px]" : ""
         }`}
       >
         {value}

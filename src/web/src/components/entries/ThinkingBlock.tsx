@@ -39,7 +39,7 @@ export function ThinkingBlock({
             collapsed ? "" : "rotate-90"
           }`}
         />
-        <span className="text-[11px] font-medium text-[var(--label-tertiary)]">
+        <span className="text-[12px] font-medium text-[var(--label-tertiary)]">
           {streaming ? "思考中..." : "思考"}
         </span>
       </button>

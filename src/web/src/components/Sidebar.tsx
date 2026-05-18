@@ -34,7 +34,7 @@ export function Sidebar({
             />
           </div>
           <div className="flex items-center justify-between">
-            <h1 className="text-[15px] font-semibold text-[var(--label-primary)] leading-tight">
+            <h1 className="text-[16px] leading-[20px] max-md:text-[18px] max-md:leading-[24px] font-semibold text-[var(--label-primary)]">
               Paimon
             </h1>
             <span
@@ -42,7 +42,7 @@ export function Sidebar({
               title={connected ? "Online" : "Offline"}
             />
           </div>
-          <div className="text-[11px] text-[var(--label-tertiary)] leading-tight">
+          <div className="text-[12px] leading-[15px] max-md:text-[13px] max-md:leading-[18px] text-[var(--label-tertiary)]">
             {instances.length} instance{instances.length !== 1 ? "s" : ""}
           </div>
         </div>
@@ -51,16 +51,16 @@ export function Sidebar({
       {/* 实例列表 */}
       <div className="flex-1 overflow-y-auto px-2 py-1 scrollbar-auto">
         {instances.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[var(--label-tertiary)] text-[11px]">
+          <div className="px-3 py-8 text-center text-[var(--label-tertiary)] text-[12px] leading-[16px] max-md:text-[13px] max-md:leading-[18px]">
             No pi instances connected
           </div>
         ) : (
-          <ul className="space-y-1">
+          <ul className="space-y-0.5 max-md:space-y-1">
             {instances.map((instance) => (
               <li key={instance.id}>
                 <button
                   onClick={() => onSelect(instance.id)}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-[8px] transition-all duration-150 ${
+                  className={`w-full text-left px-2.5 py-1.5 max-md:px-3 max-md:py-2.5 rounded-[8px] transition-all duration-150 ${
                     selectedId === instance.id
                       ? "bg-[rgba(0,0,0,0.11)] dark:bg-[rgba(255,255,255,0.11)]"
                       : "hover:bg-[var(--fill-tertiary)]"
@@ -69,7 +69,7 @@ export function Sidebar({
                   <div className="flex items-center gap-2">
                     {/* 状态指示 */}
                     <span
-                      className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors ${
+                      className={`w-1.5 h-1.5 max-md:w-2 max-md:h-2 rounded-full flex-shrink-0 transition-colors ${
                         instance.status === "streaming"
                           ? "bg-[var(--color-accent)]"
                           : "bg-green-500"
@@ -79,11 +79,11 @@ export function Sidebar({
                       }
                     />
                     {/* 工作目录（取最后一段） */}
-                    <span className="text-[13px] text-[var(--label-primary)] truncate">
+                    <span className="text-[14px] leading-[18px] max-md:text-[15px] max-md:leading-[21px] text-[var(--label-primary)] truncate">
                       {instance.cwd.split("/").pop() || instance.cwd}
                     </span>
                   </div>
-                  <div className="ml-3.5 text-[11px] text-[var(--label-secondary)] truncate mt-0.5">
+                  <div className="ml-3.5 text-[11px] leading-[14px] max-md:text-[12px] max-md:leading-[16px] text-[var(--label-secondary)] truncate mt-0.5">
                     {instance.model.name ||
                       `${instance.model.provider}/${instance.model.id}`}
                   </div>
@@ -116,10 +116,12 @@ export function Sidebar({
       <div className="px-3 py-2 border-t border-[var(--separator)]">
         <button
           onClick={() => navigate("/settings")}
-          className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-[8px] text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-all duration-150"
+          className="flex items-center gap-2 w-full px-2.5 py-1.5 max-md:py-2.5 rounded-[8px] text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-all duration-150"
         >
-          <SettingsIcon size={14} />
-          <span className="text-[12px]">设置</span>
+          <SettingsIcon size={15} className="max-md:w-4 max-md:h-4" />
+          <span className="text-[13px] leading-[18px] max-md:text-[14px] max-md:leading-[20px]">
+            设置
+          </span>
         </button>
       </div>
     </aside>

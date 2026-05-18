@@ -60,7 +60,7 @@ function SegmentedControl<T extends string>({
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`px-3 py-1 rounded-[6px] text-[12px] transition-all ${
+          className={`px-3 py-1.5 rounded-[6px] text-[13px] leading-[18px] transition-all ${
             value === opt.value
               ? "bg-[var(--panel-bg)] text-[var(--label-primary)] font-semibold shadow-sm backdrop-blur-sm"
               : "text-[var(--label-secondary)] font-normal hover:text-[var(--label-primary)]"
@@ -85,8 +85,8 @@ function SettingRow({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-2.5 select-none">
-        <span className="text-[13px] font-semibold text-[var(--label-primary)]">
+      <div className="flex items-center justify-between px-4 py-3 select-none">
+        <span className="text-[14px] leading-[20px] font-semibold text-[var(--label-primary)]">
           {label}
         </span>
         {children}
@@ -125,7 +125,7 @@ function BackgroundPicker({
             }}
           />
           <span
-            className={`text-[11px] ${
+            className={`text-[12px] leading-[16px] ${
               value === opt.value
                 ? "text-[var(--label-primary)] font-semibold"
                 : "text-[var(--label-secondary)] font-normal"
@@ -156,7 +156,7 @@ export function Settings() {
         </h1>
 
         {/* 外观 */}
-        <div className="text-[13px] font-semibold text-[var(--label-primary)] mb-2 px-4 select-none">
+        <div className="text-[14px] leading-[20px] font-semibold text-[var(--label-primary)] mb-2 px-4 select-none">
           外观
         </div>
         <section className="glass-panel overflow-hidden">
