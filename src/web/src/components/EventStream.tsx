@@ -258,11 +258,14 @@ function restoreScrollAnchor(
     snapshot.element.isConnected &&
     container.contains(snapshot.element)
   ) {
-    const entryElement = getEntryElementFromElement(container, snapshot.element);
+    const entryElement = getEntryElementFromElement(
+      container,
+      snapshot.element,
+    );
     const entryKey = entryElement ? getEntryKey(entryElement) : undefined;
     if (!snapshot.entryKey || entryKey === snapshot.entryKey) {
-      const delta = getRelativeTop(containerRect, snapshot.element) -
-        snapshot.elementTop;
+      const delta =
+        getRelativeTop(containerRect, snapshot.element) - snapshot.elementTop;
       return {
         mode: "deep",
         delta,
@@ -274,8 +277,8 @@ function restoreScrollAnchor(
   if (snapshot.entryKey && snapshot.entryTop != null) {
     const entryElement = findEntryElementByKey(container, snapshot.entryKey);
     if (entryElement) {
-      const delta = getRelativeTop(containerRect, entryElement) -
-        snapshot.entryTop;
+      const delta =
+        getRelativeTop(containerRect, entryElement) - snapshot.entryTop;
       return {
         mode: "entry",
         delta,
@@ -334,7 +337,10 @@ export function EventStream({
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const isRefreshing = loadState === "refreshing";
-  const composerButtonMode = getComposerButtonMode({ instanceStatus, inputValue });
+  const composerButtonMode = getComposerButtonMode({
+    instanceStatus,
+    inputValue,
+  });
   const [topChromeHeight, setTopChromeHeight] = useState(64);
   const [bottomChromeHeight, setBottomChromeHeight] = useState(96);
   const [bottomSafeGap, setBottomSafeGap] = useState(12);
@@ -433,45 +439,39 @@ export function EventStream({
     });
   }, [bottomChromeHeight, runProgrammaticScroll, stopAnchorPin]);
 
-  const restorePinnedAnchor = useCallback(
-    () => {
-      const el = scrollRef.current;
-      const session = anchorPinRef.current;
-      if (!el || !session) return;
+  const restorePinnedAnchor = useCallback(() => {
+    const el = scrollRef.current;
+    const session = anchorPinRef.current;
+    if (!el || !session) return;
 
-      let result: AnchorRestoreResult = {
-        mode: "none",
-        delta: 0,
-        adjusted: false,
-      };
-      runProgrammaticScroll(() => {
-        result = restoreScrollAnchor(el, session.snapshot, {
-          allowDiffFallback: false,
-        });
+    let result: AnchorRestoreResult = {
+      mode: "none",
+      delta: 0,
+      adjusted: false,
+    };
+    runProgrammaticScroll(() => {
+      result = restoreScrollAnchor(el, session.snapshot, {
+        allowDiffFallback: false,
       });
+    });
 
-      if (result.mode === "none") {
-        stopAnchorPin();
-      }
-    },
-    [runProgrammaticScroll, stopAnchorPin],
-  );
+    if (result.mode === "none") {
+      stopAnchorPin();
+    }
+  }, [runProgrammaticScroll, stopAnchorPin]);
 
-  const schedulePinnedAnchorRestore = useCallback(
-    () => {
-      const session = anchorPinRef.current;
-      if (!session || session.rafId != null) return;
+  const schedulePinnedAnchorRestore = useCallback(() => {
+    const session = anchorPinRef.current;
+    if (!session || session.rafId != null) return;
 
-      session.rafId = requestAnimationFrame(() => {
-        const current = anchorPinRef.current;
-        if (!current || current !== session) return;
+    session.rafId = requestAnimationFrame(() => {
+      const current = anchorPinRef.current;
+      if (!current || current !== session) return;
 
-        current.rafId = null;
-        restorePinnedAnchor();
-      });
-    },
-    [restorePinnedAnchor],
-  );
+      current.rafId = null;
+      restorePinnedAnchor();
+    });
+  }, [restorePinnedAnchor]);
 
   const startAnchorPin = useCallback(
     (snapshot: ScrollAnchorSnapshot) => {
@@ -788,7 +788,10 @@ export function EventStream({
               </div>
               {gitBranch && (
                 <div className="mt-1 flex min-w-0 items-center gap-1 text-[11px] text-[var(--label-tertiary)]">
-                  <GitBranch size={11} className="shrink-0 opacity-70 select-none" />
+                  <GitBranch
+                    size={11}
+                    className="shrink-0 opacity-70 select-none"
+                  />
                   <span className="truncate select-text">{gitBranch}</span>
                 </div>
               )}
@@ -809,7 +812,7 @@ export function EventStream({
               paddingTop: scrollSpacing.paddingTop,
               paddingBottom: scrollSpacing.paddingBottom,
             }}
-            className="mx-auto max-w-[920px] space-y-1"
+            className="mx-auto max-w-[920px] space-y-2"
           >
             {loadState === "loadingMore" && (
               <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2 select-none">
@@ -955,7 +958,10 @@ export function EventStream({
 
 function RefreshingConversationSkeleton() {
   return (
-    <div className="space-y-3 pt-3 select-none" aria-label="Loading conversation">
+    <div
+      className="space-y-3 pt-3 select-none"
+      aria-label="Loading conversation"
+    >
       {[0, 1, 2, 3].map((item) => (
         <div key={item} className="space-y-1.5 animate-pulse">
           <div className="h-3 w-20 rounded-full bg-[var(--fill-tertiary)]" />

@@ -117,7 +117,7 @@ function AssistantMessage({
     (!Array.isArray(content) || content.length === 0)
   ) {
     return (
-      <div className="px-4 py-1.5">
+      <div className="px-4">
         <ErrorCard message={errorMessage} />
       </div>
     );
@@ -125,7 +125,7 @@ function AssistantMessage({
 
   if (!Array.isArray(content)) {
     return (
-      <div className="px-4 py-1.5">
+      <div className="px-4">
         <MarkdownRenderer content={String(content)} />
       </div>
     );
@@ -141,7 +141,7 @@ function AssistantMessage({
     stopReason === "error";
 
   return (
-    <div className="px-4 py-1.5 space-y-2">
+    <div className="px-4 space-y-2">
       {content.map((block: any, i: number) => (
         <AssistantBlock
           key={i}
