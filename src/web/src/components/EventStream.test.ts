@@ -19,7 +19,10 @@ Object.assign(globalThis, {
   },
 });
 
-const { getConversationScrollSpacing } = await import("./EventStream");
+const {
+  getConversationScrollSpacing,
+  pinScrollToBottomIfNeeded,
+} = await import("./EventStream");
 const css = await Bun.file(new URL("../index.css", import.meta.url)).text();
 const eventStreamSource = await Bun.file(new URL("./EventStream.tsx", import.meta.url)).text();
 const sidebarSource = await Bun.file(new URL("./Sidebar.tsx", import.meta.url)).text();
@@ -27,6 +30,65 @@ const mobileNavBarSource = await Bun.file(new URL("./ui/MobileNavBar.tsx", impor
 const modalShellSource = await Bun.file(new URL("./ui/ModalShell.tsx", import.meta.url)).text();
 const toolCallCardSource = await Bun.file(new URL("./entries/ToolCallCard.tsx", import.meta.url)).text();
 const modelSelectorSource = await Bun.file(new URL("./ui/ModelSelector.tsx", import.meta.url)).text();
+
+describe("EventStream 底部 pin 滚动", () => {
+  test("已在底部且真实几何偏离时滚到底部", () => {
+    let scrollCount = 0;
+
+    const didScroll = pinScrollToBottomIfNeeded({
+      isAtBottom: true,
+      isLoadingMore: false,
+      distanceToBottom: 19,
+      overlap: 6,
+      scrollToBottom: () => {
+        scrollCount += 1;
+      },
+    });
+
+    expect(didScroll).toBe(true);
+    expect(scrollCount).toBe(1);
+  });
+
+  test("用户离开底部或加载更多时不抢滚动", () => {
+    let scrollCount = 0;
+
+    expect(
+      pinScrollToBottomIfNeeded({
+        isAtBottom: false,
+        isLoadingMore: false,
+        distanceToBottom: 19,
+        overlap: 6,
+        scrollToBottom: () => {
+          scrollCount += 1;
+        },
+      }),
+    ).toBe(false);
+    expect(
+      pinScrollToBottomIfNeeded({
+        isAtBottom: true,
+        isLoadingMore: true,
+        distanceToBottom: 19,
+        overlap: 6,
+        scrollToBottom: () => {
+          scrollCount += 1;
+        },
+      }),
+    ).toBe(false);
+    expect(
+      pinScrollToBottomIfNeeded({
+        isAtBottom: true,
+        isLoadingMore: false,
+        distanceToBottom: 0,
+        overlap: -12,
+        scrollToBottom: () => {
+          scrollCount += 1;
+        },
+      }),
+    ).toBe(false);
+    expect(scrollCount).toBe(0);
+  });
+});
+
 
 describe("EventStream 间距计算", () => {
   test("滚动到底部按钮底边与对话内容底部留白对齐", () => {

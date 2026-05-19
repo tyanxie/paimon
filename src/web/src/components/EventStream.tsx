@@ -21,6 +21,8 @@ const LOAD_MORE_SUPPRESS_MS = 350;
 const ENTRY_KEY_ATTR = "data-entry-key";
 const ANCHOR_RESTORE_EPSILON = 0.5;
 const ANCHOR_WARMUP_FRAMES = 3;
+const BOTTOM_FOLLOW_MS = 2000;
+const BOTTOM_FOLLOW_EPSILON = 0.5;
 
 export function getConversationScrollSpacing({
   topChromeHeight,
@@ -67,6 +69,30 @@ export function getComposerButtonMode({
 
 export function getSafeScrollTop(rawScrollTop: number) {
   return Math.max(0, rawScrollTop);
+}
+
+export function pinScrollToBottomIfNeeded({
+  isAtBottom,
+  isLoadingMore,
+  distanceToBottom,
+  overlap,
+  force = false,
+  scrollToBottom,
+}: {
+  isAtBottom: boolean;
+  isLoadingMore: boolean;
+  distanceToBottom: number;
+  overlap: number;
+  force?: boolean;
+  scrollToBottom: () => void;
+}) {
+  if (!isAtBottom || isLoadingMore) return false;
+  if (!force && distanceToBottom <= BOTTOM_FOLLOW_EPSILON && overlap <= 0) {
+    return false;
+  }
+
+  scrollToBottom();
+  return true;
 }
 
 export function shouldLoadMoreFromScroll({
@@ -357,6 +383,7 @@ export function EventStream({
   const adjustingScrollRef = useRef(false);
   const programmaticScrollRef = useRef(false);
   const programmaticScrollFrameRef = useRef<number | null>(null);
+  const bottomFollowCancelRef = useRef<(() => void) | null>(null);
 
   // 加载更多：滚动到顶部触发
   const loadingMoreRef = useRef(false);
@@ -429,15 +456,91 @@ export function EventStream({
     anchorPinRef.current = null;
   }, []);
 
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !isAtBottomRef.current) return;
+  const pinToBottom = useCallback(
+    ({ force = false }: { force?: boolean } = {}) => {
+      const el = scrollRef.current;
+      const contentEl = contentRef.current;
+      const bottomEl = bottomChromeRef.current;
+      if (!el || !contentEl || !bottomEl) return false;
 
-    stopAnchorPin();
-    runProgrammaticScroll(() => {
-      el.scrollTop = el.scrollHeight;
+      const entryElements = contentEl.querySelectorAll<HTMLElement>(
+        `[${ENTRY_KEY_ATTR}]`,
+      );
+      const lastEntryEl = entryElements[entryElements.length - 1];
+      const lastEntryRect = lastEntryEl?.getBoundingClientRect();
+      const bottomRect = bottomEl.getBoundingClientRect();
+      const distanceToBottom =
+        el.scrollHeight - getSafeScrollTop(el.scrollTop) - el.clientHeight;
+      const overlap = lastEntryRect ? lastEntryRect.bottom - bottomRect.top : 0;
+
+      return pinScrollToBottomIfNeeded({
+        isAtBottom: isAtBottomRef.current,
+        isLoadingMore: loadingMoreRef.current,
+        distanceToBottom,
+        overlap,
+        force,
+        scrollToBottom: () => {
+          stopAnchorPin();
+          runProgrammaticScroll(() => {
+            el.scrollTop = el.scrollHeight;
+          });
+          setShowScrollBtn(false);
+        },
+      });
+    },
+    [runProgrammaticScroll, stopAnchorPin],
+  );
+
+  const stopBottomFollow = useCallback(() => {
+    bottomFollowCancelRef.current?.();
+    bottomFollowCancelRef.current = null;
+  }, []);
+
+  const startBottomFollow = useCallback(
+    () => {
+      stopBottomFollow();
+
+      const startedAt = performance.now();
+      let frameId: number | null = null;
+      let cancelled = false;
+
+      const run = (timestamp = performance.now()) => {
+        frameId = null;
+        if (cancelled || timestamp - startedAt >= BOTTOM_FOLLOW_MS) return;
+        if (!isAtBottomRef.current || loadingMoreRef.current) return;
+
+        pinToBottom();
+        frameId = requestAnimationFrame(run);
+      };
+
+      run();
+
+      bottomFollowCancelRef.current = () => {
+        cancelled = true;
+        if (frameId != null) {
+          cancelAnimationFrame(frameId);
+          frameId = null;
+        }
+      };
+    },
+    [pinToBottom, stopBottomFollow],
+  );
+
+  useLayoutEffect(() => {
+    if (loadingMoreRef.current) return;
+    pinToBottom();
+  }, [bottomChromeHeight, bottomSafeGap, pinToBottom]);
+
+  useLayoutEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => {
+      pinToBottom();
     });
-  }, [bottomChromeHeight, runProgrammaticScroll, stopAnchorPin]);
+    observer.observe(contentEl);
+    return () => observer.disconnect();
+  }, [instanceId, pinToBottom]);
 
   const restorePinnedAnchor = useCallback(() => {
     const el = scrollRef.current;
@@ -532,6 +635,7 @@ export function EventStream({
     setShowScrollBtn(false);
 
     return () => {
+      stopBottomFollow();
       stopAnchorPin();
       if (programmaticScrollFrameRef.current != null) {
         cancelAnimationFrame(programmaticScrollFrameRef.current);
@@ -544,7 +648,7 @@ export function EventStream({
       firstEntryKeyBeforeLoadRef.current = undefined;
       suppressLoadMoreUntilRef.current = 0;
     };
-  }, [instanceId, stopAnchorPin]);
+  }, [instanceId, stopAnchorPin, stopBottomFollow]);
 
   // 此 effect 需要先于 prepend restore 执行，依赖 loadingMoreRef 在本轮渲染中尚未被清除。
   useLayoutEffect(() => {
@@ -555,13 +659,8 @@ export function EventStream({
       return;
     }
 
-    if (isAtBottomRef.current) {
-      stopAnchorPin();
-      runProgrammaticScroll(() => {
-        el.scrollTop = el.scrollHeight;
-      });
-    }
-  }, [entries, instanceId, runProgrammaticScroll, stopAnchorPin]);
+    pinToBottom();
+  }, [entries, instanceId, pinToBottom]);
 
   useLayoutEffect(() => {
     if (!shouldScrollToBottom) return;
@@ -572,18 +671,14 @@ export function EventStream({
       return;
     }
 
-    stopAnchorPin();
-    runProgrammaticScroll(() => {
-      el.scrollTop = el.scrollHeight;
-    });
     isAtBottomRef.current = true;
+    pinToBottom({ force: true });
     setShowScrollBtn(false);
     onScrollToBottomHandled();
   }, [
     shouldScrollToBottom,
     entries,
-    runProgrammaticScroll,
-    stopAnchorPin,
+    pinToBottom,
     onScrollToBottomHandled,
   ]);
 
@@ -673,6 +768,9 @@ export function EventStream({
     // 检测是否在底部（60px 容差）
     const atBottom = el.scrollHeight - safeScrollTop - el.clientHeight < 60;
     isAtBottomRef.current = atBottom;
+    if (!atBottom) {
+      stopBottomFollow();
+    }
     setShowScrollBtn(!atBottom);
 
     const willLoadMore = shouldLoadMoreFromScroll({
@@ -685,6 +783,7 @@ export function EventStream({
 
     // 滚动到顶部加载更多
     if (willLoadMore && onLoadMore) {
+      stopBottomFollow();
       stopAnchorPin();
       loadingMoreRef.current = true;
       const currentEntries = entriesRef.current;
@@ -695,7 +794,7 @@ export function EventStream({
         : undefined;
       onLoadMore();
     }
-  }, [hasMore, instanceId, onLoadMore, stopAnchorPin]);
+  }, [hasMore, instanceId, onLoadMore, stopAnchorPin, stopBottomFollow]);
 
   // 快速滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -738,7 +837,8 @@ export function EventStream({
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [inputValue, instanceStatus, onSendMessage]);
+    startBottomFollow();
+  }, [inputValue, instanceStatus, onSendMessage, startBottomFollow]);
 
   // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
   const handleKeyDown = useCallback(
