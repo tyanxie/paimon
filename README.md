@@ -4,130 +4,35 @@
   <em>守望 · 交互 · 掌控</em>
 </p>
 
-# Paimon
+Paimon，让你能在浏览器里跟所有 [Pi](https://pi.dev/) 实例对话。
 
-Pi coding agent 的远程面板——在浏览器里实时守望所有会话，随时交互介入。
+## 📸 截图
 
-## 概述
+![主界面](docs/screenshots/main.png)
 
-Paimon 由两部分组成：
+## ✨ 特性
 
-1. **Hub Server** — 独立长驻进程，提供 Web UI，管理所有 pi 实例连接
-2. **Pi Extension** — 加载到每个 pi 实例中，自动连接 Hub，转发事件、接收指令
+- 💬 **实时对话流** — 流式输出、思考过程、工具调用全展示
+- 🔄 **多实例切换** — 一个页面管理所有 pi 会话
+- 🎨 **毛玻璃风格界面** — 清爽的 macOS 风格设计
+- 📱 **响应式设计** — 桌面/移动端自适应，iOS Safe Area 适配
 
-```
-┌─────────────────────────────────────────────────────┐
-│  Hub Server (paimon hub start, 监听 :8080)           │
-│  ├── Web UI (React + Tailwind, macOS 26 风格)        │
-│  ├── 维护已连接的 pi 实例列表                         │
-│  └── 路由：浏览器 ↔ 指定 pi 实例                     │
-└─────────────────────────────────────────────────────┘
-        ↕ WebSocket              ↕ WebSocket
-┌──────────────┐         ┌──────────────┐
-│ Pi 实例 A     │         │ Pi 实例 B     │
-│ cwd: project1│         │ cwd: project2│
-│ extension:   │         │ extension:   │
-│  主动连接 Hub │         │  主动连接 Hub │
-└──────────────┘         └──────────────┘
-```
-
-## 功能 (v0.1)
-
-- Hub 启动/停止/状态查看
-- Pi 实例自动注册 + 心跳探活
-- 网页展示所有活跃 pi 实例列表（桌面 Sidebar 与移动端实例选择页均使用统一舒适字号层级）
-- 进入某实例查看实时对话流（全量 pi 事件转发）
-- 刷新/重连/切换实例后自动重新加载对话历史（按 turn 分页，滚动到顶部加载更多，并通过 anchor 恢复保持当前可见内容位置）
-- 实例切换时对话区刷新加载，首包 history 完成后自动滚到底部
-- 输入框草稿按实例隔离保存，切走消失、切回恢复
-- 实时 streaming + 刷新后自动恢复 streaming 状态
-- 自动滚动跟随新内容 + 快速滚动到底部按钮（适配底部 composer 与 iOS Safe Area）
-- 发送消息（prompt / steer）
-- 中止当前操作（abort）
-- URL 路由保持选中状态（刷新不丢失）
-- 外观设置（主题：浅色/深色/跟随系统，背景：雾/极光/余烬），字号层级与主界面保持一致
-- 对话渲染：Markdown 全量渲染、用户气泡、思考折叠、Tool Call 卡片配对，并针对长时间阅读优化正文、输入框、代码块与对话流辅助卡片字号/行高
-- Tool 弹窗：按工具类型定制（read/write 代码高亮、bash 命令+输出分区、edit diff 视图、其他通用 JSON）
-- 文本选择策略：对话正文、代码块、工具详情、会话信息可复制；导航、按钮、加载占位等纯控件禁用误选
-- API 错误展示：ErrorCard 卡片 + 超长错误弹窗详情（结构化解析 status/type/message/requestId）
-- 会话信息：侧边栏上下文进度条 + 顶部悬浮栏展示 instance name / git branch + 底部 composer 内展示 context usage / 模型
-- 模型切换：底部 composer 内模型名可点击，弹出 Popover 按 provider 分组选择，实时同步
-- 移动端响应式布局（<768px 自动切换全屏实例列表/对话页）
-- iOS Safe Area 适配（圆角屏/Home Indicator）+ 虚拟键盘弹出时自动调整视口
-
-## 技术栈
-
-| 层              | 选型                        |
-| --------------- | --------------------------- |
-| 语言            | TypeScript                  |
-| 运行时 / 包管理 | Bun                         |
-| Hub 后端        | Bun native HTTP + WebSocket |
-| 前端框架        | React                       |
-| 前端路由        | React Router                |
-| 样式方案        | Tailwind CSS                |
-| 前端构建        | Vite                        |
-| 进程管理        | Fork daemon + PID 文件      |
-
-## CLI
+## 🚀 快速开始
 
 ```bash
-paimon hub start [--port 8080]    # 启动 Hub daemon（后台）
-paimon hub stop                   # 停止 Hub
-paimon hub status                 # 显示状态、已连接实例
-paimon hub logs [--follow]        # 查看 Hub 日志
-```
-
-## 安装
-
-```bash
-# 全局安装
+# 安装
 bun install -g paimon
 
-# 或作为 pi package 安装（自动注册 extension）
-pi install npm:paimon
-```
-
-## 使用
-
-```bash
-# 1. 启动 Hub
+# 启动 Hub
 paimon hub start
 
-# 2. 正常启动 pi（extension 自动连接 Hub）
+# 启动 pi（自动连接 Hub）
 pi
 
-# 3. 浏览器打开
+# 打开浏览器
 open http://localhost:8080
 ```
 
-## 开发
-
-```bash
-# 安装依赖
-bun install
-
-# 一键启动（Hub + Vite build watch，同端口）
-bun run dev
-
-# 构建前端
-bun run build
-
-# 启动 Hub（生产模式）
-bun run start
-
-# 类型检查
-bunx tsc --noEmit
-```
-
-## 状态文件
-
-```
-~/.paimon/
-├── hub.pid          # Hub 进程 PID
-├── hub.log          # Hub 日志
-└── hub.port         # 当前监听端口
-```
-
-## License
+## 📄 License
 
 MIT
