@@ -35,7 +35,7 @@ paimon/
 │           ├── hooks/              # useWebSocket, useLogoSrc
 │           ├── stores/             # useAppState, useSettings
 │           └── components/         # Sidebar, EventStream, Settings
-│               ├── ui/             # 通用 UI 组件 (ModalShell, MobileNavBar, ModelSelector)
+│               ├── ui/             # 通用 UI 组件 (ModalShell, MobileNavBar, ModelSelector, ThinkingSelector)
 │               └── entries/        # 消息渲染器
 │                   ├── index.tsx   # EntryItem 主分发组件
 │                   ├── Markdown.tsx
@@ -111,10 +111,10 @@ paimon/
 
 Extension → Hub（上报）：
 
-- `register` — 注册实例（cwd、model、sessionName、pid、availableModels）
+- `register` — 注册实例（cwd、model、sessionName、pid、availableModels、thinkingLevel）
 - `heartbeat` — 心跳保活
 - `event` — 转发 pi 事件（仅前端实际使用的 message_start/update/end）
-- `state` — 状态变更（status/contextUsage/gitBranch/model，各字段均可选，按需更新）
+- `state` — 状态变更（status/contextUsage/gitBranch/model/thinkingLevel，各字段均可选，按需更新）
 - `history` — 响应历史请求（getBranch 返回的 session entries，按 turn 分页）
 
 Hub → Extension（下发）：
@@ -124,6 +124,7 @@ Hub → Extension（下发）：
 - `steer` — 发送 steer 消息
 - `abort` — 中止当前操作
 - `set_model` — 切换模型（provider + id）
+- `set_thinking_level` — 切换思考等级（level）
 - `get_history` — 请求历史消息（支持 offset/limit 分页）
 - `ping` — 心跳确认
 
@@ -142,6 +143,7 @@ Browser → Hub：
 - `history` — 请求实例历史（支持 offset/limit 分页）
 - `prompt` / `steer` / `abort` — 操作指令
 - `set_model` — 切换实例模型（provider + id）
+- `set_thinking_level` — 切换实例思考等级（level）
 
 ### Hub 存活探测
 
@@ -172,7 +174,7 @@ Browser → Hub：
 - **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型
 - **Diff 渲染**: Edit 弹窗从 `result.details.diff` 取已生成的 unified diff，前端逐行解析前缀着色（红删绿增灰上下文），配色跟随 light/dark 主题切换
 - **API 错误展示**: 助手消息 stopReason="error" 时渲染 ErrorCard；短 detail 直接内联，长 detail (>200字符) 点击卡片弹出 ModalShell 展示完整错误信息（结构化解析 type/message/requestId）
-- **会话信息展示**: Extension 在 message_end/session_compact 时发送 contextUsage + gitBranch；Web 侧边栏渲染上下文进度条（绿/橙/红阈值），顶部悬浮栏展示 instance name 与 git branch，底部 composer 内展示状态（在线/执行中）、context usage + model
+- **会话信息展示**: Extension 在 message_end/session_compact 时发送 contextUsage + gitBranch；Web 侧边栏渲染上下文进度条（绿/橙/红阈值），顶部悬浮栏展示 instance name 与 git branch，底部 composer 内展示状态（在线/执行中）、context usage + model + thinkingLevel
 - **对话展示**: 统一渲染 `[...entries, streamingEntry?]`，刷新 replace、历史 prepend 与 streaming 实时更新互不冲突，详见 `docs/design/conversation-rendering.md`
 
 ## CLI 设计

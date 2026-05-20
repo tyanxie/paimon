@@ -8,7 +8,7 @@ import { useAppState } from "./stores/useAppState";
 import { Sidebar } from "./components/Sidebar";
 import { EventStream } from "./components/EventStream";
 import { Settings } from "./components/Settings";
-import type { InstanceId } from "../../protocol/types";
+import type { InstanceId, ThinkingLevel } from "../../protocol/types";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
 function useSelectedInstanceId(): InstanceId | null {
@@ -121,10 +121,23 @@ export default function App() {
     [selectedInstanceId, send],
   );
 
+  const handleSetThinkingLevel = useCallback(
+    (level: ThinkingLevel) => {
+      if (!selectedInstanceId) return;
+      send({
+        type: "set_thinking_level",
+        payload: { instanceId: selectedInstanceId, level },
+      });
+    },
+    [selectedInstanceId, send],
+  );
+
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
   // 合并 history + streaming 供渲染
-  const instanceEntries = streamingEntry ? [...entries, streamingEntry] : entries;
+  const instanceEntries = streamingEntry
+    ? [...entries, streamingEntry]
+    : entries;
   const isStreaming = streamingEntry !== null;
 
   // 加载更多历史（offset 只计算已完成 entries，不含 streaming）
@@ -139,7 +152,14 @@ export default function App() {
         offset,
       },
     });
-  }, [selectedInstanceId, hasMore, loadState, entries.length, startLoadMore, send]);
+  }, [
+    selectedInstanceId,
+    hasMore,
+    loadState,
+    entries.length,
+    startLoadMore,
+    send,
+  ]);
 
   return (
     <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-stretch p-2 gap-2 md:p-3 md:gap-3 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
@@ -170,6 +190,7 @@ export default function App() {
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
               onSetModel={handleSetModel}
+              onSetThinkingLevel={handleSetThinkingLevel}
               instanceStatus={selectedInstance?.status}
               hasMore={hasMore}
               onLoadMore={handleLoadMore}
@@ -180,6 +201,7 @@ export default function App() {
               }
               instanceModel={selectedInstance?.model}
               availableModels={selectedInstance?.availableModels}
+              thinkingLevel={selectedInstance?.thinkingLevel}
             />
           }
         />

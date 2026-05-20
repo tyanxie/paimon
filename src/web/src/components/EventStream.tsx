@@ -6,6 +6,7 @@ import type {
   InstanceId,
   ContextUsageInfo,
   ModelInfo,
+  ThinkingLevel,
 } from "../../../protocol/types";
 import {
   getSessionEntryRenderKey,
@@ -16,6 +17,7 @@ import { useLogoSrc } from "../hooks/useLogoSrc";
 import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
 import { ModelSelector } from "./ui/ModelSelector";
+import { ThinkingSelector } from "./ui/ThinkingSelector";
 
 const LOAD_MORE_SUPPRESS_MS = 350;
 const ENTRY_KEY_ATTR = "data-entry-key";
@@ -153,6 +155,7 @@ interface EventStreamProps {
   onSendMessage: (message: string) => void;
   onAbort: () => void;
   onSetModel?: (provider: string, id: string) => void;
+  onSetThinkingLevel?: (level: ThinkingLevel) => void;
   instanceStatus?: "idle" | "streaming";
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -161,6 +164,7 @@ interface EventStreamProps {
   instanceName?: string;
   instanceModel?: ModelInfo;
   availableModels?: ModelInfo[];
+  thinkingLevel?: ThinkingLevel;
 }
 
 function getEntryKey(entryElement: Element) {
@@ -344,6 +348,7 @@ export function EventStream({
   onSendMessage,
   onAbort,
   onSetModel,
+  onSetThinkingLevel,
   instanceStatus,
   hasMore = false,
   onLoadMore,
@@ -352,6 +357,7 @@ export function EventStream({
   instanceName,
   instanceModel,
   availableModels,
+  thinkingLevel,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -496,35 +502,32 @@ export function EventStream({
     bottomFollowCancelRef.current = null;
   }, []);
 
-  const startBottomFollow = useCallback(
-    () => {
-      stopBottomFollow();
+  const startBottomFollow = useCallback(() => {
+    stopBottomFollow();
 
-      const startedAt = performance.now();
-      let frameId: number | null = null;
-      let cancelled = false;
+    const startedAt = performance.now();
+    let frameId: number | null = null;
+    let cancelled = false;
 
-      const run = (timestamp = performance.now()) => {
+    const run = (timestamp = performance.now()) => {
+      frameId = null;
+      if (cancelled || timestamp - startedAt >= BOTTOM_FOLLOW_MS) return;
+      if (!isAtBottomRef.current || loadingMoreRef.current) return;
+
+      pinToBottom();
+      frameId = requestAnimationFrame(run);
+    };
+
+    run();
+
+    bottomFollowCancelRef.current = () => {
+      cancelled = true;
+      if (frameId != null) {
+        cancelAnimationFrame(frameId);
         frameId = null;
-        if (cancelled || timestamp - startedAt >= BOTTOM_FOLLOW_MS) return;
-        if (!isAtBottomRef.current || loadingMoreRef.current) return;
-
-        pinToBottom();
-        frameId = requestAnimationFrame(run);
-      };
-
-      run();
-
-      bottomFollowCancelRef.current = () => {
-        cancelled = true;
-        if (frameId != null) {
-          cancelAnimationFrame(frameId);
-          frameId = null;
-        }
-      };
-    },
-    [pinToBottom, stopBottomFollow],
-  );
+      }
+    };
+  }, [pinToBottom, stopBottomFollow]);
 
   useLayoutEffect(() => {
     if (loadingMoreRef.current) return;
@@ -675,12 +678,7 @@ export function EventStream({
     pinToBottom({ force: true });
     setShowScrollBtn(false);
     onScrollToBottomHandled();
-  }, [
-    shouldScrollToBottom,
-    entries,
-    pinToBottom,
-    onScrollToBottomHandled,
-  ]);
+  }, [shouldScrollToBottom, entries, pinToBottom, onScrollToBottomHandled]);
 
   // entries 变化后：调整滚动位置 + 重置 loading 状态
   useLayoutEffect(() => {
@@ -997,6 +995,12 @@ export function EventStream({
                         currentModel={instanceModel}
                         availableModels={availableModels}
                         onSelect={onSetModel}
+                      />
+                    )}
+                    {thinkingLevel && (
+                      <ThinkingSelector
+                        currentLevel={thinkingLevel}
+                        onSelect={onSetThinkingLevel}
                       />
                     )}
                   </span>

@@ -8,6 +8,15 @@
 /** pi 实例唯一标识（Hub 分配） */
 export type InstanceId = string;
 
+/** 思考等级（与 pi 内部 ModelThinkingLevel 一致） */
+export type ThinkingLevel =
+  | "off"
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh";
+
 /** 模型信息 */
 export interface ModelInfo {
   provider: string;
@@ -44,6 +53,8 @@ export interface InstanceInfo {
   gitBranch?: string | null;
   /** 可用模型列表 */
   availableModels?: ModelInfo[];
+  /** 当前思考等级（模型不支持 reasoning 时不存在） */
+  thinkingLevel?: ThinkingLevel;
   /** 注册时间 */
   connectedAt: number;
   /** 最后心跳时间 */
@@ -75,6 +86,8 @@ export interface ExtRegisterMessage {
     contextUsage?: ContextUsageInfo;
     /** Git 分支 */
     gitBranch?: string;
+    /** 当前思考等级（模型支持 reasoning 时） */
+    thinkingLevel?: ThinkingLevel;
   };
 }
 
@@ -107,6 +120,8 @@ export interface ExtStateMessage {
     gitBranch?: string | null;
     /** 模型变更 */
     model?: ModelInfo;
+    /** 思考等级变更（null = 清除，模型不支持 reasoning 时） */
+    thinkingLevel?: ThinkingLevel | null;
   };
 }
 
@@ -131,6 +146,7 @@ export type HubToExtensionMessage =
   | HubSteerMessage
   | HubAbortMessage
   | HubSetModelMessage
+  | HubSetThinkingLevelMessage
   | HubPingMessage
   | HubGetHistoryMessage;
 
@@ -172,6 +188,14 @@ export interface HubSetModelMessage {
   };
 }
 
+/** 切换思考等级 */
+export interface HubSetThinkingLevelMessage {
+  type: "set_thinking_level";
+  payload: {
+    level: ThinkingLevel;
+  };
+}
+
 /** 心跳探测 */
 export interface HubPingMessage {
   type: "ping";
@@ -199,6 +223,7 @@ export type BrowserToHubMessage =
   | BrowserSteerMessage
   | BrowserAbortMessage
   | BrowserSetModelMessage
+  | BrowserSetThinkingLevelMessage
   | BrowserListMessage
   | BrowserHistoryMessage;
 
@@ -251,6 +276,15 @@ export interface BrowserSetModelMessage {
     instanceId: InstanceId;
     provider: string;
     id: string;
+  };
+}
+
+/** 切换实例思考等级 */
+export interface BrowserSetThinkingLevelMessage {
+  type: "set_thinking_level";
+  payload: {
+    instanceId: InstanceId;
+    level: ThinkingLevel;
   };
 }
 

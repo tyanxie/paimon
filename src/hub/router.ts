@@ -203,5 +203,27 @@ export function handleBrowserMessage(
       }
       break;
     }
+    case "set_thinking_level": {
+      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
+      if (instanceWs) {
+        instanceWs.send(
+          JSON.stringify({
+            type: "set_thinking_level",
+            payload: { level: msg.payload.level },
+          }),
+        );
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            payload: {
+              message: `Instance ${msg.payload.instanceId} not found`,
+              code: "INSTANCE_NOT_FOUND",
+            },
+          }),
+        );
+      }
+      break;
+    }
   }
 }

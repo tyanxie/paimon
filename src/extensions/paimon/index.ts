@@ -11,6 +11,7 @@ import type {
   ExtHistoryMessage,
   ContextUsageInfo,
   ModelInfo,
+  ThinkingLevel,
 } from "../../protocol/types";
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
@@ -45,6 +46,9 @@ export default function (pi: ExtensionAPI) {
           contextUsage: ctx ? getContextUsageInfo(ctx) : undefined,
           gitBranch: ctx
             ? (getGitBranch(ctx.cwd ?? process.cwd()) ?? undefined)
+            : undefined,
+          thinkingLevel: ctx?.model?.reasoning
+            ? (pi.getThinkingLevel() as ThinkingLevel)
             : undefined,
         },
       });
@@ -103,6 +107,9 @@ export default function (pi: ExtensionAPI) {
           sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
           pid: process.pid,
           availableModels: getAvailableModels(ctx),
+          thinkingLevel: ctx.model.reasoning
+            ? (pi.getThinkingLevel() as ThinkingLevel)
+            : undefined,
         },
       });
     }
@@ -122,7 +129,20 @@ export default function (pi: ExtensionAPI) {
           name: event.model.name,
         },
         contextUsage: getContextUsageInfo(ctx),
+        // 新模型支持 reasoning → 报告当前 level；否则 null 清除
+        thinkingLevel: event.model.reasoning
+          ? (pi.getThinkingLevel() as ThinkingLevel)
+          : null,
       },
+    });
+  });
+
+  // 思考等级切换时同步给 Hub
+  pi.on("thinking_level_select", async (event) => {
+    if (!client.connected) return;
+    client.send({
+      type: "state",
+      payload: { thinkingLevel: event.level as ThinkingLevel },
     });
   });
 
@@ -190,6 +210,9 @@ export default function (pi: ExtensionAPI) {
           availableModels: getAvailableModels(ctx),
           contextUsage: getContextUsageInfo(ctx),
           gitBranch: getGitBranch(ctx.cwd) ?? undefined,
+          thinkingLevel: ctx.model.reasoning
+            ? (pi.getThinkingLevel() as ThinkingLevel)
+            : undefined,
         },
       });
     }
@@ -236,6 +259,10 @@ function handleHubMessage(
           });
         }
       }
+      break;
+    }
+    case "set_thinking_level": {
+      pi.setThinkingLevel(msg.payload.level as any);
       break;
     }
     case "get_history": {

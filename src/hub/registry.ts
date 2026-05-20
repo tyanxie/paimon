@@ -6,6 +6,7 @@ import type {
   InstanceInfo,
   ModelInfo,
   ContextUsageInfo,
+  ThinkingLevel,
 } from "../protocol/types";
 import { DEFAULTS } from "../protocol/types";
 import * as log from "./logger";
@@ -50,6 +51,7 @@ class Registry {
       availableModels?: ModelInfo[];
       contextUsage?: ContextUsageInfo;
       gitBranch?: string;
+      thinkingLevel?: ThinkingLevel;
     },
   ): InstanceInfo {
     // 同一 ws 重复注册：更新已有实例信息
@@ -62,6 +64,7 @@ class Registry {
       record.info.availableModels = payload.availableModels;
       record.info.contextUsage = payload.contextUsage;
       record.info.gitBranch = payload.gitBranch;
+      record.info.thinkingLevel = payload.thinkingLevel;
       record.info.lastHeartbeat = Date.now();
       log.info(
         `Instance updated: ${existingId} (model: ${payload.model.provider}/${payload.model.id})`,
@@ -102,6 +105,7 @@ class Registry {
       availableModels: payload.availableModels,
       contextUsage: payload.contextUsage,
       gitBranch: payload.gitBranch,
+      thinkingLevel: payload.thinkingLevel,
       connectedAt: now,
       lastHeartbeat: now,
     };
@@ -170,6 +174,7 @@ class Registry {
       };
       gitBranch?: string | null;
       model?: ModelInfo;
+      thinkingLevel?: ThinkingLevel | null;
     },
   ): void {
     const record = this.instances.get(id);
@@ -186,6 +191,11 @@ class Registry {
     }
     if (state.model !== undefined) {
       record.info.model = state.model;
+    }
+    if (state.thinkingLevel !== undefined) {
+      // null 表示清除（模型不支持 reasoning）
+      record.info.thinkingLevel =
+        state.thinkingLevel === null ? undefined : state.thinkingLevel;
     }
 
     // 通知浏览器
