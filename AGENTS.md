@@ -1,220 +1,67 @@
 # AGENTS.md
 
-本项目是 Paimon — pi coding agent 的远程观察与控制面板。
+Paimon 是 Pi 的远程控制面板。
 
-## 项目结构
+中心化 Hub + Extension Client 架构：Hub Server 为独立常驻进程，Pi Extension 在每个 pi 实例中加载并向 Hub 注册，Web UI 为单一页面自动发现所有实例。
 
-```
-paimon/
-├── src/
-│   ├── protocol/                   # 共享协议
-│   │   └── types.ts                # 所有消息类型 + 常量
-│   │
-│   ├── cli/                        # CLI 入口
-│   │   ├── index.ts                # paimon 主命令路由
-│   │   ├── hub.ts                  # paimon hub start/stop/status/logs
-│   │   └── daemon.ts               # fork 子进程 + PID 管理
-│   │
-│   ├── hub/                        # Hub Server（daemon 进程运行）
-│   │   ├── index.ts                # 启动 HTTP + WebSocket
-│   │   ├── registry.ts             # 实例注册表、心跳、清理
-│   │   ├── router.ts               # 消息路由（Extension / Browser）
-│   │   └── logger.ts               # 日志
-│   │
-│   ├── extensions/paimon/              # pi extension
-│   │   ├── index.ts                # 入口：连接 Hub、事件转发
-│   │   ├── client.ts               # WebSocket 客户端 + 指数退避重连
-│   │   └── serializer.ts           # 事件序列化
-│   │
-│   └── web/                        # 前端（React + Tailwind）
-│       ├── index.html
-│       └── src/
-│           ├── main.tsx            # React 入口
-│           ├── App.tsx             # 根组件
-│           ├── index.css           # Tailwind + macOS 26 tokens
-│           ├── hooks/              # useWebSocket, useLogoSrc
-│           ├── stores/             # useAppState, useSettings
-│           └── components/         # Sidebar, EventStream, Settings
-│               ├── ui/             # 通用 UI 组件 (ModalShell, MobileNavBar, ModelSelector, ThinkingSelector)
-│               └── entries/        # 消息渲染器
-│                   ├── index.tsx   # EntryItem 主分发组件
-│                   ├── Markdown.tsx
-│                   ├── ThinkingBlock.tsx
-│                   └── ToolCallCard.tsx
-│
-├── docs/design/                    # 设计参考
-│   ├── macos-26-design-tokens.json # Figma Design Tokens 插件导出
-│   ├── macos-26-figma-raw-data.md  # Figma API 原始数据缓存
-│   ├── macos-26-tokens.md          # 整理后的设计规范速查表
-│   ├── logos/                      # 按 data-bg/data-theme 分组的 logo 产物
-│   └── generate-logo.py            # logo 生成脚本
-│
-├── package.json                    # 依赖 + bin + pi extension 声明
-├── tsconfig.json
-├── vite.config.ts                  # Vite 配置（root: src/web）
-└── .gitignore
+## Commands
+
+```bash
+bun run dev      # 开发模式：构建前端 + 启动 Hub + watch
+bun run build    # 仅构建前端（Vite）
+bun run start    # 直接启动 Hub
+bun test         # 运行测试
 ```
 
 ## 技术选型
 
-- **语言**: TypeScript
-- **运行时 / 包管理**: Bun
-- **Hub 后端**: Bun 原生 HTTP + WebSocket server
-- **前端框架**: React
-- **前端路由**: React Router (history mode)
-- **样式方案**: Tailwind CSS
-- **前端构建**: Vite
-- **进程管理**: fork daemon + PID 文件 (~/.paimon/)
+| 组件     | 版本 / 方案                              |
+| -------- | ---------------------------------------- |
+| 运行时   | Bun                                      |
+| 语言     | TypeScript 5.8                           |
+| 后端     | Bun 原生 HTTP + WebSocket                |
+| 前端     | React 19 + React Router 7 (history mode) |
+| 样式     | Tailwind CSS 4                           |
+| 构建     | Vite 6                                   |
+| 进程管理 | Bun.spawn + PID 文件（`~/.paimon/`）     |
 
-## 设计风格
+**关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react
 
-参考 macOS 26 系统设置页 / App Store 的视觉风格（Liquid Glass），设计 token 从 Apple Figma 文件（`av2f5FwZtGoCObPOByH1O0`）提取。
+## 项目结构（仅非标准部分）
 
-### 设计参考文件
-
-| 文件                                      | 内容                                                                  |
-| ----------------------------------------- | --------------------------------------------------------------------- |
-| `docs/design/macos-26-tokens.md`          | 整理后的设计规范速查表（双模式颜色、圆角、阴影、字体、Tailwind 映射） |
-| `docs/design/macos-26-design-tokens.json` | Figma Design Tokens 插件原始导出（Dark mode，3782 行）                |
-| `docs/design/macos-26-figma-raw-data.md`  | Figma REST API 返回的布局/结构数据缓存                                |
-
-### 核心视觉规范
-
-- 浮动面板布局：Sidebar 保持毛玻璃导航面板；右侧对话区为开放渐变画布，顶部实例/分支信息与底部 composer 作为同宽悬浮毛玻璃控件浮在内容之上
-- 动态渐变背景：animated gradient 20s 循环，亮暗双模式各有配色
-- 毛玻璃效果（backdrop-filter: blur(30px) + 半透明底色 + 0.5px 边框）；Popover 使用 `glass-popover` 对齐 `glass-panel` 材质
-- 大圆角卡片（window 26px / panel 18px / item 8px）
-- 柔和阴影（panel: `0 8px 40px rgba(0,0,0,0.08)`）
-- 面板间 gap 12px，外层 padding 12px，背景可透出
-- 系统字体栈（-apple-system / Inter）
-- 字号层级：外围控件延续 macOS 紧凑但更舒适的密度；对话正文/输入框/代码块等阅读核心区采用略大的字号与行高；顶部会话标题、Sidebar 实例列表、对话流辅助卡片与设置页主控件小幅增强以保持层级协调；桌面 Sidebar 收紧行高与列表间距，移动端实例选择页保留更大的触控区域
-- 亮色/暗色双模式（基于 data-theme 属性，支持手动切换 + 跟随系统）
-- 背景渐变预设（雾/极光/余烬，基于 data-bg 属性）；logo 按 data-bg + data-theme 使用对应四色渐变版本
-- 设置页（/settings）：外观配置（主题 + 背景），存储于 localStorage（paimon:appearance / paimon:background）
-- 代码高亮：不使用第三方 hljs 主题，自定义 CSS 变量配色（`--hljs-*`），跟随 light/dark 主题自动切换；配色低饱和度，与 macOS 26 label 色系协调
-- 响应式布局：Tailwind `md:` 断点（768px）区分移动/桌面；移动端 Sidebar 隐藏、根路由全屏实例列表、对话页 MobileNavBar 导航；不分离 Layout 组件，同一份 JSX + 响应式类
-- iOS 适配：`viewport-fit=cover` + `env(safe-area-inset-bottom)` 避开圆角/Home Indicator；`maximum-scale=1` 禁止输入框自动缩放；`interactive-widget=resizes-content` + `useViewportHeight` hook 处理键盘弹出时视口缩放；内联 `<style>` 设置 html background-color 作为 safe area 兜底色（Safari 仅从内联样式读取）
-- Sidebar logo 使用固定高度（`h-[34px]`）匹配标题两行文字，避免 `display:none` 转换时百分比高度解析失败
-- 文本选择策略：对话正文、代码块、工具详情、顶部/底部会话信息、Modal 标题等有复制价值的内容保持可选；Sidebar、按钮、Tool 折叠卡、加载/空状态占位等纯控件禁用误选
-
-## 架构设计
-
-### 核心架构
-
-中心化 Hub + Extension Client 模式：
-
-- **Hub Server**: 独立长驻进程，默认监听 0.0.0.0:8080，提供 Web UI + WebSocket
-- **Pi Extension**: 每个 pi 实例加载，主动连接 Hub 注册自己，转发事件流
-- **Web UI**: 单一网页入口，自动发现所有已连接 pi 实例
-
-### 通信协议
-
-Extension → Hub（上报）：
-
-- `register` — 注册实例（cwd、model、sessionName、pid、availableModels、thinkingLevel）
-- `heartbeat` — 心跳保活
-- `event` — 转发 pi 事件（仅前端实际使用的 message_start/update/end）
-- `state` — 状态变更（status/contextUsage/gitBranch/model/thinkingLevel，各字段均可选，按需更新）
-- `history` — 响应历史请求（getBranch 返回的 session entries，按 turn 分页）
-
-Hub → Extension（下发）：
-
-- `registered` — 注册确认（返回分配的 instanceId）
-- `prompt` — 发送用户消息
-- `steer` — 发送 steer 消息
-- `abort` — 中止当前操作
-- `set_model` — 切换模型（provider + id）
-- `set_thinking_level` — 切换思考等级（level）
-- `get_history` — 请求历史消息（支持 offset/limit 分页）
-- `ping` — 心跳确认
-
-Hub → Browser：
-
-- `instance_list` — 完整实例列表
-- `instance_update` — 单个实例变更（connected/disconnected/updated）
-- `forwarded_event` — 实时事件转发
-- `history` — 历史消息（含 hasMore 分页标记）
-- `error` — 错误信息
-
-Browser → Hub：
-
-- `list` — 请求实例列表
-- `subscribe` / `unsubscribe` — 订阅/取消实例事件流
-- `history` — 请求实例历史（支持 offset/limit 分页）
-- `prompt` / `steer` / `abort` — 操作指令
-- `set_model` — 切换实例模型（provider + id）
-- `set_thinking_level` — 切换实例思考等级（level）
-
-### Hub 存活探测
-
-三层保障：
-
-1. TCP 层 — WebSocket 连接断开（覆盖正常退出、kill）
-2. WS 协议层 — ping/pong 帧（覆盖网络中断）
-3. 应用层 — 心跳 15s + 超时 10s（覆盖进程卡死）
-
-### Extension 重连策略
-
-- Hub 未启动时静默忽略，定期重试
-- 重连退避：1s → 2s → 5s → 10s → 30s
-- 首次断连时通过 `ctx.ui.notify()` 提示用户
-- 重连成功时通知
-
-### 数据获取与对话展示
-
-- **历史消息**: `ctx.sessionManager.getBranch()` 获取当前分支完整历史，浏览器订阅时自动请求
-- **重要：`getBranch()` 只返回已完成的消息**（`appendMessage` 在 `message_end` 时才调用），正在 streaming 的消息不在其中
-- **分页加载**: 按 turn 分组（每个 user message 开始新 turn），支持 offset + limit 参数；实例切换/刷新请求不带 offset，加载更早历史时 offset 取当前已完成 entries 长度
-- **前端数据分层**: Web 侧只保存当前实例的已完成 `entries` 与当前 `streamingEntry`，实例切换时清空对话区并重新请求 history；history 刷新响应 replace entries，加载更早历史响应 prepend entries
-- **草稿隔离**: 输入框草稿按实例 ID 存储，切换实例时显示目标实例草稿；发送成功后只清空当前实例草稿
-- **Streaming 恢复**: 刷新页面后 `message_update` 隐式创建 streamingEntry，无需先收到 `message_start`
-- **自动滚动**: 实例切换/刷新 history 首包完成后自动滚到底部；用户在底部时自动跟随新内容，并通过 ResizeObserver 与发送后约 2000ms 的 sticky bottom follow 监听真实几何偏移（distanceToBottom / overlap）持续校正到底部，避免 late layout change 让新消息被底部悬浮输入区遮挡；history prepend 期间通过稳定 entry key、禁用浏览器滚动锚定、deep visible anchor / entry anchor 恢复和 ResizeObserver anchor pin 保持当前可见内容位置，并暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中，按底部 composer 可见高度 + iOS Safe Area 定位）
-- **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
-- **Tool 弹窗架构**: 每个工具可拥有专属 DetailModal（ReadDetailModal / BashDetailModal / WriteDetailModal / EditDetailModal），未定制的工具使用 DefaultDetailModal（JSON args + 纯文本 result）；共享 ModalShell 外壳组件
-- **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型；Read/Write 遇到 `.md`/`.mdx` 文件时直接以 markdown 渲染（非代码块），Bash 使用动态长度 fence 避免内容中嵌套 ` ``` ` 导致解析异常；Bash 弹窗采用单一滚动容器（命令块带底色 + 结果块带 OUTPUT 标签），避免长命令时分栏空间分配失衡
-- **Frontmatter 渲染**: MarkdownRenderer 通过 `remark-frontmatter` + 自定义 remark 插件识别 YAML frontmatter，渲染为两列元数据表格（key 左列、value 右列），使用 `js-yaml` 解析；解析失败时回退为原始文本展示
-- **Diff 渲染**: Edit 弹窗从 `result.details.diff` 取已生成的 unified diff，前端逐行解析前缀着色（红删绿增灰上下文），配色跟随 light/dark 主题切换
-- **API 错误展示**: 助手消息 stopReason="error" 时渲染 ErrorCard；短 detail 直接内联，长 detail (>200字符) 点击卡片弹出 ModalShell 展示完整错误信息（结构化解析 type/message/requestId）
-- **会话信息展示**: Extension 在 message_end/session_compact 时发送 contextUsage + gitBranch；Web 侧边栏渲染上下文进度条（绿/橙/红阈值），顶部悬浮栏展示 instance name 与 git branch，底部 composer 内展示状态（在线/执行中）、context usage + model + thinkingLevel
-- **对话展示**: 统一渲染 `[...entries, streamingEntry?]`，刷新 replace、历史 prepend 与 streaming 实时更新互不冲突，详见 `docs/design/conversation-rendering.md`
-
-## CLI 设计
-
-```bash
-paimon hub start [--port 8080]    # 启动 Hub daemon
-paimon hub stop                   # 停止 Hub
-paimon hub status                 # 显示状态
-paimon hub logs [--follow]        # 查看日志
+```
+src/
+├── protocol/types.ts          # 所有消息类型 + 常量
+├── cli/                       # paimon CLI 入口（hub 子命令）
+├── hub/                       # Hub 服务端（registry / router / logger）
+├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化）
+└── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
+    └── src/
+        ├── stores/            # useAppState, useSettings（全局状态）
+        ├── hooks/             # useWebSocket, useLogoSrc
+        └── components/
+            ├── ui/            # 通用组件（ModalShell, MobileNavBar 等）
+            └── entries/       # 消息渲染器（Markdown, ThinkingBlock, ToolCallCard）
 ```
 
-后台驻守方式：Bun.spawn 子进程 + PID 文件。
+## 关键约定
 
-状态文件位置：`~/.paimon/`（hub.pid、hub.log、hub.port）
+- **pi SDK 行为依赖** — `ctx.sessionManager.getBranch()` 只返回已完成的消息（`appendMessage` 在 `message_end` 触发），streaming 中的消息不在列表中。这是 pi SDK 的行为，非 paimon 控制
+- **开发模式不是 Vite dev server** — `bun run dev` 实际执行 `vite build && concurrently`（先构建再 watch），Web 端通过 Hub 的 HTTP 服务访问静态文件，不走 Vite 自带 dev server
+- **Hub 启动依赖构建产物** — Hub 启动前 `dist/web/` 必须存在，否则进程直接退出。开发时需先 `vite build` 或使用 `bun run dev`
+- **Daemon 进程模型** — Hub 通过 `Bun.spawn` fork 子进程运行，父进程退出后子进程继续（`child.unref()`）。状态文件（PID、端口、日志）存储在 `~/.paimon/`
+- **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
 
-## 开发规范
+## 代码规范
 
-- 代码注释使用中文
-- 日志和用户提示使用英文
+- **注释用中文**，**日志和用户提示用英文**
 - Git 提交格式：`type(scope): 描述`（中文描述）
-- Extension 开发遵循 pi extension 规范（参考 pi docs/extensions.md）
-- **提交需用户确认**：每次修改完代码后，需等待用户审阅确认后才可执行 git commit
-- **文档同步**：每次功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
+- Extension 开发遵循 pi extension 规范
+- **提交需用户确认** — 每次修改完成后，等待用户审阅确认才可执行 `git commit`
+- 功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
 
-## 安全
+## 设计风格（摘要）
 
-- v0.1 局域网裸跑，不做认证
-- 远程访问由外部网关处理，项目本身不涉及
+参考 macOS 26 Liquid Glass 风格。完整规范见 [docs/design/macos-26-tokens.md](docs/design/macos-26-tokens.md)。
 
-## v0.1 功能范围
-
-- [x] Hub 启动/停止/状态
-- [x] 实例自动注册 + 心跳探活
-- [x] 网页展示所有 pi 实例列表
-- [x] 进入某实例查看实时对话流
-- [x] 发送消息（prompt / steer）
-- [x] abort 按钮
-- [x] URL 路由保持选中状态
-- [x] Liquid Glass 浮动面板 + 动态渐变背景
-- [x] 移动端响应式布局（v0.1）
-- [ ] tunnel 集成（后续）
-- [ ] 认证（后续）
+关键要点：浮动毛玻璃面板（`backdrop-filter: blur(30px)` + 半透明底色 + 0.5px 边框）、大圆角（window 26px / panel 18px）、亮暗双模式（`data-theme`）、动态渐变背景（`data-bg`）、响应式（`md:` 768px 断点）、iOS Safe Area 适配。代码高亮使用自定义 CSS 变量 `--hljs-*` 而非第三方主题。
