@@ -52,6 +52,20 @@ function getToolSummary(name: string, args: Record<string, any>): string {
   }
 }
 
+/** 构造动态长度的 fenced code block，避免内容中的 ``` 导致解析异常 */
+function wrapInFence(content: string, language: string): string {
+  // 找到内容中最长的连续 backtick 序列长度
+  let maxBackticks = 0;
+  const regex = /`+/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(content)) !== null) {
+    if (match[0].length > maxBackticks) maxBackticks = match[0].length;
+  }
+  // 外层 fence 至少比内容中最长的多 1 个，且至少 3 个
+  const fence = "`".repeat(Math.max(3, maxBackticks + 1));
+  return `${fence}${language}\n${content}\n${fence}`;
+}
+
 /** 文件扩展名到 highlight.js 语言的映射 */
 const extToLanguage: Record<string, string> = {
   ts: "typescript",
@@ -268,10 +282,11 @@ function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
     addressText += ` [${start}:${end}]`;
   }
 
-  // 构造 markdown 代码块
+  // markdown 文件直接渲染，其他文件用代码块
+  const isMarkdown = language === "markdown";
   const codeBlock =
-    result && !result.isError
-      ? `\`\`\`${language ?? ""}\n${result.content}\n\`\`\``
+    result && !result.isError && !isMarkdown
+      ? wrapInFence(result.content, language ?? "")
       : null;
 
   return (
@@ -290,6 +305,8 @@ function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
             <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
               {result.content}
             </pre>
+          ) : isMarkdown ? (
+            <MarkdownRenderer content={result.content} />
           ) : (
             <MarkdownRenderer content={codeBlock!} />
           )
@@ -310,11 +327,11 @@ function BashDetailModal({ name, args, result, onClose }: DetailModalProps) {
   const timeout = args.timeout as number | undefined;
 
   // command 用 bash 代码块渲染
-  const commandBlock = `\`\`\`bash\n${command}\n\`\`\``;
+  const commandBlock = wrapInFence(command, "bash");
   // result 用 plaintext 代码块渲染
   const resultBlock =
     result && !result.isError
-      ? `\`\`\`plaintext\n${result.content.trim()}\n\`\`\``
+      ? wrapInFence(result.content.trim(), "plaintext")
       : null;
 
   return (
@@ -365,8 +382,9 @@ function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
   const content = args.content ?? "";
   const language = getLanguageFromPath(path);
 
-  // content 用代码块渲染
-  const contentBlock = `\`\`\`${language ?? ""}\n${content}\n\`\`\``;
+  // markdown 文件直接渲染，其他文件用代码块
+  const isMarkdown = language === "markdown";
+  const contentBlock = isMarkdown ? null : wrapInFence(content, language ?? "");
 
   return (
     <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
@@ -381,7 +399,7 @@ function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
       <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 space-y-3 scrollbar-auto">
         {/* 文件内容 */}
         <section>
-          <MarkdownRenderer content={contentBlock} />
+          <MarkdownRenderer content={isMarkdown ? content : contentBlock!} />
         </section>
 
         {/* 结果 */}
