@@ -2,10 +2,74 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkFrontmatter from "remark-frontmatter";
 import rehypeHighlight from "rehype-highlight";
+import yaml from "js-yaml";
 import { useState, useCallback } from "react";
 import type { Components } from "react-markdown";
 import { Copy, Check } from "lucide-react";
+
+/**
+ * 自定义 remark 插件：将 remark-frontmatter 解析出的 yaml 节点
+ * 转为带特殊语言标记的 code 节点，使其能通过 remark-rehype 传递到组件层
+ */
+function remarkFrontmatterToCode() {
+  return (tree: any) => {
+    if (tree.children[0]?.type === "yaml") {
+      tree.children[0] = {
+        type: "code",
+        lang: "__frontmatter__",
+        value: tree.children[0].value,
+      };
+    }
+  };
+}
+
+/** Frontmatter 元数据表格：key 左列，value 右列 */
+function FrontmatterBlock({ yamlText }: { yamlText: string }) {
+  // 解析 YAML 为 key-value 对
+  let entries: [string, string][] = [];
+  try {
+    const parsed = yaml.load(yamlText);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      entries = Object.entries(parsed as Record<string, unknown>).map(
+        ([key, value]) => {
+          // 值转为可读字符串
+          const display =
+            typeof value === "string" ? value : JSON.stringify(value, null, 2);
+          return [key, display];
+        },
+      );
+    }
+  } catch {
+    // YAML 解析失败时回退为原始文本展示
+    entries = [["raw", yamlText]];
+  }
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="my-2 rounded-[8px] border border-[var(--separator)] overflow-hidden">
+      <table className="w-full text-[13px]">
+        <tbody>
+          {entries.map(([key, value]) => (
+            <tr
+              key={key}
+              className="border-b last:border-b-0 border-[var(--separator)]"
+            >
+              <td className="px-3 py-1.5 bg-[var(--fill-quaternary)] text-[var(--label-secondary)] font-medium whitespace-nowrap align-top w-[1%]">
+                {key}
+              </td>
+              <td className="px-3 py-1.5 text-[var(--label-primary)] whitespace-pre-wrap break-all">
+                {value}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 /** 从 React children 中递归提取纯文本 */
 function extractText(node: React.ReactNode): string {
@@ -63,6 +127,12 @@ const components: Components = {
   // 代码：区分行内和块级
   code({ className, children, ...props }) {
     const match = /language-(\w+)/.exec(className || "");
+
+    // frontmatter 特殊标记 → 元数据表格
+    if (match?.[1] === "__frontmatter__") {
+      const yamlText = extractText(children).replace(/\n$/, "");
+      return <FrontmatterBlock yamlText={yamlText} />;
+    }
 
     if (match) {
       // 有语言标记 → fenced code block
@@ -210,7 +280,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
   return (
     <div className="markdown-body">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkFrontmatter, remarkFrontmatterToCode]}
         rehypePlugins={[rehypeHighlight]}
         components={components}
       >

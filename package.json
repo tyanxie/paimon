@@ -16,18 +16,21 @@
   },
   "dependencies": {
     "highlight.js": "^11.11.1",
+    "js-yaml": "^4.1.1",
     "lucide-react": "^1.14.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
     "react-router": "^7.15.0",
     "rehype-highlight": "^7.0.2",
+    "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.74.0",
     "@tailwindcss/vite": "^4.1.5",
     "@types/bun": "^1.2.14",
+    "@types/js-yaml": "^4.0.9",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.4.1",
