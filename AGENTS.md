@@ -171,7 +171,7 @@ Browser → Hub：
 - **自动滚动**: 实例切换/刷新 history 首包完成后自动滚到底部；用户在底部时自动跟随新内容，并通过 ResizeObserver 与发送后约 2000ms 的 sticky bottom follow 监听真实几何偏移（distanceToBottom / overlap）持续校正到底部，避免 late layout change 让新消息被底部悬浮输入区遮挡；history prepend 期间通过稳定 entry key、禁用浏览器滚动锚定、deep visible anchor / entry anchor 恢复和 ResizeObserver anchor pin 保持当前可见内容位置，并暂停 isAtBottom 判断避免误触发；不在底部时显示浮动「滚动到底部」按钮（Liquid Glass 风格，底部居中，按底部 composer 可见高度 + iOS Safe Area 定位）
 - **自定义工具状态**: 通过 `tool_execution_end` 事件的 `result.details` 自然获取，无需特殊处理
 - **Tool 弹窗架构**: 每个工具可拥有专属 DetailModal（ReadDetailModal / BashDetailModal / WriteDetailModal / EditDetailModal），未定制的工具使用 DefaultDetailModal（JSON args + 纯文本 result）；共享 ModalShell 外壳组件
-- **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型；Read/Write 遇到 `.md`/`.mdx` 文件时直接以 markdown 渲染（非代码块），Bash 使用动态长度 fence 避免内容中嵌套 ` ``` ` 导致解析异常
+- **代码高亮**: Read/Write/Bash 弹窗通过 MarkdownRenderer 渲染代码块，复用 rehype-highlight（无额外 hljs 实例），扩展名→语言映射表覆盖常见文件类型；Read/Write 遇到 `.md`/`.mdx` 文件时直接以 markdown 渲染（非代码块），Bash 使用动态长度 fence 避免内容中嵌套 ` ``` ` 导致解析异常；Bash 弹窗采用单一滚动容器（命令块带底色 + 结果块带 OUTPUT 标签），避免长命令时分栏空间分配失衡
 - **Frontmatter 渲染**: MarkdownRenderer 通过 `remark-frontmatter` + 自定义 remark 插件识别 YAML frontmatter，渲染为两列元数据表格（key 左列、value 右列），使用 `js-yaml` 解析；解析失败时回退为原始文本展示
 - **Diff 渲染**: Edit 弹窗从 `result.details.diff` 取已生成的 unified diff，前端逐行解析前缀着色（红删绿增灰上下文），配色跟随 light/dark 主题切换
 - **API 错误展示**: 助手消息 stopReason="error" 时渲染 ErrorCard；短 detail 直接内联，长 detail (>200字符) 点击卡片弹出 ModalShell 展示完整错误信息（结构化解析 type/message/requestId）

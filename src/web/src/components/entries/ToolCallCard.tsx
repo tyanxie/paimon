@@ -347,30 +347,33 @@ function BashDetailModal({ name, args, result, onClose }: DetailModalProps) {
         ) : undefined
       }
     >
-      {/* 命令区 */}
-      <div className="px-5 pt-3 pb-3">
-        <MarkdownRenderer content={commandBlock} />
-      </div>
+      {/* 内容区：命令 + 结果单一滚动 */}
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-auto">
+        {/* 命令块 */}
+        <div className="px-5 pt-3 pb-3 bg-[var(--fill-quaternary)]">
+          <MarkdownRenderer content={commandBlock} />
+        </div>
 
-      {/* 分隔线 */}
-      <div className="border-b border-[var(--separator)]" />
-
-      {/* 结果区 */}
-      <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 scrollbar-auto">
-        {result !== null ? (
-          result.isError ? (
-            <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
-              {result.content}
-            </pre>
+        {/* 结果块 */}
+        <div className="px-5 pt-3 pb-5">
+          <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-2">
+            Output
+          </h4>
+          {result !== null ? (
+            result.isError ? (
+              <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
+                {result.content}
+              </pre>
+            ) : (
+              <MarkdownRenderer content={resultBlock!} />
+            )
           ) : (
-            <MarkdownRenderer content={resultBlock!} />
-          )
-        ) : (
-          <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
-            <Loader2 size={14} className="animate-spin" />
-            <span>执行中...</span>
-          </div>
-        )}
+            <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
+              <Loader2 size={14} className="animate-spin" />
+              <span>执行中...</span>
+            </div>
+          )}
+        </div>
       </div>
     </ModalShell>
   );
