@@ -26,7 +26,11 @@ export interface SessionEntry {
 
 type RenderKeySource = "history" | "streaming" | "live";
 
-export type ConversationLoadState = "idle" | "refreshing" | "loadingMore" | "error";
+export type ConversationLoadState =
+  | "idle"
+  | "refreshing"
+  | "loadingMore"
+  | "error";
 
 export interface ConversationState {
   currentInstanceId: InstanceId | null;
@@ -47,7 +51,9 @@ type NextRenderKey = (
 export function getSessionEntryRenderKey(entry: SessionEntry): string {
   const key = entry.id ?? entry.__renderKey;
   if (!key) {
-    throw new Error(`SessionEntry missing stable render key: type=${entry.type}`);
+    throw new Error(
+      `SessionEntry missing stable render key: type=${entry.type}`,
+    );
   }
   return key;
 }
@@ -143,7 +149,11 @@ export function beginInstanceRefresh(
 }
 
 export function beginLoadMore(state: ConversationState): ConversationState {
-  if (!state.currentInstanceId || !state.hasMore || state.loadState !== "idle") {
+  if (
+    !state.currentInstanceId ||
+    !state.hasMore ||
+    state.loadState !== "idle"
+  ) {
     return state;
   }
 
@@ -207,6 +217,18 @@ export function useAppState() {
     createConversationState(),
   );
 
+  // 跟踪每个实例的 sessionId，用于检测变化
+  const sessionIdMapRef = useRef<Map<InstanceId, string | undefined>>(
+    new Map(),
+  );
+  // 当前查看的实例 sessionId 变化时设置为该 instanceId，App 层监听并重新拉取 history
+  const [sessionChangedInstanceId, setSessionChangedInstanceId] =
+    useState<InstanceId | null>(null);
+
+  const clearSessionChanged = useCallback(() => {
+    setSessionChangedInstanceId(null);
+  }, []);
+
   const startInstanceRefresh = useCallback((instanceId: InstanceId) => {
     setConversation((prev) => beginInstanceRefresh(prev, instanceId));
   }, []);
@@ -230,61 +252,103 @@ export function useAppState() {
   }, []);
 
   // handleForwardedEvent 只依赖稳定的 setConversation 与 nextRenderKey；如果后续加入非稳定依赖，需要同步更新这里的 deps。
-  const handleMessage = useCallback((msg: HubToBrowserMessage) => {
-    switch (msg.type) {
-      case "instance_list":
-        setInstances(msg.payload.instances);
-        break;
-      case "instance_update":
-        if (msg.payload.action === "connected") {
-          setInstances((prev) => {
-            if (prev.some((i) => i.id === msg.payload.instance.id)) {
-              return prev.map((i) =>
-                i.id === msg.payload.instance.id ? msg.payload.instance : i,
-              );
+  const handleMessage = useCallback(
+    (msg: HubToBrowserMessage) => {
+      switch (msg.type) {
+        case "instance_list":
+          setInstances(msg.payload.instances);
+          // 初始化 sessionId 跟踪
+          for (const inst of msg.payload.instances) {
+            sessionIdMapRef.current.set(inst.id, inst.sessionId);
+          }
+          break;
+        case "instance_update":
+          if (msg.payload.action === "connected") {
+            setInstances((prev) => {
+              if (prev.some((i) => i.id === msg.payload.instance.id)) {
+                return prev.map((i) =>
+                  i.id === msg.payload.instance.id ? msg.payload.instance : i,
+                );
+              }
+              return [...prev, msg.payload.instance];
+            });
+            // 记录新实例的 sessionId
+            sessionIdMapRef.current.set(
+              msg.payload.instance.id,
+              msg.payload.instance.sessionId,
+            );
+          } else if (msg.payload.action === "disconnected") {
+            setInstances((prev) =>
+              prev.filter((i) => i.id !== msg.payload.instance.id),
+            );
+            sessionIdMapRef.current.delete(msg.payload.instance.id);
+          } else if (msg.payload.action === "updated") {
+            const inst = msg.payload.instance;
+            const prevSessionId = sessionIdMapRef.current.get(inst.id);
+            // 只在 sessionId 有效时更新 map，避免 ctx 未就绪时 undefined 覆盖有效值
+            if (inst.sessionId !== undefined) {
+              sessionIdMapRef.current.set(inst.id, inst.sessionId);
             }
-            return [...prev, msg.payload.instance];
-          });
-        } else if (msg.payload.action === "disconnected") {
-          setInstances((prev) =>
-            prev.filter((i) => i.id !== msg.payload.instance.id),
-          );
-        } else if (msg.payload.action === "updated") {
-          setInstances((prev) =>
-            prev.map((i) =>
-              i.id === msg.payload.instance.id ? msg.payload.instance : i,
-            ),
-          );
-        }
-        break;
-      case "forwarded_event":
-        handleForwardedEvent(
-          msg.payload.instanceId,
-          msg.payload.event,
-          msg.payload.data,
-        );
-        break;
-      case "history": {
-        const instanceId = msg.payload.instanceId;
-        const newEntries = normalizeSessionEntriesForRender(
-          instanceId,
-          msg.payload.messages as SessionEntry[],
-          "history",
-          nextRenderKey,
-        );
-        const more = (msg.payload as any).hasMore ?? false;
 
-        setConversation((prev) =>
-          applyHistoryResponse(prev, instanceId, newEntries, more),
-        );
-        break;
+            setInstances((prev) =>
+              prev.map((i) => (i.id === inst.id ? inst : i)),
+            );
+
+            // sessionId 变化且是当前查看的实例 → 通知 App 层重新拉取 history
+            // 只有新旧值都是有效值且不相等时才触发，避免 ctx 未就绪时 undefined 导致误触发
+            if (
+              prevSessionId !== undefined &&
+              inst.sessionId !== undefined &&
+              inst.sessionId !== prevSessionId
+            ) {
+              setConversation((prev) => {
+                if (prev.currentInstanceId !== inst.id) return prev;
+                return {
+                  ...prev,
+                  entries: [],
+                  streamingEntry: null,
+                  hasMore: false,
+                  loadState: "refreshing",
+                  errorMessage: null,
+                  shouldScrollToBottom: false,
+                };
+              });
+              setSessionChangedInstanceId(inst.id);
+            }
+          }
+          break;
+        case "forwarded_event":
+          handleForwardedEvent(
+            msg.payload.instanceId,
+            msg.payload.event,
+            msg.payload.data,
+          );
+          break;
+        case "history": {
+          const instanceId = msg.payload.instanceId;
+          const newEntries = normalizeSessionEntriesForRender(
+            instanceId,
+            msg.payload.messages as SessionEntry[],
+            "history",
+            nextRenderKey,
+          );
+          const more = (msg.payload as any).hasMore ?? false;
+
+          setConversation((prev) =>
+            applyHistoryResponse(prev, instanceId, newEntries, more),
+          );
+          break;
+        }
+        case "error":
+          console.error("[Paimon]", msg.payload.message);
+          setConversation((prev) =>
+            applyConversationError(prev, msg.payload.message),
+          );
+          break;
       }
-      case "error":
-        console.error("[Paimon]", msg.payload.message);
-        setConversation((prev) => applyConversationError(prev, msg.payload.message));
-        break;
-    }
-  }, [nextRenderKey]);
+    },
+    [nextRenderKey],
+  );
 
   /** 处理实时事件 */
   function handleForwardedEvent(
@@ -348,7 +412,12 @@ export function useAppState() {
           const nextEntries = message
             ? [
                 ...prev.entries,
-                createSessionMessageEntry(instanceId, message, "live", nextRenderKey),
+                createSessionMessageEntry(
+                  instanceId,
+                  message,
+                  "live",
+                  nextRenderKey,
+                ),
               ]
             : prev.entries;
 
@@ -372,12 +441,17 @@ export function useAppState() {
     errorMessage: conversation.errorMessage,
     currentInstanceId: conversation.currentInstanceId,
     shouldScrollToBottom: conversation.shouldScrollToBottom,
-    draft: getInstanceDraft(conversation.drafts, conversation.currentInstanceId),
+    draft: getInstanceDraft(
+      conversation.drafts,
+      conversation.currentInstanceId,
+    ),
     drafts: conversation.drafts,
+    sessionChangedInstanceId,
     handleMessage,
     startInstanceRefresh,
     startLoadMore,
     setDraft,
     clearScrollToBottom,
+    clearSessionChanged,
   };
 }

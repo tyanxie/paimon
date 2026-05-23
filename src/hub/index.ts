@@ -100,9 +100,13 @@ const server = Bun.serve<WsData>({
       log.debug(`WebSocket closed: ${ws.data.role} (code: ${code})`);
 
       if (ws.data.role === "extension") {
-        const id = registry.findInstanceByWs(ws);
+        const id = ws.data.instanceId;
         if (id) {
-          registry.unregister(id);
+          // 只有当这个 ws 仍是活跃连接时才启动 grace period，避免旧 ws 的 close 干扰新连接
+          const activeWs = registry.getInstanceWs(id);
+          if (activeWs === ws || activeWs === undefined) {
+            registry.startGracePeriod(id);
+          }
         }
       } else if (ws.data.role === "browser") {
         registry.removeBrowser(ws);

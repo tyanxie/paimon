@@ -1,5 +1,6 @@
 // 实例注册表：管理已连接的 pi 实例
 
+import { createHash } from "crypto";
 import type { ServerWebSocket } from "bun";
 import type {
   InstanceId,
@@ -24,28 +25,31 @@ export interface WsData {
 /** 实例注册记录 */
 interface InstanceRecord {
   info: InstanceInfo;
-  /** 对应的 WebSocket 连接 */
-  ws: ServerWebSocket<WsData>;
+  /** 对应的 WebSocket 连接（grace period 期间可能为 null） */
+  ws: ServerWebSocket<WsData> | null;
   /** 心跳超时定时器 */
   heartbeatTimer?: Timer;
+  /** 断连 grace period 定时器 */
+  graceTimer?: Timer;
+}
+
+/** 根据 hostname + pid 计算确定性 InstanceId */
+function computeInstanceId(hostname: string, pid: number): InstanceId {
+  return createHash("md5").update(`${hostname}:${pid}`).digest("hex");
 }
 
 class Registry {
   private instances = new Map<InstanceId, InstanceRecord>();
   private browserClients = new Set<ServerWebSocket<WsData>>();
-  private nextId = 1;
 
-  /** 生成唯一实例 ID */
-  private generateId(): InstanceId {
-    return `pi-${this.nextId++}-${Date.now().toString(36)}`;
-  }
-
-  /** 注册新实例（或更新已有实例） */
+  /** 注册实例（新注册或重连复用） */
   register(
     ws: ServerWebSocket<WsData>,
     payload: {
+      hostname: string;
       cwd: string;
       model: ModelInfo;
+      sessionId?: string;
       sessionName?: string;
       pid: number;
       availableModels?: ModelInfo[];
@@ -54,51 +58,60 @@ class Registry {
       thinkingLevel?: ThinkingLevel;
     },
   ): InstanceInfo {
-    // 同一 ws 重复注册：更新已有实例信息
-    const existingId = ws.data.instanceId;
-    if (existingId && this.instances.has(existingId)) {
-      const record = this.instances.get(existingId)!;
-      record.info.cwd = payload.cwd;
-      record.info.model = payload.model;
-      record.info.sessionName = payload.sessionName;
-      record.info.availableModels = payload.availableModels;
-      record.info.contextUsage = payload.contextUsage;
-      record.info.gitBranch = payload.gitBranch;
-      record.info.thinkingLevel = payload.thinkingLevel;
-      record.info.lastHeartbeat = Date.now();
+    const id = computeInstanceId(payload.hostname, payload.pid);
+    const now = Date.now();
+    const existing = this.instances.get(id);
+
+    if (existing) {
+      // 同一实例重连或更新：取消 grace timer，替换 ws，更新信息
+      if (existing.graceTimer) {
+        clearTimeout(existing.graceTimer);
+        existing.graceTimer = undefined;
+      }
+
+      // 如果旧 ws 不同于新 ws，关闭旧连接
+      if (existing.ws && existing.ws !== ws) {
+        existing.ws.close(1000, "Replaced by new connection");
+      }
+
+      existing.ws = ws;
+      existing.info.hostname = payload.hostname;
+      existing.info.cwd = payload.cwd;
+      existing.info.model = payload.model;
+      existing.info.sessionId = payload.sessionId;
+      existing.info.sessionName = payload.sessionName;
+      existing.info.pid = payload.pid;
+      existing.info.availableModels = payload.availableModels;
+      existing.info.contextUsage = payload.contextUsage;
+      existing.info.gitBranch = payload.gitBranch;
+      existing.info.thinkingLevel = payload.thinkingLevel;
+      existing.info.lastHeartbeat = now;
+
+      // 重置心跳
+      if (existing.heartbeatTimer) clearTimeout(existing.heartbeatTimer);
+      existing.heartbeatTimer = this.startHeartbeatTimer(id);
+
+      ws.data.instanceId = id;
+
       log.info(
-        `Instance updated: ${existingId} (model: ${payload.model.provider}/${payload.model.id})`,
+        `Instance reconnected: ${id} (pid: ${payload.pid}, model: ${payload.model.provider}/${payload.model.id})`,
       );
+
       this.broadcastToBrowsers({
         type: "instance_update",
-        payload: { instance: record.info, action: "updated" },
+        payload: { instance: existing.info, action: "updated" },
       });
-      return record.info;
+
+      return existing.info;
     }
 
-    // 同一 pid 但不同 ws：清理旧实例（extension reload 场景）
-    for (const [staleId, record] of this.instances) {
-      if (record.info.pid === payload.pid && record.ws !== ws) {
-        log.info(
-          `Replacing stale instance ${staleId} (same pid: ${payload.pid})`,
-        );
-        if (record.heartbeatTimer) clearTimeout(record.heartbeatTimer);
-        record.ws.close(1000, "Replaced by new connection");
-        this.instances.delete(staleId);
-        this.broadcastToBrowsers({
-          type: "instance_update",
-          payload: { instance: record.info, action: "disconnected" },
-        });
-      }
-    }
-
-    const id = this.generateId();
-    const now = Date.now();
-
+    // 全新实例
     const info: InstanceInfo = {
       id,
+      hostname: payload.hostname,
       cwd: payload.cwd,
       model: payload.model,
+      sessionId: payload.sessionId,
       sessionName: payload.sessionName,
       pid: payload.pid,
       status: "idle",
@@ -110,17 +123,14 @@ class Registry {
       lastHeartbeat: now,
     };
 
-    // 设置心跳超时
     const heartbeatTimer = this.startHeartbeatTimer(id);
-
     this.instances.set(id, { info, ws, heartbeatTimer });
     ws.data.instanceId = id;
 
     log.info(
-      `Instance registered: ${id} (cwd: ${payload.cwd}, model: ${payload.model.provider}/${payload.model.id})`,
+      `Instance registered: ${id} (pid: ${payload.pid}, cwd: ${payload.cwd}, model: ${payload.model.provider}/${payload.model.id})`,
     );
 
-    // 通知所有浏览器
     this.broadcastToBrowsers({
       type: "instance_update",
       payload: { instance: info, action: "connected" },
@@ -129,19 +139,49 @@ class Registry {
     return info;
   }
 
-  /** 注销实例 */
+  /** ws 断开时启动 grace period，超时后注销 */
+  startGracePeriod(id: InstanceId): void {
+    const record = this.instances.get(id);
+    if (!record) return;
+    // 已在 grace period 中，不重复启动
+    if (record.graceTimer) return;
+
+    // 标记 ws 为空
+    record.ws = null;
+
+    // 清除心跳定时器（断连后无需检测心跳）
+    if (record.heartbeatTimer) {
+      clearTimeout(record.heartbeatTimer);
+      record.heartbeatTimer = undefined;
+    }
+
+    log.info(
+      `Instance ${id} disconnected, grace period ${DEFAULTS.DISCONNECT_GRACE_PERIOD}ms`,
+    );
+
+    record.graceTimer = setTimeout(() => {
+      record.graceTimer = undefined;
+      // grace period 过期，真正移除
+      this.instances.delete(id);
+      log.info(`Instance ${id} removed after grace period`);
+      this.broadcastToBrowsers({
+        type: "instance_update",
+        payload: { instance: record.info, action: "disconnected" },
+      });
+    }, DEFAULTS.DISCONNECT_GRACE_PERIOD);
+  }
+
+  /** 立即注销实例（心跳超时等强制场景） */
   unregister(id: InstanceId): void {
     const record = this.instances.get(id);
     if (!record) return;
 
-    if (record.heartbeatTimer) {
-      clearTimeout(record.heartbeatTimer);
-    }
+    if (record.heartbeatTimer) clearTimeout(record.heartbeatTimer);
+    if (record.graceTimer) clearTimeout(record.graceTimer);
 
     this.instances.delete(id);
     log.info(`Instance unregistered: ${id}`);
 
-    // 通知所有浏览器
     this.broadcastToBrowsers({
       type: "instance_update",
       payload: { instance: record.info, action: "disconnected" },
@@ -205,9 +245,9 @@ class Registry {
     });
   }
 
-  /** 获取实例的 WebSocket */
+  /** 获取实例的 WebSocket（grace period 期间返回 undefined） */
   getInstanceWs(id: InstanceId): ServerWebSocket<WsData> | undefined {
-    return this.instances.get(id)?.ws;
+    return this.instances.get(id)?.ws ?? undefined;
   }
 
   /** 获取实例信息 */
@@ -263,7 +303,9 @@ class Registry {
       const record = this.instances.get(id);
       if (record) {
         log.warn(`Instance ${id} heartbeat timeout, disconnecting`);
-        record.ws.close(1001, "Heartbeat timeout");
+        if (record.ws) {
+          record.ws.close(1001, "Heartbeat timeout");
+        }
         this.unregister(id);
       }
     }, DEFAULTS.HEARTBEAT_INTERVAL + DEFAULTS.HEARTBEAT_TIMEOUT);

@@ -37,10 +37,14 @@ export interface ContextUsageInfo {
 /** pi 实例信息 */
 export interface InstanceInfo {
   id: InstanceId;
+  /** 主机名 */
+  hostname: string;
   /** 工作目录 */
   cwd: string;
   /** 模型信息 */
   model: ModelInfo;
+  /** 当前 session ID（来自 pi sessionManager） */
+  sessionId?: string;
   /** 当前 session 名 */
   sessionName?: string;
   /** pi 进程 PID */
@@ -76,8 +80,12 @@ export type ExtensionToHubMessage =
 export interface ExtRegisterMessage {
   type: "register";
   payload: {
+    /** 主机名 */
+    hostname: string;
     cwd: string;
     model: ModelInfo;
+    /** 当前 session ID（来自 pi sessionManager） */
+    sessionId?: string;
     sessionName?: string;
     pid: number;
     /** 可用模型列表 */
@@ -377,6 +385,8 @@ export const DEFAULTS = {
   HEARTBEAT_INTERVAL: 15_000,
   /** 心跳超时 (ms) */
   HEARTBEAT_TIMEOUT: 10_000,
+  /** 实例断连后的保留时间 (ms)，超时才广播 disconnected */
+  DISCONNECT_GRACE_PERIOD: 5_000,
   /** 重连退避序列 (ms) */
   RECONNECT_BACKOFF: [1000, 2000, 5000, 10_000, 30_000],
   /** 状态文件目录 */

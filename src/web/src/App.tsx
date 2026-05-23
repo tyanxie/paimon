@@ -27,11 +27,13 @@ export default function App() {
     errorMessage,
     draft,
     shouldScrollToBottom,
+    sessionChangedInstanceId,
     handleMessage,
     startInstanceRefresh,
     startLoadMore,
     setDraft,
     clearScrollToBottom,
+    clearSessionChanged,
   } = useAppState();
 
   const { connected, send } = useWebSocket(handleMessage);
@@ -73,6 +75,18 @@ export default function App() {
     }
     // exists 为 false 时不更新 ref，等 instances 加载后重试
   }, [selectedInstanceId, instances, connected, send, startInstanceRefresh]);
+
+  // sessionId 变化时重新拉取 history（/new 、/reload 等场景）
+  useEffect(() => {
+    if (!sessionChangedInstanceId) return;
+    if (connected) {
+      send({
+        type: "history",
+        payload: { instanceId: sessionChangedInstanceId },
+      });
+    }
+    clearSessionChanged();
+  }, [sessionChangedInstanceId, connected, send, clearSessionChanged]);
 
   // 点击侧边栏实例：只导航，订阅由 useEffect 自动响应
   const handleSelect = useCallback(

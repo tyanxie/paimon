@@ -1,6 +1,7 @@
 // Pi Extension 入口：连接 Hub、转发事件、接收指令
 
 import { spawnSync } from "child_process";
+import { hostname } from "os";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -23,6 +24,8 @@ export default function (pi: ExtensionAPI) {
   // 保存最新的 ctx 引用，用于响应 get_history
   let currentCtx: ExtensionContext | null = null;
 
+  const currentHostname = hostname();
+
   // 创建 Hub 客户端
   const client = new HubClient({
     port,
@@ -32,6 +35,7 @@ export default function (pi: ExtensionAPI) {
       client.send({
         type: "register",
         payload: {
+          hostname: currentHostname,
           cwd: ctx?.cwd ?? process.cwd(),
           model: ctx?.model
             ? {
@@ -40,6 +44,7 @@ export default function (pi: ExtensionAPI) {
                 name: ctx.model.name,
               }
             : { provider: "unknown", id: "unknown" },
+          sessionId: ctx?.sessionManager?.getSessionId?.() ?? undefined,
           sessionName: ctx?.sessionManager?.getSessionFile?.() ?? undefined,
           pid: process.pid,
           availableModels: ctx ? getAvailableModels(ctx) : undefined,
@@ -98,12 +103,14 @@ export default function (pi: ExtensionAPI) {
       client.send({
         type: "register",
         payload: {
+          hostname: currentHostname,
           cwd: ctx.cwd,
           model: {
             provider: ctx.model.provider,
             id: ctx.model.id,
             name: ctx.model.name,
           },
+          sessionId: ctx.sessionManager.getSessionId() ?? undefined,
           sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
           pid: process.pid,
           availableModels: getAvailableModels(ctx),
@@ -199,12 +206,14 @@ export default function (pi: ExtensionAPI) {
       client.send({
         type: "register",
         payload: {
+          hostname: currentHostname,
           cwd: ctx.cwd,
           model: {
             provider: ctx.model.provider,
             id: ctx.model.id,
             name: ctx.model.name,
           },
+          sessionId: ctx.sessionManager.getSessionId() ?? undefined,
           sessionName: ctx.sessionManager.getSessionFile() ?? undefined,
           pid: process.pid,
           availableModels: getAvailableModels(ctx),
