@@ -147,7 +147,7 @@ const components: Components = {
     // 行内代码
     return (
       <code
-        className="px-1.5 py-0.5 rounded-[4px] bg-[var(--fill-secondary)] text-[13px] font-mono"
+        className="px-1.5 py-0.5 rounded-[4px] bg-[var(--fill-secondary)] text-[13px] font-mono break-words"
         {...props}
       >
         {children}
@@ -278,7 +278,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
   if (!content.trim()) return null;
 
   return (
-    <div className="markdown-body">
+    <div className="markdown-body overflow-hidden">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkFrontmatter, remarkFrontmatterToCode]}
         rehypePlugins={[rehypeHighlight]}
