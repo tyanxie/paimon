@@ -996,11 +996,7 @@ export function EventStream({
           className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 px-3 pb-0 md:px-4"
         >
           <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
-            <div
-              className={`glass-panel px-3 py-2 md:px-4 ${
-                instanceStatus === "streaming" ? "" : "glass-panel-input"
-              }`}
-            >
+            <div className="glass-panel glass-panel-input px-3 py-2 md:px-4">
               {/* 状态 + 上下文 + 模型信息 */}
               {(instanceStatus || contextUsage || instanceModel) && (
                 <div className="mb-1.5 flex items-center justify-between gap-3 px-1 text-[12px] text-[var(--label-secondary)]">
@@ -1034,16 +1030,11 @@ export function EventStream({
                 <textarea
                   ref={textareaRef}
                   rows={1}
-                  placeholder={
-                    instanceStatus === "streaming"
-                      ? "Agent is running..."
-                      : "Send a message..."
-                  }
+                  placeholder="Send a message..."
                   value={inputValue}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  disabled={instanceStatus === "streaming"}
-                  className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[16px] leading-[24px] px-3 py-[9px] outline-none overflow-hidden disabled:cursor-default md:px-4 md:py-[10px] md:text-[14px] md:leading-[22px]"
+                  className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[16px] leading-[24px] px-3 py-[9px] outline-none overflow-hidden md:px-4 md:py-[10px] md:text-[14px] md:leading-[22px]"
                 />
                 <div className="flex-shrink-0 pb-[5px] pr-[5px] pointer-events-auto md:pb-[6px] md:pr-[6px]">
                   {composerButtonMode === "stop" ? (
