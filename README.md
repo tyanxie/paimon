@@ -21,13 +21,17 @@ Paimon，让你能在浏览器里跟所有 [Pi](https://pi.dev/) 实例对话。
 ## 🚀 快速开始
 
 ```bash
-# 安装
-bun install -g paimon
+# 克隆并安装依赖
+git clone https://github.com/tyanxie/paimon.git && cd paimon
+bun install
 
-# 启动 Hub
-paimon hub start
+# 开发模式：构建前端 + 启动 Hub + watch
+bun run dev
 
-# 启动 pi（自动连接 Hub）
+# 安装 extension（让 pi 启动时自动加载）
+pi install .
+
+# 启动 pi
 pi
 
 # 打开浏览器
