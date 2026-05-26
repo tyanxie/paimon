@@ -1,7 +1,7 @@
 // 事件流画布：展示选中实例的对话 entries
 
 import { useRef, useLayoutEffect, useState, useCallback } from "react";
-import { ArrowUp, Square, ChevronsDown, GitBranch } from "lucide-react";
+import { ArrowUp, Square, ChevronsDown } from "lucide-react";
 import type {
   InstanceId,
   ContextUsageInfo,
@@ -17,6 +17,7 @@ import {
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
+import { InstanceHeader } from "./ui/InstanceHeader";
 import { ModelSelector } from "./ui/ModelSelector";
 import { ThinkingSelector } from "./ui/ThinkingSelector";
 import { SessionPopover } from "./ui/SessionPopover";
@@ -881,6 +882,23 @@ export function EventStream({
 
   const title = instanceName || "Instance";
 
+  // 实例顶栏 props（PC 和移动端共用）
+  const instanceHeaderProps = {
+    title,
+    gitBranch,
+    actions:
+      onListSessions && onNewSession && onSwitchSession ? (
+        <SessionPopover
+          sessions={sessionList}
+          loading={sessionListLoading}
+          disabled={instanceStatus === "streaming"}
+          onOpen={onListSessions}
+          onNewSession={onNewSession}
+          onSwitchSession={onSwitchSession}
+        />
+      ) : undefined,
+  };
+
   return (
     <div className="relative flex-1 min-w-0 overflow-hidden">
       <main className="absolute inset-0 flex min-h-0 flex-col overflow-hidden">
@@ -892,48 +910,14 @@ export function EventStream({
             role="region"
             aria-label="Instance info"
           >
-            <div className="hidden md:flex items-start justify-between gap-2 min-w-0">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[14px] leading-[20px] font-medium text-[var(--label-primary)] select-text">
-                  {title}
-                </div>
-                {gitBranch && (
-                  <div className="mt-1 flex min-w-0 items-center gap-1 text-[11px] text-[var(--label-tertiary)]">
-                    <GitBranch
-                      size={11}
-                      className="shrink-0 opacity-70 select-none"
-                    />
-                    <span className="truncate select-text">{gitBranch}</span>
-                  </div>
-                )}
-              </div>
-              {onListSessions && onNewSession && onSwitchSession && (
-                <SessionPopover
-                  sessions={sessionList}
-                  loading={sessionListLoading}
-                  disabled={instanceStatus === "streaming"}
-                  onOpen={onListSessions}
-                  onNewSession={onNewSession}
-                  onSwitchSession={onSwitchSession}
-                />
-              )}
+            {/* PC 端：直接展示 InstanceHeader */}
+            <div className="hidden md:flex">
+              <InstanceHeader {...instanceHeaderProps} />
             </div>
-            <MobileNavBar
-              title={title}
-              subtitle={gitBranch ?? undefined}
-              actions={
-                onListSessions && onNewSession && onSwitchSession ? (
-                  <SessionPopover
-                    sessions={sessionList}
-                    loading={sessionListLoading}
-                    disabled={instanceStatus === "streaming"}
-                    onOpen={onListSessions}
-                    onNewSession={onNewSession}
-                    onSwitchSession={onSwitchSession}
-                  />
-                ) : undefined
-              }
-            />
+            {/* 移动端：MobileNavBar 壳 + InstanceHeader 内容 */}
+            <MobileNavBar>
+              <InstanceHeader {...instanceHeaderProps} />
+            </MobileNavBar>
           </div>
         </div>
         <div
