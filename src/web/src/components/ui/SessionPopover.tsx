@@ -55,7 +55,7 @@ export function SessionPopover({
     <Popover
       trigger={({ open }) => (
         <button
-          className={`flex items-center justify-center w-7 h-7 rounded-[6px] transition-colors ${
+          className={`flex items-center justify-center w-9 h-9 rounded-[8px] transition-colors ${
             open
               ? "bg-[rgba(0,0,0,0.11)] dark:bg-[rgba(255,255,255,0.11)]"
               : "hover:bg-[var(--fill-tertiary)]"
@@ -65,7 +65,7 @@ export function SessionPopover({
             if (!open) onOpen();
           }}
         >
-          <History size={14} className="text-[var(--label-secondary)]" />
+          <History size={16} className="text-[var(--label-secondary)]" />
         </button>
       )}
       width={320}
