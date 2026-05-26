@@ -6,16 +6,19 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { DEFAULTS } from "../../protocol/types";
 import type {
   HubToExtensionMessage,
   ExtHistoryMessage,
+  ExtSessionListMessage,
   ContextUsageInfo,
   ModelInfo,
   ThinkingLevel,
 } from "../../protocol/types";
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
+import * as sessionControlPatch from "./session_control_patch";
 
 export default function (pi: ExtensionAPI) {
   const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
@@ -23,6 +26,9 @@ export default function (pi: ExtensionAPI) {
   let registered = false;
   // 保存最新的 ctx 引用，用于响应 get_history
   let currentCtx: ExtensionContext | null = null;
+
+  // 安装 session 控制 patch（截获 newSession/switchSession 函数引用）
+  sessionControlPatch.install();
 
   const currentHostname = hostname();
 
@@ -177,6 +183,8 @@ export default function (pi: ExtensionAPI) {
         gitBranch: ctx ? getGitBranch(ctx.cwd) : undefined,
       },
     });
+    // 安全网：agent 结束后尝试执行 pending session 操作
+    setTimeout(() => sessionControlPatch.flush(), 0);
   });
 
   // 压缩完成后更新上下文使用情况（tokens 会变为 null）
@@ -229,6 +237,7 @@ export default function (pi: ExtensionAPI) {
 
   // 清理
   pi.on("session_shutdown", async () => {
+    sessionControlPatch.clear();
     clearInterval(heartbeatInterval);
     client.disconnect();
   });
@@ -342,6 +351,44 @@ function handleHubMessage(
     }
     case "ping":
     case "registered":
+      break;
+    case "list_sessions": {
+      const ctx = getCurrentCtx();
+      if (ctx?.cwd) {
+        SessionManager.list(ctx.cwd)
+          .then((sessions) => {
+            const currentFile = (ctx.sessionManager as any).getSessionFile?.();
+            const response: ExtSessionListMessage = {
+              type: "session_list",
+              payload: {
+                sessions: sessions.map((s) => ({
+                  path: s.path,
+                  id: s.id,
+                  name: s.name,
+                  cwd: s.cwd,
+                  created: s.created.toISOString(),
+                  modified: s.modified.toISOString(),
+                  messageCount: s.messageCount,
+                  firstMessage: s.firstMessage.slice(0, 100),
+                  isCurrent: s.path === currentFile,
+                })),
+              },
+            };
+            client.send(response);
+          })
+          .catch(() => {
+            client.send({ type: "session_list", payload: { sessions: [] } });
+          });
+      } else {
+        client.send({ type: "session_list", payload: { sessions: [] } });
+      }
+      break;
+    }
+    case "new_session":
+      sessionControlPatch.scheduleNew();
+      break;
+    case "switch_session":
+      sessionControlPatch.scheduleSwitch(msg.payload.path);
       break;
   }
 }

@@ -5,6 +5,7 @@ import type {
   InstanceInfo,
   HubToBrowserMessage,
   InstanceId,
+  SessionListItem,
 } from "../../../protocol/types";
 
 /** 统一的 session entry（来自 getBranch 或实时事件构造） */
@@ -41,6 +42,8 @@ export interface ConversationState {
   errorMessage: string | null;
   shouldScrollToBottom: boolean;
   drafts: Map<InstanceId, string>;
+  sessionList: SessionListItem[];
+  sessionListLoading: boolean;
 }
 
 type NextRenderKey = (
@@ -107,6 +110,8 @@ export function createConversationState(): ConversationState {
     errorMessage: null,
     shouldScrollToBottom: false,
     drafts: new Map(),
+    sessionList: [],
+    sessionListLoading: false,
   };
 }
 
@@ -145,6 +150,8 @@ export function beginInstanceRefresh(
     loadState: "refreshing",
     errorMessage: null,
     shouldScrollToBottom: false,
+    sessionList: [],
+    sessionListLoading: false,
   };
 }
 
@@ -345,6 +352,16 @@ export function useAppState() {
             applyConversationError(prev, msg.payload.message),
           );
           break;
+        case "session_list":
+          setConversation((prev) => {
+            if (prev.currentInstanceId !== msg.payload.instanceId) return prev;
+            return {
+              ...prev,
+              sessionList: msg.payload.sessions,
+              sessionListLoading: false,
+            };
+          });
+          break;
       }
     },
     [nextRenderKey],
@@ -432,6 +449,13 @@ export function useAppState() {
     }
   }
 
+  const setSessionListLoading = useCallback((loading: boolean) => {
+    setConversation((prev) => ({
+      ...prev,
+      sessionListLoading: loading,
+    }));
+  }, []);
+
   return {
     instances,
     entries: conversation.entries,
@@ -446,11 +470,14 @@ export function useAppState() {
       conversation.currentInstanceId,
     ),
     drafts: conversation.drafts,
+    sessionList: conversation.sessionList,
+    sessionListLoading: conversation.sessionListLoading,
     sessionChangedInstanceId,
     handleMessage,
     startInstanceRefresh,
     startLoadMore,
     setDraft,
+    setSessionListLoading,
     clearScrollToBottom,
     clearSessionChanged,
   };

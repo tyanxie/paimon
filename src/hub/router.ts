@@ -88,6 +88,26 @@ export function handleExtensionMessage(
       }
       break;
     }
+    case "session_list": {
+      const id = registry.findInstanceByWs(ws);
+      if (!id) return;
+
+      // 转发给订阅了该实例的浏览器
+      const subscribers = registry.getSubscribers(id);
+      if (subscribers.length > 0) {
+        const sessionListMsg = JSON.stringify({
+          type: "session_list",
+          payload: {
+            instanceId: id,
+            sessions: msg.payload.sessions,
+          },
+        });
+        for (const browser of subscribers) {
+          browser.send(sessionListMsg);
+        }
+      }
+      break;
+    }
   }
 }
 
@@ -210,6 +230,62 @@ export function handleBrowserMessage(
           JSON.stringify({
             type: "set_thinking_level",
             payload: { level: msg.payload.level },
+          }),
+        );
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            payload: {
+              message: `Instance ${msg.payload.instanceId} not found`,
+              code: "INSTANCE_NOT_FOUND",
+            },
+          }),
+        );
+      }
+      break;
+    }
+    case "list_sessions": {
+      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
+      if (instanceWs) {
+        instanceWs.send(JSON.stringify({ type: "list_sessions" }));
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            payload: {
+              message: `Instance ${msg.payload.instanceId} not found`,
+              code: "INSTANCE_NOT_FOUND",
+            },
+          }),
+        );
+      }
+      break;
+    }
+    case "new_session": {
+      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
+      if (instanceWs) {
+        instanceWs.send(JSON.stringify({ type: "new_session" }));
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            payload: {
+              message: `Instance ${msg.payload.instanceId} not found`,
+              code: "INSTANCE_NOT_FOUND",
+            },
+          }),
+        );
+      }
+      break;
+    }
+    case "switch_session": {
+      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
+      if (instanceWs) {
+        instanceWs.send(
+          JSON.stringify({
+            type: "switch_session",
+            payload: { path: msg.payload.path },
           }),
         );
       } else {

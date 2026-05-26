@@ -28,10 +28,13 @@ export default function App() {
     draft,
     shouldScrollToBottom,
     sessionChangedInstanceId,
+    sessionList,
+    sessionListLoading,
     handleMessage,
     startInstanceRefresh,
     startLoadMore,
     setDraft,
+    setSessionListLoading,
     clearScrollToBottom,
     clearSessionChanged,
   } = useAppState();
@@ -146,6 +149,34 @@ export default function App() {
     [selectedInstanceId, send],
   );
 
+  const handleListSessions = useCallback(() => {
+    if (!selectedInstanceId) return;
+    setSessionListLoading(true);
+    send({
+      type: "list_sessions",
+      payload: { instanceId: selectedInstanceId },
+    });
+  }, [selectedInstanceId, send, setSessionListLoading]);
+
+  const handleNewSession = useCallback(() => {
+    if (!selectedInstanceId) return;
+    send({
+      type: "new_session",
+      payload: { instanceId: selectedInstanceId },
+    });
+  }, [selectedInstanceId, send]);
+
+  const handleSwitchSession = useCallback(
+    (path: string) => {
+      if (!selectedInstanceId) return;
+      send({
+        type: "switch_session",
+        payload: { instanceId: selectedInstanceId, path },
+      });
+    },
+    [selectedInstanceId, send],
+  );
+
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
   // 合并 history + streaming 供渲染
@@ -216,6 +247,11 @@ export default function App() {
               instanceModel={selectedInstance?.model}
               availableModels={selectedInstance?.availableModels}
               thinkingLevel={selectedInstance?.thinkingLevel}
+              sessionList={sessionList}
+              sessionListLoading={sessionListLoading}
+              onListSessions={handleListSessions}
+              onNewSession={handleNewSession}
+              onSwitchSession={handleSwitchSession}
             />
           }
         />

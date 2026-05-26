@@ -20,12 +20,12 @@ describe("Popover 位置计算", () => {
       writable: true,
     });
 
-    expect(calcPosition({ top: 700, right: 920 })).toEqual({
+    expect(calcPosition({ top: 700, bottom: 720, right: 920 })).toEqual({
       right: 80,
       bottom: 108,
     });
 
-    expect(calcPosition({ top: 20, right: 995 })).toEqual({
+    expect(calcPosition({ top: 20, bottom: 40, right: 995 })).toEqual({
       right: 12,
       bottom: 788,
     });

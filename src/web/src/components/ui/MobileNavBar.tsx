@@ -1,5 +1,6 @@
-// 移动端导航栏：返回按钮 + 标题/副标题，仅 <md 可见
+// 移动端导航栏：返回按钮 + 标题/副标题 + 右侧操作区，仅 <md 可见
 
+import { type ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router";
 
@@ -7,12 +8,15 @@ interface MobileNavBarProps {
   title: string;
   subtitle?: string;
   backTo?: string;
+  /** 右侧操作区 */
+  actions?: ReactNode;
 }
 
 export function MobileNavBar({
   title,
   subtitle,
   backTo = "/",
+  actions,
 }: MobileNavBarProps) {
   const navigate = useNavigate();
 
@@ -35,6 +39,7 @@ export function MobileNavBar({
           </div>
         )}
       </div>
+      {actions}
     </div>
   );
 }

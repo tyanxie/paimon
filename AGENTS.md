@@ -34,7 +34,7 @@ src/
 ├── protocol/types.ts          # 所有消息类型 + 常量
 ├── cli/                       # paimon CLI 入口（hub 子命令）
 ├── hub/                       # Hub 服务端（registry / router / logger）
-├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化）
+├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化 + session 控制）
 └── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
     └── src/
         ├── stores/            # useAppState, useSettings（全局状态）

@@ -1,7 +1,10 @@
-// 通用 Popover 浮层组件：向上弹出，Portal 到 body，glass-popover 样式
+// 通用 Popover 浮层组件：Portal 到 body，glass-popover 样式
 
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+
+/** 弹出方向 */
+export type PopoverPlacement = "top" | "bottom";
 
 interface PopoverProps {
   /** 渲染触发按钮，接收 open 状态 */
@@ -12,17 +15,35 @@ interface PopoverProps {
   children: (close: () => void) => ReactNode;
   /** 禁用弹出 */
   disabled?: boolean;
+  /** 弹出方向：top（向上，默认）或 bottom（向下） */
+  placement?: PopoverPlacement;
+}
+
+interface PopoverPosition {
+  right: number;
+  top?: number;
+  bottom?: number;
 }
 
 /** 计算 Popover 位置：向上弹出，右对齐锚点 */
 export function calcPosition(
-  anchorRect: Pick<DOMRect, "top" | "right">,
+  anchorRect: Pick<DOMRect, "top" | "bottom" | "right">,
+  placement: PopoverPlacement = "top",
   margin = 8,
   viewportPadding = 12,
-) {
+): PopoverPosition {
   const { innerWidth, innerHeight } = window;
+  const right = Math.max(viewportPadding, innerWidth - anchorRect.right);
+
+  if (placement === "bottom") {
+    return {
+      right,
+      top: Math.max(viewportPadding, anchorRect.bottom + margin),
+    };
+  }
+
   return {
-    right: Math.max(viewportPadding, innerWidth - anchorRect.right),
+    right,
     bottom: Math.max(viewportPadding, innerHeight - anchorRect.top + margin),
   };
 }
@@ -32,12 +53,10 @@ export function Popover({
   width = 200,
   children,
   disabled = false,
+  placement = "top",
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState<{
-    right: number;
-    bottom: number;
-  } | null>(null);
+  const [position, setPosition] = useState<PopoverPosition | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -81,7 +100,7 @@ export function Popover({
     }
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPosition(calcPosition(rect));
+    setPosition(calcPosition(rect, placement));
     setOpen(true);
   };
 
@@ -96,7 +115,9 @@ export function Popover({
             style={{
               position: "fixed",
               right: position.right,
-              bottom: position.bottom,
+              ...(position.top !== undefined
+                ? { top: position.top }
+                : { bottom: position.bottom }),
               width: `${width}px`,
             }}
           >

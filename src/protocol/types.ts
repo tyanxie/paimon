@@ -66,6 +66,32 @@ export interface InstanceInfo {
 }
 
 // ============================================================
+// Session 列表相关
+// ============================================================
+
+/** Session 列表项 */
+export interface SessionListItem {
+  /** session 文件路径 */
+  path: string;
+  /** session UUID */
+  id: string;
+  /** 用户自定义名称 */
+  name?: string;
+  /** 工作目录 */
+  cwd: string;
+  /** 创建时间（ISO） */
+  created: string;
+  /** 最后修改时间（ISO） */
+  modified: string;
+  /** 消息数量 */
+  messageCount: number;
+  /** 第一条消息预览（截断） */
+  firstMessage: string;
+  /** 是否为当前活跃 session */
+  isCurrent: boolean;
+}
+
+// ============================================================
 // Extension → Hub 消息
 // ============================================================
 
@@ -74,7 +100,8 @@ export type ExtensionToHubMessage =
   | ExtHeartbeatMessage
   | ExtEventMessage
   | ExtStateMessage
-  | ExtHistoryMessage;
+  | ExtHistoryMessage
+  | ExtSessionListMessage;
 
 /** 注册 */
 export interface ExtRegisterMessage {
@@ -144,6 +171,14 @@ export interface ExtHistoryMessage {
   };
 }
 
+/** Session 列表响应 */
+export interface ExtSessionListMessage {
+  type: "session_list";
+  payload: {
+    sessions: SessionListItem[];
+  };
+}
+
 // ============================================================
 // Hub → Extension 消息
 // ============================================================
@@ -156,7 +191,10 @@ export type HubToExtensionMessage =
   | HubSetModelMessage
   | HubSetThinkingLevelMessage
   | HubPingMessage
-  | HubGetHistoryMessage;
+  | HubGetHistoryMessage
+  | HubListSessionsMessage
+  | HubNewSessionMessage
+  | HubSwitchSessionMessage;
 
 /** 注册确认，返回分配的 id */
 export interface HubRegisteredMessage {
@@ -220,6 +258,24 @@ export interface HubGetHistoryMessage {
   };
 }
 
+/** 请求 session 列表 */
+export interface HubListSessionsMessage {
+  type: "list_sessions";
+}
+
+/** 创建新 session */
+export interface HubNewSessionMessage {
+  type: "new_session";
+}
+
+/** 切换 session */
+export interface HubSwitchSessionMessage {
+  type: "switch_session";
+  payload: {
+    path: string;
+  };
+}
+
 // ============================================================
 // Browser → Hub 消息
 // ============================================================
@@ -233,7 +289,10 @@ export type BrowserToHubMessage =
   | BrowserSetModelMessage
   | BrowserSetThinkingLevelMessage
   | BrowserListMessage
-  | BrowserHistoryMessage;
+  | BrowserHistoryMessage
+  | BrowserListSessionsMessage
+  | BrowserNewSessionMessage
+  | BrowserSwitchSessionMessage;
 
 /** 订阅实例事件流 */
 export interface BrowserSubscribeMessage {
@@ -313,6 +372,31 @@ export interface BrowserHistoryMessage {
   };
 }
 
+/** 请求实例的 session 列表 */
+export interface BrowserListSessionsMessage {
+  type: "list_sessions";
+  payload: {
+    instanceId: InstanceId;
+  };
+}
+
+/** 指示实例创建新 session */
+export interface BrowserNewSessionMessage {
+  type: "new_session";
+  payload: {
+    instanceId: InstanceId;
+  };
+}
+
+/** 指示实例切换 session */
+export interface BrowserSwitchSessionMessage {
+  type: "switch_session";
+  payload: {
+    instanceId: InstanceId;
+    path: string;
+  };
+}
+
 // ============================================================
 // Hub → Browser 消息
 // ============================================================
@@ -322,6 +406,7 @@ export type HubToBrowserMessage =
   | HubInstanceUpdateMessage
   | HubForwardedEventMessage
   | HubHistoryMessage
+  | HubSessionListMessage
   | HubErrorMessage;
 
 /** 实例列表 */
@@ -362,6 +447,15 @@ export interface HubHistoryMessage {
     messages: unknown[];
     /** 是否还有更早的历史 */
     hasMore: boolean;
+  };
+}
+
+/** Session 列表（响应 list_sessions） */
+export interface HubSessionListMessage {
+  type: "session_list";
+  payload: {
+    instanceId: InstanceId;
+    sessions: SessionListItem[];
   };
 }
 

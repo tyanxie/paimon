@@ -7,6 +7,7 @@ import type {
   ContextUsageInfo,
   ModelInfo,
   ThinkingLevel,
+  SessionListItem,
 } from "../../../protocol/types";
 import {
   getSessionEntryRenderKey,
@@ -18,6 +19,7 @@ import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
 import { ModelSelector } from "./ui/ModelSelector";
 import { ThinkingSelector } from "./ui/ThinkingSelector";
+import { SessionPopover } from "./ui/SessionPopover";
 
 const LOAD_MORE_SUPPRESS_MS = 350;
 const ENTRY_KEY_ATTR = "data-entry-key";
@@ -165,6 +167,11 @@ interface EventStreamProps {
   instanceModel?: ModelInfo;
   availableModels?: ModelInfo[];
   thinkingLevel?: ThinkingLevel;
+  sessionList?: SessionListItem[];
+  sessionListLoading?: boolean;
+  onListSessions?: () => void;
+  onNewSession?: () => void;
+  onSwitchSession?: (path: string) => void;
 }
 
 function getEntryKey(entryElement: Element) {
@@ -358,6 +365,11 @@ export function EventStream({
   instanceModel,
   availableModels,
   thinkingLevel,
+  sessionList = [],
+  sessionListLoading = false,
+  onListSessions,
+  onNewSession,
+  onSwitchSession,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -880,21 +892,48 @@ export function EventStream({
             role="region"
             aria-label="Instance info"
           >
-            <div className="hidden md:block min-w-0">
-              <div className="truncate text-[14px] leading-[20px] font-medium text-[var(--label-primary)] select-text">
-                {title}
-              </div>
-              {gitBranch && (
-                <div className="mt-1 flex min-w-0 items-center gap-1 text-[11px] text-[var(--label-tertiary)]">
-                  <GitBranch
-                    size={11}
-                    className="shrink-0 opacity-70 select-none"
-                  />
-                  <span className="truncate select-text">{gitBranch}</span>
+            <div className="hidden md:flex items-start justify-between gap-2 min-w-0">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] leading-[20px] font-medium text-[var(--label-primary)] select-text">
+                  {title}
                 </div>
+                {gitBranch && (
+                  <div className="mt-1 flex min-w-0 items-center gap-1 text-[11px] text-[var(--label-tertiary)]">
+                    <GitBranch
+                      size={11}
+                      className="shrink-0 opacity-70 select-none"
+                    />
+                    <span className="truncate select-text">{gitBranch}</span>
+                  </div>
+                )}
+              </div>
+              {onListSessions && onNewSession && onSwitchSession && (
+                <SessionPopover
+                  sessions={sessionList}
+                  loading={sessionListLoading}
+                  disabled={instanceStatus === "streaming"}
+                  onOpen={onListSessions}
+                  onNewSession={onNewSession}
+                  onSwitchSession={onSwitchSession}
+                />
               )}
             </div>
-            <MobileNavBar title={title} subtitle={gitBranch ?? undefined} />
+            <MobileNavBar
+              title={title}
+              subtitle={gitBranch ?? undefined}
+              actions={
+                onListSessions && onNewSession && onSwitchSession ? (
+                  <SessionPopover
+                    sessions={sessionList}
+                    loading={sessionListLoading}
+                    disabled={instanceStatus === "streaming"}
+                    onOpen={onListSessions}
+                    onNewSession={onNewSession}
+                    onSwitchSession={onSwitchSession}
+                  />
+                ) : undefined
+              }
+            />
           </div>
         </div>
         <div
