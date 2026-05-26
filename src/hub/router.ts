@@ -301,5 +301,29 @@ export function handleBrowserMessage(
       }
       break;
     }
+    case "compact": {
+      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
+      if (instanceWs) {
+        instanceWs.send(
+          JSON.stringify({
+            type: "compact",
+            payload: msg.payload.customInstructions
+              ? { customInstructions: msg.payload.customInstructions }
+              : undefined,
+          }),
+        );
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            payload: {
+              message: `Instance ${msg.payload.instanceId} not found`,
+              code: "INSTANCE_NOT_FOUND",
+            },
+          }),
+        );
+      }
+      break;
+    }
   }
 }

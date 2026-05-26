@@ -419,6 +419,15 @@ function handleHubMessage(
     case "switch_session":
       sessionControlPatch.scheduleSwitch(msg.payload.path);
       break;
+    case "compact": {
+      const ctx = getCurrentCtx();
+      if (ctx && ctx.isIdle()) {
+        ctx.compact({
+          customInstructions: msg.payload?.customInstructions,
+        });
+      }
+      break;
+    }
   }
 }
 

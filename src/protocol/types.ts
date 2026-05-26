@@ -193,6 +193,7 @@ export type HubToExtensionMessage =
   | HubAbortMessage
   | HubSetModelMessage
   | HubSetThinkingLevelMessage
+  | HubCompactMessage
   | HubPingMessage
   | HubGetHistoryMessage
   | HubListSessionsMessage
@@ -245,6 +246,14 @@ export interface HubSetThinkingLevelMessage {
   };
 }
 
+/** 触发上下文压缩 */
+export interface HubCompactMessage {
+  type: "compact";
+  payload?: {
+    customInstructions?: string;
+  };
+}
+
 /** 心跳探测 */
 export interface HubPingMessage {
   type: "ping";
@@ -291,6 +300,7 @@ export type BrowserToHubMessage =
   | BrowserAbortMessage
   | BrowserSetModelMessage
   | BrowserSetThinkingLevelMessage
+  | BrowserCompactMessage
   | BrowserListMessage
   | BrowserHistoryMessage
   | BrowserListSessionsMessage
@@ -355,6 +365,15 @@ export interface BrowserSetThinkingLevelMessage {
   payload: {
     instanceId: InstanceId;
     level: ThinkingLevel;
+  };
+}
+
+/** 触发实例上下文压缩 */
+export interface BrowserCompactMessage {
+  type: "compact";
+  payload: {
+    instanceId: InstanceId;
+    customInstructions?: string;
   };
 }
 

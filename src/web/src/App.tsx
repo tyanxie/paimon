@@ -177,6 +177,17 @@ export default function App() {
     [selectedInstanceId, send],
   );
 
+  const handleCompact = useCallback(
+    (customInstructions?: string) => {
+      if (!selectedInstanceId) return;
+      send({
+        type: "compact",
+        payload: { instanceId: selectedInstanceId, customInstructions },
+      });
+    },
+    [selectedInstanceId, send],
+  );
+
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
   // 合并 history + streaming 供渲染
@@ -252,6 +263,7 @@ export default function App() {
               onListSessions={handleListSessions}
               onNewSession={handleNewSession}
               onSwitchSession={handleSwitchSession}
+              onCompact={handleCompact}
             />
           }
         />

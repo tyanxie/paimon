@@ -100,7 +100,7 @@ export function SessionPopover({
                 placeholder="Filter..."
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded-[6px] bg-[var(--fill-tertiary)] text-[12px] text-[var(--label-primary)] placeholder:text-[var(--label-quaternary)] outline-none border border-transparent focus:border-[var(--separator)]"
+                className="w-full px-2.5 py-1.5 rounded-[6px] bg-[var(--fill-tertiary)] text-[12px] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none border border-transparent focus:border-[var(--separator)]"
                 autoFocus
               />
             </div>

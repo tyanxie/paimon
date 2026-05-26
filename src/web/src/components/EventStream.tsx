@@ -1,7 +1,7 @@
 // 事件流画布：展示选中实例的对话 entries
 
 import { useRef, useLayoutEffect, useState, useCallback } from "react";
-import { ArrowUp, Square, ChevronsDown } from "lucide-react";
+import { ArrowUp, Square, ChevronsDown, Minimize2 } from "lucide-react";
 import type {
   InstanceId,
   ContextUsageInfo,
@@ -23,6 +23,7 @@ import { InstanceHeader } from "./ui/InstanceHeader";
 import { ModelSelector } from "./ui/ModelSelector";
 import { ThinkingSelector } from "./ui/ThinkingSelector";
 import { SessionPopover } from "./ui/SessionPopover";
+import { CompactModal } from "./ui/CompactModal";
 
 const LOAD_MORE_SUPPRESS_MS = 350;
 const ENTRY_KEY_ATTR = "data-entry-key";
@@ -175,6 +176,7 @@ interface EventStreamProps {
   onListSessions?: () => void;
   onNewSession?: () => void;
   onSwitchSession?: (path: string) => void;
+  onCompact?: (customInstructions?: string) => void;
 }
 
 function getEntryKey(entryElement: Element) {
@@ -373,6 +375,7 @@ export function EventStream({
   onListSessions,
   onNewSession,
   onSwitchSession,
+  onCompact,
 }: EventStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -381,6 +384,7 @@ export function EventStream({
   const bottomChromeRef = useRef<HTMLDivElement>(null);
   const bottomSafeGapRef = useRef<HTMLDivElement>(null);
   const logoSrc = useLogoSrc();
+  const [showCompactModal, setShowCompactModal] = useState(false);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const isRefreshing = loadState === "refreshing";
@@ -388,6 +392,14 @@ export function EventStream({
     instanceStatus,
     inputValue,
   });
+  // 上下文信息 + 压缩按钮作为整体：tokens 有值时同时展示，最后一条是 compaction entry 时不显示压缩按钮（无内容可压缩）
+  const lastEntryIsCompaction =
+    entries.length > 0 && entries[entries.length - 1].type === "compaction";
+  const showContextInfo =
+    !!contextUsage &&
+    contextUsage.tokens != null &&
+    contextUsage.percent != null;
+  const compactDisabled = isBusy(instanceStatus);
   const [topChromeHeight, setTopChromeHeight] = useState(64);
   const [bottomChromeHeight, setBottomChromeHeight] = useState(96);
   const [bottomSafeGap, setBottomSafeGap] = useState(12);
@@ -1004,11 +1016,24 @@ export function EventStream({
                 <div className="mb-1.5 flex items-center justify-between gap-3 px-1 text-[12px] text-[var(--label-secondary)]">
                   <span className="flex min-w-0 items-center gap-2">
                     <ComposerStatusIndicator status={instanceStatus} />
-                    {contextUsage ? (
-                      <span className="min-w-0 truncate">
-                        <ContextIndicator contextUsage={contextUsage} />
+                    {showContextInfo && (
+                      <span className="min-w-0 flex items-center gap-2">
+                        <span className="min-w-0 truncate">
+                          <ContextIndicator contextUsage={contextUsage} />
+                        </span>
+                        {/* 压缩按钮：最后一条是 compaction entry 时不显示（无内容可压缩） */}
+                        {!lastEntryIsCompaction && onCompact && (
+                          <button
+                            onClick={() => setShowCompactModal(true)}
+                            disabled={compactDisabled}
+                            title="压缩上下文"
+                            className="shrink-0 inline-flex items-center justify-center p-0.5 rounded-[4px] text-[var(--label-secondary)] hover:text-[var(--color-accent)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <Minimize2 size={12} />
+                          </button>
+                        )}
                       </span>
-                    ) : null}
+                    )}
                   </span>
                   <span className="flex shrink-0 items-center gap-2.5">
                     {instanceModel && (
@@ -1072,6 +1097,16 @@ export function EventStream({
           </div>
         </div>
       </main>
+      {/* 压缩上下文 Modal */}
+      {showCompactModal && onCompact && (
+        <CompactModal
+          onClose={() => setShowCompactModal(false)}
+          onConfirm={(customInstructions) => {
+            onCompact(customInstructions);
+            setShowCompactModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1137,10 +1172,8 @@ export function ComposerStatusIndicator({
 function ContextIndicator({
   contextUsage,
 }: {
-  contextUsage?: ContextUsageInfo;
+  contextUsage: ContextUsageInfo;
 }) {
-  if (!contextUsage) return null;
-
   const { tokens, contextWindow, percent } = contextUsage;
   if (tokens == null || percent == null) return null;
 
