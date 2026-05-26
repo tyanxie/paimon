@@ -46,7 +46,7 @@ export function ThinkingSelector({
       )}
     >
       {(close) => (
-        <div className="py-1.5">
+        <div className="py-1.5 px-1.5">
           {THINKING_LEVELS.map((level) => {
             const active = level === currentLevel;
             return (
@@ -56,10 +56,10 @@ export function ThinkingSelector({
                   if (!active) onSelect?.(level);
                   close();
                 }}
-                className={`w-full text-left px-3 py-[7px] flex items-center gap-2 transition-colors select-none ${
+                className={`w-full text-left px-2.5 py-2 rounded-[8px] flex items-center gap-2 transition-colors select-none mb-0.5 ${
                   active
-                    ? "bg-[var(--fill-tertiary)]"
-                    : "hover:bg-[var(--fill-quaternary)]"
+                    ? "bg-[var(--fill-secondary)]"
+                    : "hover:bg-[var(--fill-tertiary)]"
                 }`}
               >
                 <span className="flex-1 text-[13px] text-[var(--label-primary)]">

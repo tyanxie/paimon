@@ -135,7 +135,7 @@ export function SessionPopover({
                   disabled={session.isCurrent}
                   className={`w-full text-left px-2.5 py-2 rounded-[8px] transition-colors mb-0.5 ${
                     session.isCurrent
-                      ? "bg-[rgba(0,0,0,0.07)] dark:bg-[rgba(255,255,255,0.07)] cursor-default"
+                      ? "bg-[var(--fill-secondary)] cursor-default"
                       : "hover:bg-[var(--fill-tertiary)] cursor-pointer"
                   }`}
                 >

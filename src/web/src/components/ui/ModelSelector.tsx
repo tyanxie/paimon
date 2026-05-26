@@ -60,13 +60,13 @@ export function ModelSelector({
       )}
     >
       {(close) => (
-        <div className="max-h-[320px] overflow-y-auto py-1.5 scrollbar-auto">
+        <div className="max-h-[320px] overflow-y-auto py-1.5 px-1.5 scrollbar-auto">
           {Array.from(groups.entries()).map(([provider, models], gi) => (
             <div key={provider}>
               {gi > 0 && (
-                <div className="mx-3 my-1 h-px bg-[var(--fill-tertiary)]" />
+                <div className="mx-1 my-1 h-px bg-[var(--separator)]" />
               )}
-              <div className="px-3 pt-2 pb-1 text-[11px] font-bold text-[var(--label-tertiary)] uppercase select-none">
+              <div className="px-2.5 pt-2 pb-1 text-[11px] font-bold text-[var(--label-tertiary)] uppercase select-none">
                 {provider}
               </div>
               {models.map((m) => {
@@ -78,10 +78,10 @@ export function ModelSelector({
                       if (!active) onSelect?.(m.provider, m.id);
                       close();
                     }}
-                    className={`w-full text-left px-3 py-[7px] flex items-center gap-2 transition-colors select-none ${
+                    className={`w-full text-left px-2.5 py-2 rounded-[8px] flex items-center gap-2 transition-colors select-none mb-0.5 ${
                       active
-                        ? "bg-[var(--fill-tertiary)]"
-                        : "hover:bg-[var(--fill-quaternary)]"
+                        ? "bg-[var(--fill-secondary)]"
+                        : "hover:bg-[var(--fill-tertiary)]"
                     }`}
                   >
                     <div className="flex-1 min-w-0">

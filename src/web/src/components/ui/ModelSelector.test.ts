@@ -55,7 +55,7 @@ describe("ModelSelector", () => {
 
   test("滚动裁剪在内容层而非 popover 壳", () => {
     expect(selectorSource).toContain(
-      'className="max-h-[320px] overflow-y-auto py-1.5 scrollbar-auto"',
+      'className="max-h-[320px] overflow-y-auto py-1.5 px-1.5 scrollbar-auto"',
     );
   });
 });
