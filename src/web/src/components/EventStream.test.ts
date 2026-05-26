@@ -179,7 +179,7 @@ describe("文本选择边界", () => {
       'className="truncate select-text">{gitBranch}</span>',
     );
     expect(eventStreamSource).toContain(
-      '<span className="select-text">{isRunning ? "执行中" : "在线"}</span>',
+      '<span className="text-[11px] font-medium leading-none">{label}</span>',
     );
     expect(eventStreamSource).toContain(
       '<span className="select-text" style={{ color }}>',

@@ -34,6 +34,9 @@ export interface ContextUsageInfo {
   percent: number | null;
 }
 
+/** 实例状态 */
+export type InstanceStatus = "idle" | "streaming" | "compacting";
+
 /** pi 实例信息 */
 export interface InstanceInfo {
   id: InstanceId;
@@ -50,7 +53,7 @@ export interface InstanceInfo {
   /** pi 进程 PID */
   pid: number;
   /** 实例状态 */
-  status: "idle" | "streaming";
+  status: InstanceStatus;
   /** 上下文使用情况 */
   contextUsage?: ContextUsageInfo;
   /** Git 分支名（null = 非 git 仓库, "detached" = detached HEAD） */
@@ -148,7 +151,7 @@ export interface ExtEventMessage {
 export interface ExtStateMessage {
   type: "state";
   payload: {
-    status?: "idle" | "streaming";
+    status?: InstanceStatus;
     /** 上下文使用情况 */
     contextUsage?: ContextUsageInfo;
     /** Git 分支名 */

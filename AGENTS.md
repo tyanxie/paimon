@@ -39,6 +39,7 @@ src/
     └── src/
         ├── stores/            # useAppState, useSettings（全局状态）
         ├── hooks/             # useWebSocket, useLogoSrc
+        ├── utils/             # 工具函数（status 状态判断等）
         └── components/
             ├── ui/            # 通用组件（ModalShell, MobileNavBar 等）
             └── entries/       # 消息渲染器（Markdown, ThinkingBlock, ToolCallCard）

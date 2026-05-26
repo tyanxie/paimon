@@ -26,6 +26,8 @@ export default function (pi: ExtensionAPI) {
   let registered = false;
   // 保存最新的 ctx 引用，用于响应 get_history
   let currentCtx: ExtensionContext | null = null;
+  // 跟踪 compaction 状态（兜底用）
+  let compacting = false;
 
   // 安装 session 控制 patch（截获 newSession/switchSession 函数引用）
   sessionControlPatch.install();
@@ -105,6 +107,8 @@ export default function (pi: ExtensionAPI) {
   // 转发状态变更 + 更新注册信息（确保 model 正确）
   pi.on("agent_start", async (_event, ctx) => {
     currentCtx = ctx;
+    // 兜底：如果之前卡在 compacting 状态，agent_start 时强制恢复
+    compacting = false;
     if (ctx.model) {
       client.send({
         type: "register",
@@ -175,6 +179,8 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_end", async () => {
     const ctx = currentCtx;
+    // 兜底：如果之前卡在 compacting 状态，agent_end 时强制恢复
+    compacting = false;
     client.send({
       type: "state",
       payload: {
@@ -187,9 +193,32 @@ export default function (pi: ExtensionAPI) {
     setTimeout(() => sessionControlPatch.flush(), 0);
   });
 
+  // 压缩开始前：标记 compacting 状态
+  pi.on("session_before_compact", async (event, ctx) => {
+    currentCtx = ctx;
+    compacting = true;
+    if (!client.connected) return;
+    client.send({
+      type: "state",
+      payload: { status: "compacting" },
+    });
+    // 监听取消信号（ESC），即时回退状态
+    event.signal.addEventListener(
+      "abort",
+      () => {
+        compacting = false;
+        if (client.connected) {
+          client.send({ type: "state", payload: { status: "idle" } });
+        }
+      },
+      { once: true },
+    );
+  });
+
   // 压缩完成后更新上下文使用情况（tokens 会变为 null）
   pi.on("session_compact", async (_event, ctx) => {
     currentCtx = ctx;
+    compacting = false;
     if (!client.connected) return;
     client.send({
       type: "state",

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import type {
   InstanceInfo,
+  InstanceStatus,
   HubToBrowserMessage,
   InstanceId,
   SessionListItem,
@@ -155,6 +156,24 @@ export function beginInstanceRefresh(
   };
 }
 
+/** 重置当前实例的对话内容并进入刷新态（session 切换 / compaction） */
+export function beginContentRefresh(
+  state: ConversationState,
+  instanceId: InstanceId,
+  options?: { scrollToBottom?: boolean },
+): ConversationState {
+  if (state.currentInstanceId !== instanceId) return state;
+  return {
+    ...state,
+    entries: [],
+    streamingEntry: null,
+    hasMore: false,
+    loadState: "refreshing",
+    errorMessage: null,
+    shouldScrollToBottom: options?.scrollToBottom ?? false,
+  };
+}
+
 export function beginLoadMore(state: ConversationState): ConversationState {
   if (
     !state.currentInstanceId ||
@@ -228,6 +247,8 @@ export function useAppState() {
   const sessionIdMapRef = useRef<Map<InstanceId, string | undefined>>(
     new Map(),
   );
+  // 跟踪每个实例的 status，用于检测 compacting → 非 compacting 转换
+  const statusMapRef = useRef<Map<InstanceId, InstanceStatus>>(new Map());
   // 当前查看的实例 sessionId 变化时设置为该 instanceId，App 层监听并重新拉取 history
   const [sessionChangedInstanceId, setSessionChangedInstanceId] =
     useState<InstanceId | null>(null);
@@ -264,9 +285,10 @@ export function useAppState() {
       switch (msg.type) {
         case "instance_list":
           setInstances(msg.payload.instances);
-          // 初始化 sessionId 跟踪
+          // 初始化 sessionId 和 status 跟踪
           for (const inst of msg.payload.instances) {
             sessionIdMapRef.current.set(inst.id, inst.sessionId);
+            statusMapRef.current.set(inst.id, inst.status);
           }
           break;
         case "instance_update":
@@ -279,23 +301,30 @@ export function useAppState() {
               }
               return [...prev, msg.payload.instance];
             });
-            // 记录新实例的 sessionId
+            // 记录新实例的 sessionId 和 status
             sessionIdMapRef.current.set(
               msg.payload.instance.id,
               msg.payload.instance.sessionId,
+            );
+            statusMapRef.current.set(
+              msg.payload.instance.id,
+              msg.payload.instance.status,
             );
           } else if (msg.payload.action === "disconnected") {
             setInstances((prev) =>
               prev.filter((i) => i.id !== msg.payload.instance.id),
             );
             sessionIdMapRef.current.delete(msg.payload.instance.id);
+            statusMapRef.current.delete(msg.payload.instance.id);
           } else if (msg.payload.action === "updated") {
             const inst = msg.payload.instance;
             const prevSessionId = sessionIdMapRef.current.get(inst.id);
+            const prevStatus = statusMapRef.current.get(inst.id);
             // 只在 sessionId 有效时更新 map，避免 ctx 未就绪时 undefined 覆盖有效值
             if (inst.sessionId !== undefined) {
               sessionIdMapRef.current.set(inst.id, inst.sessionId);
             }
+            statusMapRef.current.set(inst.id, inst.status);
 
             setInstances((prev) =>
               prev.map((i) => (i.id === inst.id ? inst : i)),
@@ -308,18 +337,15 @@ export function useAppState() {
               inst.sessionId !== undefined &&
               inst.sessionId !== prevSessionId
             ) {
-              setConversation((prev) => {
-                if (prev.currentInstanceId !== inst.id) return prev;
-                return {
-                  ...prev,
-                  entries: [],
-                  streamingEntry: null,
-                  hasMore: false,
-                  loadState: "refreshing",
-                  errorMessage: null,
-                  shouldScrollToBottom: false,
-                };
-              });
+              setConversation((prev) => beginContentRefresh(prev, inst.id));
+              setSessionChangedInstanceId(inst.id);
+            }
+
+            // compacting → 非 compacting：压缩完成（或取消），重新拉取 history
+            if (prevStatus === "compacting" && inst.status !== "compacting") {
+              setConversation((prev) =>
+                beginContentRefresh(prev, inst.id, { scrollToBottom: true }),
+              );
               setSessionChangedInstanceId(inst.id);
             }
           }

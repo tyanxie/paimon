@@ -5,6 +5,7 @@ import type { ServerWebSocket } from "bun";
 import type {
   InstanceId,
   InstanceInfo,
+  InstanceStatus,
   ModelInfo,
   ContextUsageInfo,
   ThinkingLevel,
@@ -206,7 +207,7 @@ class Registry {
   updateState(
     id: InstanceId,
     state: {
-      status?: "idle" | "streaming";
+      status?: InstanceStatus;
       contextUsage?: {
         tokens: number | null;
         contextWindow: number;

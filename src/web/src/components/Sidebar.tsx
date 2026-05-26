@@ -71,11 +71,17 @@ export function Sidebar({
                     <span
                       className={`w-1.5 h-1.5 max-md:w-2 max-md:h-2 rounded-full flex-shrink-0 transition-colors ${
                         instance.status === "streaming"
-                          ? "bg-[var(--color-accent)]"
-                          : "bg-green-500"
+                          ? "bg-[var(--color-accent)] animate-pulse"
+                          : instance.status === "compacting"
+                            ? "bg-amber-500 animate-pulse"
+                            : "bg-green-500"
                       }`}
                       title={
-                        instance.status === "streaming" ? "Streaming" : "Idle"
+                        instance.status === "streaming"
+                          ? "Streaming"
+                          : instance.status === "compacting"
+                            ? "Compacting"
+                            : "Idle"
                       }
                     />
                     {/* 工作目录（取最后一段） */}

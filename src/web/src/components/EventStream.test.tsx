@@ -1,11 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import type { InstanceStatus } from "../../../protocol/types";
+
 let ComposerStatusIndicator: (props: {
-  status?: "idle" | "streaming";
+  status?: InstanceStatus;
 }) => React.ReactNode;
 let getComposerButtonMode: (args: {
-  instanceStatus?: "idle" | "streaming";
+  instanceStatus?: InstanceStatus;
   inputValue: string;
 }) => "send" | "stop";
 
@@ -33,7 +35,8 @@ beforeAll(async () => {
     },
   });
 
-  ({ ComposerStatusIndicator, getComposerButtonMode } = await import("./EventStream"));
+  ({ ComposerStatusIndicator, getComposerButtonMode } =
+    await import("./EventStream"));
 });
 
 describe("ComposerStatusIndicator", () => {
@@ -57,9 +60,23 @@ describe("ComposerStatusIndicator", () => {
 
     expect(markup).toContain("执行中");
     expect(markup).toContain("rounded-full");
-    expect(markup).toContain("bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]");
+    expect(markup).toContain(
+      "bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]",
+    );
     expect(markup).toContain("bg-[var(--color-accent)]");
     expect(markup).toContain("text-[var(--color-accent)]");
+    expect(markup).toContain("animate-pulse");
+  });
+
+  test("renders compacting state with amber pulse", () => {
+    const markup = renderToStaticMarkup(
+      <ComposerStatusIndicator status="compacting" />,
+    );
+
+    expect(markup).toContain("压缩中");
+    expect(markup).toContain("bg-amber-500/10");
+    expect(markup).toContain("bg-amber-500");
+    expect(markup).toContain("text-amber-500");
     expect(markup).toContain("animate-pulse");
   });
 
@@ -70,5 +87,14 @@ describe("ComposerStatusIndicator", () => {
         inputValue: "queued draft",
       }),
     ).toBe("stop");
+  });
+
+  test("shows send button during compacting", () => {
+    expect(
+      getComposerButtonMode({
+        instanceStatus: "compacting",
+        inputValue: "test",
+      }),
+    ).toBe("send");
   });
 });

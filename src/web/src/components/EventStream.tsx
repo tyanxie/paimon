@@ -8,6 +8,7 @@ import type {
   ModelInfo,
   ThinkingLevel,
   SessionListItem,
+  InstanceStatus,
 } from "../../../protocol/types";
 import {
   getSessionEntryRenderKey,
@@ -15,6 +16,7 @@ import {
   type SessionEntry,
 } from "../stores/useAppState";
 import { useLogoSrc } from "../hooks/useLogoSrc";
+import { isStreaming as isStatusStreaming, isBusy } from "../utils/status";
 import { EntryItem } from "./entries";
 import { MobileNavBar } from "./ui/MobileNavBar";
 import { InstanceHeader } from "./ui/InstanceHeader";
@@ -66,10 +68,10 @@ export function calculatePrependScrollTop({
 export function getComposerButtonMode({
   instanceStatus,
 }: {
-  instanceStatus?: "idle" | "streaming";
+  instanceStatus?: InstanceStatus;
   inputValue: string;
 }) {
-  return instanceStatus === "streaming" ? "stop" : "send";
+  return isStatusStreaming(instanceStatus) ? "stop" : "send";
 }
 
 export function getSafeScrollTop(rawScrollTop: number) {
@@ -159,7 +161,7 @@ interface EventStreamProps {
   onAbort: () => void;
   onSetModel?: (provider: string, id: string) => void;
   onSetThinkingLevel?: (level: ThinkingLevel) => void;
-  instanceStatus?: "idle" | "streaming";
+  instanceStatus?: InstanceStatus;
   hasMore?: boolean;
   onLoadMore?: () => void;
   contextUsage?: ContextUsageInfo;
@@ -843,7 +845,7 @@ export function EventStream({
 
   // 发送消息
   const handleSend = useCallback(() => {
-    if (instanceStatus === "streaming" || !inputValue.trim()) return;
+    if (isBusy(instanceStatus) || !inputValue.trim()) return;
     onSendMessage(inputValue.trim());
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -891,7 +893,7 @@ export function EventStream({
         <SessionPopover
           sessions={sessionList}
           loading={sessionListLoading}
-          disabled={instanceStatus === "streaming"}
+          disabled={isBusy(instanceStatus)}
           onOpen={onListSessions}
           onNewSession={onNewSession}
           onSwitchSession={onSwitchSession}
@@ -1048,9 +1050,9 @@ export function EventStream({
                   ) : (
                     <button
                       onClick={handleSend}
-                      disabled={!inputValue.trim()}
+                      disabled={isBusy(instanceStatus) || !inputValue.trim()}
                       className={`select-none w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
-                        inputValue.trim()
+                        !isBusy(instanceStatus) && inputValue.trim()
                           ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
                           : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
                       }`}
@@ -1096,33 +1098,37 @@ function RefreshingConversationSkeleton() {
 export function ComposerStatusIndicator({
   status,
 }: {
-  status?: "idle" | "streaming";
+  status?: InstanceStatus;
 }) {
   if (!status) return null;
 
   const isRunning = status === "streaming";
+  const isCompacting = status === "compacting";
+
+  const colorClass = isRunning
+    ? "bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] text-[var(--color-accent)]"
+    : isCompacting
+      ? "bg-amber-500/10 text-amber-500"
+      : "bg-green-500/10 text-green-500";
+
+  const dotClass = isRunning
+    ? "bg-[var(--color-accent)] animate-pulse"
+    : isCompacting
+      ? "bg-amber-500 animate-pulse"
+      : "bg-green-500";
+
+  const label = isRunning ? "执行中" : isCompacting ? "压缩中" : "在线";
 
   return (
     <span
-      className={`flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 ${
-        isRunning
-          ? "bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] text-[var(--color-accent)]"
-          : "bg-green-500/10 text-green-500"
-      }`}
-      title={isRunning ? "执行中" : "在线"}
+      className={`flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 ${colorClass}`}
+      title={label}
       role="status"
       aria-live="polite"
-      aria-label={isRunning ? "执行中" : "在线"}
+      aria-label={label}
     >
-      <span
-        aria-hidden="true"
-        className={`h-2 w-2 rounded-full ${
-          isRunning
-            ? "motion-safe:animate-pulse bg-[var(--color-accent)]"
-            : "bg-green-500"
-        }`}
-      />
-      <span className="select-text">{isRunning ? "执行中" : "在线"}</span>
+      <span aria-hidden="true" className={`h-2 w-2 rounded-full ${dotClass}`} />
+      <span className="text-[11px] font-medium leading-none">{label}</span>
     </span>
   );
 }
