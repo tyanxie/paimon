@@ -19,6 +19,8 @@ export interface WsData {
   role: "extension" | "browser";
   /** 实例 ID（extension 连接才有） */
   instanceId?: InstanceId;
+  /** 浏览器连接 ID（browser 连接才有） */
+  browserId?: string;
   /** 浏览器订阅的实例列表 */
   subscriptions?: Set<InstanceId>;
 }
@@ -42,6 +44,8 @@ function computeInstanceId(hostname: string, pid: number): InstanceId {
 class Registry {
   private instances = new Map<InstanceId, InstanceRecord>();
   private browserClients = new Set<ServerWebSocket<WsData>>();
+  /** 浏览器连接心跳超时定时器 */
+  private browserHeartbeatTimers = new Map<ServerWebSocket<WsData>, Timer>();
 
   /** 注册实例（新注册或重连复用） */
   register(
@@ -263,15 +267,27 @@ class Registry {
 
   /** 注册浏览器连接 */
   addBrowser(ws: ServerWebSocket<WsData>): void {
+    const id = crypto.randomUUID();
+    ws.data.browserId = id;
     this.browserClients.add(ws);
     ws.data.subscriptions = new Set();
-    log.debug(`Browser connected (total: ${this.browserClients.size})`);
+    this.startBrowserHeartbeatTimer(ws);
+    log.info(`Browser ${id} connected (total: ${this.browserClients.size})`);
   }
 
   /** 移除浏览器连接 */
   removeBrowser(ws: ServerWebSocket<WsData>): void {
+    this.clearBrowserHeartbeatTimer(ws);
     this.browserClients.delete(ws);
-    log.debug(`Browser disconnected (total: ${this.browserClients.size})`);
+    log.info(
+      `Browser ${ws.data.browserId} disconnected (total: ${this.browserClients.size})`,
+    );
+  }
+
+  /** 浏览器心跳更新 */
+  browserHeartbeat(ws: ServerWebSocket<WsData>): void {
+    this.clearBrowserHeartbeatTimer(ws);
+    this.startBrowserHeartbeatTimer(ws);
   }
 
   /** 获取订阅了指定实例的所有浏览器 */
@@ -298,7 +314,7 @@ class Registry {
     return ws.data.instanceId;
   }
 
-  /** 启动心跳超时定时器 */
+  /** 启动实例心跳超时定时器 */
   private startHeartbeatTimer(id: InstanceId): Timer {
     return setTimeout(() => {
       const record = this.instances.get(id);
@@ -310,6 +326,26 @@ class Registry {
         this.unregister(id);
       }
     }, DEFAULTS.HEARTBEAT_INTERVAL + DEFAULTS.HEARTBEAT_TIMEOUT);
+  }
+
+  /** 启动浏览器心跳超时定时器 */
+  private startBrowserHeartbeatTimer(ws: ServerWebSocket<WsData>): void {
+    const timer = setTimeout(() => {
+      log.warn(`Browser ${ws.data.browserId} heartbeat timeout, disconnecting`);
+      this.browserHeartbeatTimers.delete(ws);
+      ws.close(1001, "Heartbeat timeout");
+      this.browserClients.delete(ws);
+    }, DEFAULTS.HEARTBEAT_INTERVAL + DEFAULTS.HEARTBEAT_TIMEOUT);
+    this.browserHeartbeatTimers.set(ws, timer);
+  }
+
+  /** 清除浏览器心跳定时器 */
+  private clearBrowserHeartbeatTimer(ws: ServerWebSocket<WsData>): void {
+    const timer = this.browserHeartbeatTimers.get(ws);
+    if (timer) {
+      clearTimeout(timer);
+      this.browserHeartbeatTimers.delete(ws);
+    }
   }
 }
 

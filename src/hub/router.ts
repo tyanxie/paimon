@@ -29,12 +29,12 @@ export function handleExtensionMessage(
       ws.send(JSON.stringify({ type: "registered", payload: { id: info.id } }));
       break;
     }
-    case "heartbeat": {
+    case "ping": {
       const id = registry.findInstanceByWs(ws);
       if (id) {
         registry.heartbeat(id);
-        // 回复 ping 作为确认
-        ws.send(JSON.stringify({ type: "ping" }));
+        // 回复 pong 作为确认
+        ws.send(JSON.stringify({ type: "pong" }));
       }
       break;
     }
@@ -125,6 +125,12 @@ export function handleBrowserMessage(
   }
 
   switch (msg.type) {
+    case "ping": {
+      // 心跳回复 + 重置超时
+      registry.browserHeartbeat(ws);
+      ws.send(JSON.stringify({ type: "pong" }));
+      break;
+    }
     case "list": {
       const instances = registry.getAllInstances();
       ws.send(

@@ -232,7 +232,7 @@ export default function (pi: ExtensionAPI) {
   // 心跳
   const heartbeatInterval = setInterval(() => {
     if (client.connected) {
-      client.send({ type: "heartbeat" });
+      client.send({ type: "ping" });
     }
   }, DEFAULTS.HEARTBEAT_INTERVAL);
 
@@ -378,7 +378,7 @@ function handleHubMessage(
       }
       break;
     }
-    case "ping":
+    case "pong":
     case "registered":
       break;
     case "list_sessions": {

@@ -100,7 +100,7 @@ export interface SessionListItem {
 
 export type ExtensionToHubMessage =
   | ExtRegisterMessage
-  | ExtHeartbeatMessage
+  | PingMessage
   | ExtEventMessage
   | ExtStateMessage
   | ExtHistoryMessage
@@ -129,9 +129,9 @@ export interface ExtRegisterMessage {
   };
 }
 
-/** 心跳 */
-export interface ExtHeartbeatMessage {
-  type: "heartbeat";
+/** 心跳探测（Extension / Browser 共用） */
+export interface PingMessage {
+  type: "ping";
 }
 
 /** 转发 pi 事件 */
@@ -194,7 +194,7 @@ export type HubToExtensionMessage =
   | HubSetModelMessage
   | HubSetThinkingLevelMessage
   | HubCompactMessage
-  | HubPingMessage
+  | PongMessage
   | HubGetHistoryMessage
   | HubListSessionsMessage
   | HubNewSessionMessage
@@ -254,9 +254,9 @@ export interface HubCompactMessage {
   };
 }
 
-/** 心跳探测 */
-export interface HubPingMessage {
-  type: "ping";
+/** 心跳回复（Hub 回复 Extension / Browser 共用） */
+export interface PongMessage {
+  type: "pong";
 }
 
 /** 请求历史消息 */
@@ -293,6 +293,7 @@ export interface HubSwitchSessionMessage {
 // ============================================================
 
 export type BrowserToHubMessage =
+  | PingMessage
   | BrowserSubscribeMessage
   | BrowserUnsubscribeMessage
   | BrowserPromptMessage
@@ -424,6 +425,7 @@ export interface BrowserSwitchSessionMessage {
 // ============================================================
 
 export type HubToBrowserMessage =
+  | PongMessage
   | HubInstanceListMessage
   | HubInstanceUpdateMessage
   | HubForwardedEventMessage
@@ -497,10 +499,18 @@ export interface HubErrorMessage {
 export const DEFAULTS = {
   /** Hub 默认端口 */
   PORT: 8080 as number,
-  /** 心跳间隔 (ms) */
-  HEARTBEAT_INTERVAL: 15_000,
-  /** 心跳超时 (ms) */
-  HEARTBEAT_TIMEOUT: 10_000,
+  /**
+   * 心跳发送间隔 (ms)，Extension 和 Browser 共用。
+   * 客户端每隔此时间发送一次 ping。
+   */
+  HEARTBEAT_INTERVAL: 5_000,
+  /**
+   * 心跳回复超时 (ms)。
+   * - 客户端：发 ping 后等待 pong 的最长时间，超时则主动断开触发重连。
+   * - Hub 侧：超时窗口 = INTERVAL + TIMEOUT，即允许丢失一次 ping
+   *   后仍不断开，仅在连续无心跳超过该窗口才判定断连。
+   */
+  HEARTBEAT_TIMEOUT: 5_000,
   /** 实例断连后的保留时间 (ms)，超时才广播 disconnected */
   DISCONNECT_GRACE_PERIOD: 5_000,
   /** 重连退避序列 (ms) */
