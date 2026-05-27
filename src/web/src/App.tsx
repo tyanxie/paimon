@@ -48,8 +48,11 @@ export default function App() {
   const subscribedRef = useRef<InstanceId | null>(null);
 
   useEffect(() => {
-    // WS 未连接时不操作
-    if (!connected) return;
+    // WS 未连接时重置订阅状态（服务端订阅已随旧连接丢失）
+    if (!connected) {
+      subscribedRef.current = null;
+      return;
+    }
 
     // selectedInstanceId 为 null（去设置页/首页）时保持订阅不动
     if (!selectedInstanceId) return;
