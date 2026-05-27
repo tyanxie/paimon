@@ -165,11 +165,13 @@ export function ToolCallCard({
   args,
   toolCallId,
   entries,
+  isAborted = false,
 }: {
   name: string;
   args: Record<string, any>;
   toolCallId?: string;
   entries: SessionEntry[];
+  isAborted?: boolean;
 }) {
   const [showModal, setShowModal] = useState(false);
   const summary = getToolSummary(name, args);
@@ -182,6 +184,8 @@ export function ToolCallCard({
 
   const isCompleted = result !== null;
   const isError = result?.isError ?? false;
+  // 工具未完成且消息已终止（abort / error）→ 视为失败
+  const isFailed = isError || (!isCompleted && isAborted);
 
   // 按工具名选择弹窗组件
   const DetailModal =
@@ -215,12 +219,12 @@ export function ToolCallCard({
         )}
         {/* 右侧状态 icon：执行中 / 失败 / 完成 */}
         <span className="flex-shrink-0 ml-auto">
-          {!isCompleted ? (
+          {!isCompleted && !isAborted ? (
             <Loader2
               size={14}
               className="text-[var(--label-tertiary)] animate-spin"
             />
-          ) : isError ? (
+          ) : isFailed ? (
             <CircleX size={14} className="text-red-400" />
           ) : (
             <ChevronRight
@@ -237,6 +241,7 @@ export function ToolCallCard({
           name={name}
           args={args}
           result={result}
+          isAborted={isAborted}
           onClose={() => setShowModal(false)}
         />
       )}
@@ -252,7 +257,28 @@ interface DetailModalProps {
   name: string;
   args: Record<string, any>;
   result: ToolResult | null;
+  isAborted: boolean;
   onClose: () => void;
+}
+
+/** 执行中指示器 */
+function RunningIndicator() {
+  return (
+    <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
+      <Loader2 size={14} className="animate-spin" />
+      <span>执行中...</span>
+    </div>
+  );
+}
+
+/** 已终止指示器 */
+function AbortedIndicator() {
+  return (
+    <div className="flex items-center gap-2 text-[12px] text-red-400">
+      <CircleX size={14} />
+      <span>已终止</span>
+    </div>
+  );
 }
 
 /** 工具弹窗标题（icon + name） */
@@ -268,7 +294,13 @@ function ToolModalTitle({ name }: { name: string }) {
 }
 
 /** Read 工具专用弹窗 */
-function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
+function ReadDetailModal({
+  name,
+  args,
+  result,
+  isAborted,
+  onClose,
+}: DetailModalProps) {
   const path = args.path ?? "";
   const offset = args.offset as number | undefined;
   const limit = args.limit as number | undefined;
@@ -310,11 +342,10 @@ function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
           ) : (
             <MarkdownRenderer content={codeBlock!} />
           )
+        ) : isAborted ? (
+          <AbortedIndicator />
         ) : (
-          <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
-            <Loader2 size={14} className="animate-spin" />
-            <span>执行中...</span>
-          </div>
+          <RunningIndicator />
         )}
       </div>
     </ModalShell>
@@ -322,7 +353,13 @@ function ReadDetailModal({ name, args, result, onClose }: DetailModalProps) {
 }
 
 /** Bash 工具专用弹窗 */
-function BashDetailModal({ name, args, result, onClose }: DetailModalProps) {
+function BashDetailModal({
+  name,
+  args,
+  result,
+  isAborted,
+  onClose,
+}: DetailModalProps) {
   const command = args.command ?? "";
   const timeout = args.timeout as number | undefined;
 
@@ -367,11 +404,10 @@ function BashDetailModal({ name, args, result, onClose }: DetailModalProps) {
             ) : (
               <MarkdownRenderer content={resultBlock!} />
             )
+          ) : isAborted ? (
+            <AbortedIndicator />
           ) : (
-            <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
-              <Loader2 size={14} className="animate-spin" />
-              <span>执行中...</span>
-            </div>
+            <RunningIndicator />
           )}
         </div>
       </div>
@@ -380,7 +416,13 @@ function BashDetailModal({ name, args, result, onClose }: DetailModalProps) {
 }
 
 /** Write 工具专用弹窗 */
-function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
+function WriteDetailModal({
+  name,
+  args,
+  result,
+  isAborted,
+  onClose,
+}: DetailModalProps) {
   const path = args.path ?? "";
   const content = args.content ?? "";
   const language = getLanguageFromPath(path);
@@ -423,13 +465,9 @@ function WriteDetailModal({ name, args, result, onClose }: DetailModalProps) {
           </section>
         )}
 
-        {/* 执行中 */}
-        {result === null && (
-          <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
-            <Loader2 size={14} className="animate-spin" />
-            <span>执行中...</span>
-          </div>
-        )}
+        {/* 执行中 / 已终止 */}
+        {result === null &&
+          (isAborted ? <AbortedIndicator /> : <RunningIndicator />)}
       </div>
     </ModalShell>
   );
@@ -488,7 +526,13 @@ function DiffView({ diff }: { diff: string }) {
 }
 
 /** Edit 工具专用弹窗 */
-function EditDetailModal({ name, args, result, onClose }: DetailModalProps) {
+function EditDetailModal({
+  name,
+  args,
+  result,
+  isAborted,
+  onClose,
+}: DetailModalProps) {
   const path = args.path ?? "";
   const diff = result?.details?.diff as string | undefined;
 
@@ -516,10 +560,13 @@ function EditDetailModal({ name, args, result, onClose }: DetailModalProps) {
               {result.content}
             </pre>
           )
+        ) : isAborted ? (
+          <div className="px-5">
+            <AbortedIndicator />
+          </div>
         ) : (
-          <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)] px-5">
-            <Loader2 size={14} className="animate-spin" />
-            <span>执行中...</span>
+          <div className="px-5">
+            <RunningIndicator />
           </div>
         )}
       </div>
@@ -528,7 +575,13 @@ function EditDetailModal({ name, args, result, onClose }: DetailModalProps) {
 }
 
 /** 默认通用弹窗（JSON args + 纯文本 result） */
-function DefaultDetailModal({ name, args, result, onClose }: DetailModalProps) {
+function DefaultDetailModal({
+  name,
+  args,
+  result,
+  isAborted,
+  onClose,
+}: DetailModalProps) {
   return (
     <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 space-y-3 scrollbar-auto">
@@ -560,11 +613,10 @@ function DefaultDetailModal({ name, args, result, onClose }: DetailModalProps) {
           </section>
         )}
 
-        {/* 执行中 */}
+        {/* 执行中 / 已终止 */}
         {result === null && (
-          <section className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
-            <Loader2 size={14} className="animate-spin" />
-            <span>执行中...</span>
+          <section>
+            {isAborted ? <AbortedIndicator /> : <RunningIndicator />}
           </section>
         )}
       </div>

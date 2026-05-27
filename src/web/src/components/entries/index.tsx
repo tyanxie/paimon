@@ -131,14 +131,16 @@ function AssistantMessage({
     );
   }
 
+  // 消息是否已终止（手动 abort 或 API 报错）
+  const isAborted = stopReason === "aborted" || stopReason === "error";
+
   // 判断是否还在产出 thinking（用于自动折叠逻辑）
   const lastBlock = content[content.length - 1];
   const isThinking = streaming && lastBlock?.type === "thinking";
   // 如果有 text/toolCall block 出现了，说明正式输出已开始
   const hasOutput =
     content.some((b: any) => b.type === "text" || b.type === "toolCall") ||
-    stopReason === "aborted" ||
-    stopReason === "error";
+    isAborted;
 
   return (
     <div className="px-4 space-y-2">
@@ -149,6 +151,7 @@ function AssistantMessage({
           entries={entries}
           streaming={streaming && i === content.length - 1}
           autoCollapse={block.type === "thinking" && hasOutput && !isThinking}
+          isAborted={isAborted}
         />
       ))}
       {/* 部分输出 + 最终报错 */}
@@ -168,11 +171,13 @@ function AssistantBlock({
   entries,
   streaming,
   autoCollapse,
+  isAborted,
 }: {
   block: any;
   entries: SessionEntry[];
   streaming: boolean;
   autoCollapse: boolean;
+  isAborted: boolean;
 }) {
   switch (block.type) {
     case "text":
@@ -192,6 +197,7 @@ function AssistantBlock({
           args={block.arguments}
           toolCallId={block.id}
           entries={entries}
+          isAborted={isAborted}
         />
       );
     default:
