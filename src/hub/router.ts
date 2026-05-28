@@ -108,6 +108,14 @@ export function handleExtensionMessage(
       }
       break;
     }
+    case "quit": {
+      // 实例主动退出，立即注销（跳过 grace period）
+      const id = registry.findInstanceByWs(ws);
+      if (id) {
+        registry.unregister(id);
+      }
+      break;
+    }
   }
 }
 

@@ -5,6 +5,7 @@ import { hostname } from "os";
 import type {
   ExtensionAPI,
   ExtensionContext,
+  SessionShutdownEvent,
 } from "@earendil-works/pi-coding-agent";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { DEFAULTS } from "../../protocol/types";
@@ -265,9 +266,13 @@ export default function (pi: ExtensionAPI) {
   });
 
   // 清理
-  pi.on("session_shutdown", async () => {
+  pi.on("session_shutdown", async (event: SessionShutdownEvent) => {
     sessionControlPatch.clear();
     clearInterval(heartbeatInterval);
+    // 如果shutdown原因是进程退出，则主动通知hub进程退出
+    if (client.connected && event.reason === "quit") {
+      client.send({ type: "quit" });
+    }
     client.disconnect();
   });
 }

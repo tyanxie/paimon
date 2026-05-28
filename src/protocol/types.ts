@@ -104,7 +104,13 @@ export type ExtensionToHubMessage =
   | ExtEventMessage
   | ExtStateMessage
   | ExtHistoryMessage
-  | ExtSessionListMessage;
+  | ExtSessionListMessage
+  | ExtQuitMessage;
+
+/** 主动退出通知（跳过 grace period） */
+export interface ExtQuitMessage {
+  type: "quit";
+}
 
 /** 注册 */
 export interface ExtRegisterMessage {
