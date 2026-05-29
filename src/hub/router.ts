@@ -339,5 +339,22 @@ export function handleBrowserMessage(
       }
       break;
     }
+    case "shutdown": {
+      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
+      if (instanceWs) {
+        instanceWs.send(JSON.stringify({ type: "shutdown" }));
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            payload: {
+              message: `Instance ${msg.payload.instanceId} not found`,
+              code: "INSTANCE_NOT_FOUND",
+            },
+          }),
+        );
+      }
+      break;
+    }
   }
 }

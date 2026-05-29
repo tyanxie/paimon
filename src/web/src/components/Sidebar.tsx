@@ -1,25 +1,85 @@
 // 侧边栏：pi 实例列表（独立玻璃面板）
 
-import { Settings as SettingsIcon } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Settings as SettingsIcon, LogOut } from "lucide-react";
 import { useNavigate } from "react-router";
 import type { InstanceInfo, InstanceId } from "../../../protocol/types";
 import { useLogoSrc } from "../hooks/useLogoSrc";
+import {
+  ContextMenu,
+  ContextMenuItem,
+  type ContextMenuPosition,
+} from "./ui/ContextMenu";
 
 interface SidebarProps {
   instances: InstanceInfo[];
   selectedId: InstanceId | null;
   onSelect: (id: InstanceId) => void;
+  onShutdown: (id: InstanceId) => void;
   connected: boolean;
 }
+
+/** 长按触发阈值 (ms) */
+const LONG_PRESS_DELAY = 500;
 
 export function Sidebar({
   instances,
   selectedId,
   onSelect,
+  onShutdown,
   connected,
 }: SidebarProps) {
   const navigate = useNavigate();
   const logoSrc = useLogoSrc();
+
+  // 右键/长按菜单状态
+  const [contextMenu, setContextMenu] = useState<{
+    position: ContextMenuPosition;
+    instanceId: InstanceId;
+  } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 标记当前触摸是否已触发长按（防止 touchEnd 时触发 click）
+  const longPressFiredRef = useRef(false);
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, instanceId: InstanceId) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setContextMenu({ position: { x: e.clientX, y: e.clientY }, instanceId });
+    },
+    [],
+  );
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent, instanceId: InstanceId) => {
+      longPressFiredRef.current = false;
+      const touch = e.touches[0];
+      const pos = { x: touch.clientX, y: touch.clientY };
+      longPressTimerRef.current = setTimeout(() => {
+        longPressFiredRef.current = true;
+        navigator.vibrate?.(10);
+        setContextMenu({ position: pos, instanceId });
+      }, LONG_PRESS_DELAY);
+    },
+    [],
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    // 手指移动取消长按
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
   return (
     <aside className="glass-panel select-none w-[240px] md:w-[240px] flex-shrink-0 flex flex-col overflow-hidden max-md:w-full max-md:flex-1">
@@ -59,7 +119,15 @@ export function Sidebar({
             {instances.map((instance) => (
               <li key={instance.id}>
                 <button
-                  onClick={() => onSelect(instance.id)}
+                  onClick={() => {
+                    // 长按触发后不响应 click
+                    if (longPressFiredRef.current) return;
+                    onSelect(instance.id);
+                  }}
+                  onContextMenu={(e) => handleContextMenu(e, instance.id)}
+                  onTouchStart={(e) => handleTouchStart(e, instance.id)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchMove}
                   className={`w-full text-left px-2.5 py-1.5 max-md:px-3 max-md:py-2.5 rounded-[8px] transition-all duration-150 ${
                     selectedId === instance.id
                       ? "bg-[rgba(0,0,0,0.11)] dark:bg-[rgba(255,255,255,0.11)]"
@@ -117,6 +185,21 @@ export function Sidebar({
           </ul>
         )}
       </div>
+
+      {/* 右键/长按上下文菜单 */}
+      {contextMenu && (
+        <ContextMenu position={contextMenu.position} onClose={closeContextMenu}>
+          <ContextMenuItem
+            icon={<LogOut size={14} />}
+            label="退出实例"
+            danger
+            onClick={() => {
+              onShutdown(contextMenu.instanceId);
+              closeContextMenu();
+            }}
+          />
+        </ContextMenu>
+      )}
 
       {/* 设置入口 */}
       <div className="px-3 py-2 border-t border-[var(--separator)]">

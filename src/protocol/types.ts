@@ -200,11 +200,17 @@ export type HubToExtensionMessage =
   | HubSetModelMessage
   | HubSetThinkingLevelMessage
   | HubCompactMessage
+  | HubShutdownMessage
   | PongMessage
   | HubGetHistoryMessage
   | HubListSessionsMessage
   | HubNewSessionMessage
   | HubSwitchSessionMessage;
+
+/** 指示实例优雅退出 */
+export interface HubShutdownMessage {
+  type: "shutdown";
+}
 
 /** 注册确认，返回分配的 id */
 export interface HubRegisteredMessage {
@@ -308,11 +314,20 @@ export type BrowserToHubMessage =
   | BrowserSetModelMessage
   | BrowserSetThinkingLevelMessage
   | BrowserCompactMessage
+  | BrowserShutdownMessage
   | BrowserListMessage
   | BrowserHistoryMessage
   | BrowserListSessionsMessage
   | BrowserNewSessionMessage
   | BrowserSwitchSessionMessage;
+
+/** 请求实例优雅退出 */
+export interface BrowserShutdownMessage {
+  type: "shutdown";
+  payload: {
+    instanceId: InstanceId;
+  };
+}
 
 /** 订阅实例事件流 */
 export interface BrowserSubscribeMessage {

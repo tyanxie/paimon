@@ -386,6 +386,14 @@ function handleHubMessage(
     case "pong":
     case "registered":
       break;
+    case "shutdown": {
+      // Hub 下发退出指令，优雅关闭 pi 进程
+      const ctx = getCurrentCtx();
+      if (ctx) {
+        ctx.shutdown();
+      }
+      break;
+    }
     case "list_sessions": {
       const ctx = getCurrentCtx();
       if (ctx?.cwd) {

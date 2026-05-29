@@ -191,6 +191,13 @@ export default function App() {
     [selectedInstanceId, send],
   );
 
+  const handleShutdown = useCallback(
+    (id: InstanceId) => {
+      send({ type: "shutdown", payload: { instanceId: id } });
+    },
+    [send],
+  );
+
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
   // 合并 history + streaming 供渲染
@@ -228,6 +235,7 @@ export default function App() {
           instances={instances}
           selectedId={selectedInstanceId}
           onSelect={handleSelect}
+          onShutdown={handleShutdown}
           connected={connected}
         />
       </div>
@@ -280,6 +288,7 @@ export default function App() {
                   instances={instances}
                   selectedId={selectedInstanceId}
                   onSelect={handleSelect}
+                  onShutdown={handleShutdown}
                   connected={connected}
                 />
               </div>
