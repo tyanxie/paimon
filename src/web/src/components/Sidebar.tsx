@@ -130,7 +130,7 @@ export function Sidebar({
                   onTouchMove={handleTouchMove}
                   className={`w-full text-left px-2.5 py-1.5 max-md:px-3 max-md:py-2.5 rounded-[8px] transition-all duration-150 ${
                     selectedId === instance.id
-                      ? "bg-[rgba(0,0,0,0.11)] dark:bg-[rgba(255,255,255,0.11)]"
+                      ? "bg-[rgba(0,145,255,0.08)] dark:bg-[rgba(0,145,255,0.12)]"
                       : "hover:bg-[var(--fill-tertiary)]"
                   }`}
                 >
