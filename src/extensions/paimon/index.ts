@@ -21,6 +21,12 @@ import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
 import * as sessionControlPatch from "./session_control_patch";
 
+// pi 未提供判断运行模式的 API，只能从启动参数解析 `--mode rpc`
+// process.argv 启动后不变，故计算一次即可
+const IS_RPC_MODE = process.argv.some(
+  (arg, i) => arg === "--mode" && process.argv[i + 1] === "rpc",
+);
+
 export default function (pi: ExtensionAPI) {
   const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
 
@@ -391,6 +397,15 @@ function handleHubMessage(
       const ctx = getCurrentCtx();
       if (ctx) {
         ctx.shutdown();
+        // RPC 模式下 ctx.shutdown() 仅设置退出标志，需等下一条 stdin 命令才生效，
+        // 而 paimon 全程走 WS、不会再有 stdin，故额外发 SIGTERM 触发优雅退出。
+        // 仅在明确为 RPC 模式时发送：interactive 模式 ctx.shutdown() 已会自行优雅退出，
+        // 此时再发 SIGTERM 会与其竞争（shutdown 已注销 SIGTERM handler 并 await 让出
+        // 事件循环），导致 Node 默认行为强杀进程、破坏优雅退出。无法确认模式时宁可不发。
+        // 仅在 idle 时发送：streaming 中发 SIGTERM 会硬打断当前回答。
+        if (IS_RPC_MODE && ctx.isIdle?.()) {
+          process.kill(process.pid, "SIGTERM");
+        }
       }
       break;
     }
