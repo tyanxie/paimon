@@ -4,7 +4,7 @@
   "description": "Remote observation and control panel for pi coding agent",
   "type": "module",
   "bin": {
-    "paimon": "./dist/cli/index.js"
+    "paimon": "./src/cli/index.ts"
   },
   "pi": {
     "extensions": ["src/extensions"]

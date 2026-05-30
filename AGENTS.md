@@ -52,6 +52,7 @@ src/
 - **Hub 启动依赖构建产物** — Hub 启动前 `dist/web/` 必须存在，否则进程直接退出。开发时需先 `vite build` 或使用 `bun run dev`
 - **Daemon 进程模型** — Hub 通过 `Bun.spawn` fork 子进程运行，父进程退出后子进程继续（`child.unref()`）。状态文件（PID、端口、日志）存储在 `~/.paimon/`
 - **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
+- **CLI 全局安装走 `bun link`** — `package.json` 的 `bin` 指向 `src/cli/index.ts`（非编译产物），bun 直接执行带 shebang 的 ts 源码。`bun link` 在 `~/.bun/bin/` 建软链接回 clone 目录，`bun unlink` 解除。整条链路（CLI → daemon fork `src/hub/index.ts` → hub 找 `dist/web`）全程跑 ts 源码，依赖 ① clone 目录不可删/移动 ② 用户机器装有 bun。发布到 npm 需另做编译化改造（webDir / hub fork 路径 / files / 依赖）
 
 ## 代码规范
 
