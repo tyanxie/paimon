@@ -7,6 +7,7 @@ import type {
   BrowserToHubMessage,
 } from "../protocol/types";
 import { registry } from "./registry";
+import { forwardToInstanceForWs } from "./forward";
 import * as log from "./logger";
 
 /** 处理 Extension 消息 */
@@ -158,202 +159,78 @@ export function handleBrowserMessage(
     }
     case "history": {
       // 向 Extension 请求历史（透传 offset/limit）
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        const getHistoryMsg: any = { type: "get_history" };
-        if (
-          msg.payload.offset !== undefined ||
-          msg.payload.limit !== undefined
-        ) {
-          getHistoryMsg.payload = {
-            offset: msg.payload.offset,
-            limit: msg.payload.limit,
-          };
-        }
-        instanceWs.send(JSON.stringify(getHistoryMsg));
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            payload: {
-              message: `Instance ${msg.payload.instanceId} not found`,
-              code: "INSTANCE_NOT_FOUND",
-            },
-          }),
-        );
-      }
+      const payload =
+        msg.payload.offset !== undefined || msg.payload.limit !== undefined
+          ? { offset: msg.payload.offset, limit: msg.payload.limit }
+          : undefined;
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "get_history",
+        payload,
+      });
       break;
     }
     case "prompt": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(
-          JSON.stringify({
-            type: "prompt",
-            payload: { message: msg.payload.message },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "prompt",
+        payload: { message: msg.payload.message },
+      });
       break;
     }
     case "steer": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(
-          JSON.stringify({
-            type: "steer",
-            payload: { message: msg.payload.message },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "steer",
+        payload: { message: msg.payload.message },
+      });
       break;
     }
     case "abort": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(JSON.stringify({ type: "abort" }));
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, { type: "abort" });
       break;
     }
     case "set_model": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(
-          JSON.stringify({
-            type: "set_model",
-            payload: { provider: msg.payload.provider, id: msg.payload.id },
-          }),
-        );
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            payload: {
-              message: `Instance ${msg.payload.instanceId} not found`,
-              code: "INSTANCE_NOT_FOUND",
-            },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "set_model",
+        payload: { provider: msg.payload.provider, id: msg.payload.id },
+      });
       break;
     }
     case "set_thinking_level": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(
-          JSON.stringify({
-            type: "set_thinking_level",
-            payload: { level: msg.payload.level },
-          }),
-        );
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            payload: {
-              message: `Instance ${msg.payload.instanceId} not found`,
-              code: "INSTANCE_NOT_FOUND",
-            },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "set_thinking_level",
+        payload: { level: msg.payload.level },
+      });
       break;
     }
     case "list_sessions": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(JSON.stringify({ type: "list_sessions" }));
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            payload: {
-              message: `Instance ${msg.payload.instanceId} not found`,
-              code: "INSTANCE_NOT_FOUND",
-            },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "list_sessions",
+      });
       break;
     }
     case "new_session": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(JSON.stringify({ type: "new_session" }));
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            payload: {
-              message: `Instance ${msg.payload.instanceId} not found`,
-              code: "INSTANCE_NOT_FOUND",
-            },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "new_session",
+      });
       break;
     }
     case "switch_session": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(
-          JSON.stringify({
-            type: "switch_session",
-            payload: { path: msg.payload.path },
-          }),
-        );
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            payload: {
-              message: `Instance ${msg.payload.instanceId} not found`,
-              code: "INSTANCE_NOT_FOUND",
-            },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "switch_session",
+        payload: { path: msg.payload.path },
+      });
       break;
     }
     case "compact": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(
-          JSON.stringify({
-            type: "compact",
-            payload: msg.payload.customInstructions
-              ? { customInstructions: msg.payload.customInstructions }
-              : undefined,
-          }),
-        );
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            payload: {
-              message: `Instance ${msg.payload.instanceId} not found`,
-              code: "INSTANCE_NOT_FOUND",
-            },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, {
+        type: "compact",
+        payload: msg.payload.customInstructions
+          ? { customInstructions: msg.payload.customInstructions }
+          : undefined,
+      });
       break;
     }
     case "shutdown": {
-      const instanceWs = registry.getInstanceWs(msg.payload.instanceId);
-      if (instanceWs) {
-        instanceWs.send(JSON.stringify({ type: "shutdown" }));
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            payload: {
-              message: `Instance ${msg.payload.instanceId} not found`,
-              code: "INSTANCE_NOT_FOUND",
-            },
-          }),
-        );
-      }
+      forwardToInstanceForWs(ws, msg.payload.instanceId, { type: "shutdown" });
       break;
     }
   }

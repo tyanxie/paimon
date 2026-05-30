@@ -6,6 +6,7 @@ import type { ServerWebSocket, Server, BunRequest } from "bun";
 import { DEFAULTS } from "../protocol/types";
 import { registry, type WsData } from "./registry";
 import { handleExtensionMessage, handleBrowserMessage } from "./router";
+import { forwardToInstanceForHttp } from "./forward";
 import * as log from "./logger";
 
 const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
@@ -66,15 +67,10 @@ const server = Bun.serve<WsData>({
     "/api/instance/:id/shutdown": {
       POST: (req: BunRequest<"/api/instance/:id/shutdown">) => {
         const id = req.params.id;
-        const instanceWs = registry.getInstanceWs(id);
-        if (!instanceWs) {
-          return Response.json(
-            { error: `Instance ${id} not found` },
-            { status: 404 },
-          );
-        }
-        instanceWs.send(JSON.stringify({ type: "shutdown" }));
-        return Response.json({ ok: true });
+        return (
+          forwardToInstanceForHttp(id, { type: "shutdown" }) ??
+          Response.json({ ok: true })
+        );
       },
     },
   },
