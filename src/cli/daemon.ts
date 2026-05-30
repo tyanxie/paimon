@@ -75,6 +75,16 @@ export async function readPort(): Promise<number | null> {
   }
 }
 
+/** 读取日志文件尾部若干行，用于启动失败时输出诊断信息 */
+async function readLogTail(logPath: string, lines = 20): Promise<string> {
+  try {
+    const content = await Bun.file(logPath).text();
+    return content.split("\n").slice(-lines).join("\n").trim();
+  } catch {
+    return "(no log output)";
+  }
+}
+
 /** 启动 Hub daemon */
 export async function startDaemon(port: number): Promise<void> {
   // 检查是否已在运行
@@ -90,61 +100,56 @@ export async function startDaemon(port: number): Promise<void> {
   await ensureStateDir();
   const logPath = getStatePath(DEFAULTS.LOG_FILE);
 
+  // 以 append 模式打开日志文件，拿到原始 fd 直接交给子进程。
+  // 子进程的 stdout/stderr 由内核写入该 fd，父进程完全不参与转发，
+  // 因此父进程没有任何 pending IO，配合 detached + unref 可立即退出。
+  const { openSync } = await import("node:fs");
+  const logFd = openSync(logPath, "a");
+
   // Fork Hub 进程
   const hubEntry = resolve(import.meta.dirname!, "../hub/index.ts");
   const child = Bun.spawn(["bun", "run", hubEntry], {
     env: { ...process.env, PAIMON_PORT: String(port) },
-    stdio: ["ignore", "pipe", "pipe"],
-    // 分离子进程，使其独立于父进程
-    ipc: undefined,
+    stdin: "ignore",
+    // 直接写日志文件 fd，捕获包括运行时崩溃在内的全部输出
+    stdout: logFd,
+    stderr: logFd,
+    // detached: POSIX 下调用 setsid()，子进程成为新 session leader，
+    // 脱离父进程的终端/进程组，可独立存活并独立接收信号
+    detached: true,
   });
 
-  // 等待一小段时间确认启动成功
-  await Bun.sleep(500);
+  // unref 让父进程不再等待子进程退出
+  child.unref();
 
-  if (child.exitCode !== null) {
-    // 进程已退出，说明启动失败
-    const stderr = await new Response(child.stderr).text();
-    console.error(`Failed to start Hub: ${stderr}`);
+  // 轮询健康检查确认启动成功（替代不可靠的固定 sleep）
+  let ok = false;
+  for (let i = 0; i < 50; i++) {
+    // 进程已退出说明启动失败
+    if (child.exitCode !== null) break;
+    try {
+      const r = await fetch(`http://127.0.0.1:${port}/api/health`, {
+        signal: AbortSignal.timeout(500),
+      });
+      if (r.ok) {
+        ok = true;
+        break;
+      }
+    } catch {
+      // 尚未就绪，继续轮询
+    }
+    await Bun.sleep(100);
+  }
+
+  if (!ok) {
+    const tail = await readLogTail(logPath);
+    console.error(`Failed to start Hub. Recent logs:\n${tail}`);
     process.exit(1);
   }
 
   // 写入 PID 和端口
   await writePid(child.pid);
   await writePort(port);
-
-  // 将子进程的输出重定向到日志文件
-  // 使用 unref() 让父进程可以退出
-  const logFile = Bun.file(logPath);
-  const writer = logFile.writer();
-
-  // 异步读取子进程输出写入日志
-  const stdout = child.stdout;
-  const stderr = child.stderr;
-  if (stdout) {
-    const reader1 = stdout.getReader();
-    (async () => {
-      while (true) {
-        const { done, value } = await reader1.read();
-        if (done) break;
-        writer.write(value);
-      }
-      writer.end();
-    })();
-  }
-  if (stderr) {
-    const reader2 = stderr.getReader();
-    (async () => {
-      while (true) {
-        const { done, value } = await reader2.read();
-        if (done) break;
-        writer.write(value);
-      }
-    })();
-  }
-
-  // 让父进程退出（子进程继续运行）
-  child.unref();
 
   console.log(`Hub started (PID: ${child.pid}, port: ${port})`);
   console.log(`  Web UI: http://localhost:${port}`);

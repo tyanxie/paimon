@@ -55,7 +55,7 @@ paimon hub status                # 查看 Hub 状态
 paimon hub logs [--follow]       # 查看 Hub 日志
 ```
 
-运行时状态（PID / 端口 / 日志）存储在 `~/.paimon/`。
+`hub start` 以后台 daemon 方式运行（脱离终端，关闭终端不影响），运行时状态（PID / 端口 / 日志）存储在 `~/.paimon/`。
 
 ## 🧹 卸载
 
