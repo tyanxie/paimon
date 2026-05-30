@@ -2,12 +2,16 @@
 // CLI 入口：paimon 命令路由
 
 import { hubCommand } from "./hub";
+import { attachCommand } from "./attach";
 
 const [command, ...args] = process.argv.slice(2);
 
 switch (command) {
   case "hub":
     await hubCommand(args);
+    break;
+  case "attach":
+    await attachCommand(args);
     break;
   case undefined:
   case "--help":
@@ -29,6 +33,7 @@ Usage:
   paimon hub stop                   Stop Hub
   paimon hub status                 Show Hub status
   paimon hub logs [--follow]        View Hub logs
+  paimon attach [id]                Attach a local instance to this terminal
 
 Options:
   -h, --help    Show this help

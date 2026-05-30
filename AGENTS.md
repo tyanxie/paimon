@@ -32,7 +32,7 @@ bun test         # 运行测试
 ```
 src/
 ├── protocol/types.ts          # 所有消息类型 + 常量
-├── cli/                       # paimon CLI 入口（hub 子命令）
+├── cli/                       # paimon CLI 入口（hub / attach 子命令）
 ├── hub/                       # Hub 服务端（registry / router / logger）
 ├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化 + session 控制）
 └── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
@@ -52,7 +52,8 @@ src/
 - **Hub 启动依赖构建产物** — Hub 启动前 `dist/web/` 必须存在，否则进程直接退出。开发时需先 `vite build` 或使用 `bun run dev`
 - **Daemon 进程模型** — Hub 通过 `Bun.spawn` 以 `detached: true`（POSIX setsid，脱离父进程会话/终端）fork 子进程，父进程 `child.unref()` 后立即退出，子进程作为 daemon 常驻。子进程 stdout/stderr 通过文件 fd 直传日志文件（父进程零参与转发，避免 pending IO 挂住父进程）；启动后父进程轮询 `/api/health` 确认就绪。状态文件（PID、端口、日志）存储在 `~/.paimon/`
 - **停止信号语义备忘** — 当前 `paimon hub stop` 用 `process.kill(pid, SIGTERM)` 即可，因为 Hub 自身不 fork 任何子进程。未来若 Hub 需要 fork 常驻子进程，应改用 `process.kill(-pid)` 杀整个进程组（配合 detached 的 setsid 语义）
-- **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
+- **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs` 和 `paimon attach` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
+- **attach = 迁移而非双向接管** — pi 不支持同一 session 文件被多进程同时写，所以 `paimon attach` 的语义是：先调 `POST /api/instance/:id/shutdown` 关闭目标实例 → 轮询其从列表消失（3s 超时）→ 本地 `pi --session <sessionId>`（cwd=实例 cwd，stdio inherit）。过滤条件为 hostname + cwd 双重匹配（均 realpath 规范化）。被 attach 的原实例会退出由用户负责
 - **CLI 全局安装走 `bun link`** — `package.json` 的 `bin` 指向 `src/cli/index.ts`（非编译产物），bun 直接执行带 shebang 的 ts 源码。`bun link` 在 `~/.bun/bin/` 建软链接回 clone 目录，`bun unlink` 解除。整条链路（CLI → daemon fork `src/hub/index.ts` → hub 找 `dist/web`）全程跑 ts 源码，依赖 ① clone 目录不可删/移动 ② 用户机器装有 bun。发布到 npm 需另做编译化改造（webDir / hub fork 路径 / files / 依赖）
 
 ## 代码规范

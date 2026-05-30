@@ -53,9 +53,12 @@ paimon hub start [--port 8080]   # 启动 Hub daemon
 paimon hub stop                  # 停止 Hub
 paimon hub status                # 查看 Hub 状态
 paimon hub logs [--follow]       # 查看 Hub 日志
+paimon attach [id]               # 将本机 + 当前目录的实例接管到当前终端
 ```
 
 `hub start` 以后台 daemon 方式运行（脱离终端，关闭终端不影响），运行时状态（PID / 端口 / 日志）存储在 `~/.paimon/`。
+
+`attach` 将一个运行中的实例「迁移」到当前终端获得 TUI：先关闭目标实例，再在本地用同一 session 起一个带 TUI 的 pi。仅列出本机且位于当前目录的实例（session 与 cwd 强绑定）。被 attach 的原实例会退出，本地新起的 pi 会以新实例重新注册到 Hub。
 
 ## 🧹 卸载
 

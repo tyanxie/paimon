@@ -2,7 +2,7 @@
 
 import { existsSync } from "node:fs";
 import { resolve, sep } from "node:path";
-import type { ServerWebSocket, Server } from "bun";
+import type { ServerWebSocket, Server, BunRequest } from "bun";
 import { DEFAULTS } from "../protocol/types";
 import { registry, type WsData } from "./registry";
 import { handleExtensionMessage, handleBrowserMessage } from "./router";
@@ -60,6 +60,22 @@ const server = Bun.serve<WsData>({
     },
     "/api/health": {
       GET: () => Response.json({ status: "ok", uptime: process.uptime() }),
+    },
+
+    // 让指定实例优雅退出（供 CLI attach 接管前关闭原实例）
+    "/api/instance/:id/shutdown": {
+      POST: (req: BunRequest<"/api/instance/:id/shutdown">) => {
+        const id = req.params.id;
+        const instanceWs = registry.getInstanceWs(id);
+        if (!instanceWs) {
+          return Response.json(
+            { error: `Instance ${id} not found` },
+            { status: 404 },
+          );
+        }
+        instanceWs.send(JSON.stringify({ type: "shutdown" }));
+        return Response.json({ ok: true });
+      },
     },
   },
 
