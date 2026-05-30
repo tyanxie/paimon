@@ -183,6 +183,8 @@ function AssistantBlock({
     case "text":
       return <MarkdownRenderer content={block.text} />;
     case "thinking":
+      // 思考内容为空时不渲染
+      if (!block.thinking?.trim()) return null;
       return (
         <ThinkingBlock
           content={block.thinking}
