@@ -1,7 +1,9 @@
 // Daemon 进程管理：启动/停止/状态查询
 
-import { resolve, join } from "path";
-import { homedir } from "os";
+import { resolve, join } from "node:path";
+import { homedir } from "node:os";
+import { mkdir, unlink } from "node:fs/promises";
+import { openSync, closeSync } from "node:fs";
 import { DEFAULTS } from "../protocol/types";
 
 /** 状态目录，展开 ~ */
@@ -14,7 +16,6 @@ export function getStatePath(filename: string): string {
 
 /** 确保状态目录存在 */
 async function ensureStateDir(): Promise<void> {
-  const { mkdir } = await import("fs/promises");
   await mkdir(STATE_DIR, { recursive: true });
 }
 
@@ -43,7 +44,6 @@ async function writePort(port: number): Promise<void> {
 
 /** 删除状态文件 */
 async function cleanStateFiles(): Promise<void> {
-  const { unlink } = await import("fs/promises");
   const files = [DEFAULTS.PID_FILE, DEFAULTS.PORT_FILE];
   for (const f of files) {
     try {
@@ -97,13 +97,15 @@ export async function startDaemon(port: number): Promise<void> {
     return;
   }
 
+  // 进程已不存活，清理可能残留的 stale 状态文件，避免启动失败时误报运行中
+  await cleanStateFiles();
+
   await ensureStateDir();
   const logPath = getStatePath(DEFAULTS.LOG_FILE);
 
   // 以 append 模式打开日志文件，拿到原始 fd 直接交给子进程。
   // 子进程的 stdout/stderr 由内核写入该 fd，父进程完全不参与转发，
   // 因此父进程没有任何 pending IO，配合 detached + unref 可立即退出。
-  const { openSync } = await import("node:fs");
   const logFd = openSync(logPath, "a");
 
   // Fork Hub 进程
@@ -121,6 +123,9 @@ export async function startDaemon(port: number): Promise<void> {
 
   // unref 让父进程不再等待子进程退出
   child.unref();
+
+  // 子进程已继承独立的 fd 副本，父进程侧的副本可立即关闭，避免 fd 泄漏
+  closeSync(logFd);
 
   // 轮询健康检查确认启动成功（替代不可靠的固定 sleep）
   let ok = false;
