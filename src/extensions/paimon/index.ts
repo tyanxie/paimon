@@ -288,7 +288,7 @@ function handleHubMessage(
   pi: ExtensionAPI,
   msg: HubToExtensionMessage,
   client: HubClient,
-  getCurrentCtx: () => any,
+  getCurrentCtx: () => ExtensionContext | null,
 ): void {
   switch (msg.type) {
     case "prompt":
@@ -414,7 +414,7 @@ function handleHubMessage(
       if (ctx?.cwd) {
         SessionManager.list(ctx.cwd)
           .then((sessions) => {
-            const currentFile = (ctx.sessionManager as any).getSessionFile?.();
+            const currentFile = ctx.sessionManager.getSessionFile();
             const response: ExtSessionListMessage = {
               type: "session_list",
               payload: {
