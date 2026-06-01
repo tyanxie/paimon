@@ -27,6 +27,10 @@ const IS_RPC_MODE = process.argv.some(
   (arg, i) => arg === "--mode" && process.argv[i + 1] === "rpc",
 );
 
+// Hub spawn 实例时注入的一次性 token（仅页面创建的实例有）。
+// 注册时回传给 Hub，用于将 spawn 请求与注册成功的实例对应起来。
+const SPAWN_TOKEN = process.env.PAIMON_SPAWN_TOKEN;
+
 export default function (pi: ExtensionAPI) {
   const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
 
@@ -70,6 +74,7 @@ export default function (pi: ExtensionAPI) {
           thinkingLevel: ctx?.model?.reasoning
             ? (pi.getThinkingLevel() as ThinkingLevel)
             : undefined,
+          spawnToken: SPAWN_TOKEN,
         },
       });
     },

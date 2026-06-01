@@ -1,6 +1,6 @@
 // 根组件
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useViewportHeight } from "./hooks/useViewportHeight";
@@ -8,6 +8,7 @@ import { useAppState } from "./stores/useAppState";
 import { Sidebar } from "./components/Sidebar";
 import { EventStream } from "./components/EventStream";
 import { Settings } from "./components/Settings";
+import { NewInstanceModal } from "./components/ui/NewInstanceModal";
 import type { InstanceId, ThinkingLevel } from "../../protocol/types";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -43,6 +44,9 @@ export default function App() {
   const navigate = useNavigate();
   useViewportHeight();
   const selectedInstanceId = useSelectedInstanceId();
+
+  // 新建实例弹窗开关
+  const [showNewInstance, setShowNewInstance] = useState(false);
 
   // 订阅管理：监听 URL 派生的 selectedInstanceId 变化
   const subscribedRef = useRef<InstanceId | null>(null);
@@ -198,6 +202,15 @@ export default function App() {
     [send],
   );
 
+  // 新建实例创建成功：关闭弹窗并跳转到新实例（订阅由 useEffect 自动响应）
+  const handleInstanceCreated = useCallback(
+    (id: InstanceId) => {
+      setShowNewInstance(false);
+      navigate(`/instance/${id}`);
+    },
+    [navigate],
+  );
+
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
   // 合并 history + streaming 供渲染
@@ -236,6 +249,7 @@ export default function App() {
           selectedId={selectedInstanceId}
           onSelect={handleSelect}
           onShutdown={handleShutdown}
+          onNewInstance={() => setShowNewInstance(true)}
           connected={connected}
         />
       </div>
@@ -289,6 +303,7 @@ export default function App() {
                   selectedId={selectedInstanceId}
                   onSelect={handleSelect}
                   onShutdown={handleShutdown}
+                  onNewInstance={() => setShowNewInstance(true)}
                   connected={connected}
                 />
               </div>
@@ -312,6 +327,14 @@ export default function App() {
           }
         />
       </Routes>
+
+      {/* 新建实例弹窗 */}
+      {showNewInstance && (
+        <NewInstanceModal
+          onClose={() => setShowNewInstance(false)}
+          onCreated={handleInstanceCreated}
+        />
+      )}
     </div>
   );
 }

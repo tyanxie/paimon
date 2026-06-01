@@ -4,12 +4,16 @@ import { existsSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import type { ServerWebSocket, Server, BunRequest } from "bun";
 import { DEFAULTS } from "../protocol/types";
+import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
 import { registry, type WsData } from "./registry";
 import { handleExtensionMessage, handleBrowserMessage } from "./router";
 import { forwardToInstanceForHttp } from "./forward";
+import { spawnInstance, validateCwd } from "./spawner";
 import * as log from "./logger";
 
 const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
+// bind 地址：默认 loopback，与 port 一致走 PAIMON_HOST 环境变量（CLI --host / dev 环境变量注入）
+const host = process.env.PAIMON_HOST || DEFAULTS.HOST;
 
 // 静态文件目录：相对于项目根 dist/web
 const webDir = resolve(import.meta.dir, "../../dist/web");
@@ -40,10 +44,15 @@ function upgradeWs(
   return undefined;
 }
 
-log.info(`Starting Hub server on port ${port}...`);
+log.info(`Starting Hub server on ${host}:${port}...`);
+
+// 非 loopback bind 时警告（页面可创建具全部系统权限的 pi 实例）
+if (!isLoopbackHost(host)) {
+  log.warn(nonLoopbackWarning(host));
+}
 
 const server = Bun.serve<WsData>({
-  hostname: "0.0.0.0",
+  hostname: host,
   port,
 
   routes: {
@@ -58,6 +67,28 @@ const server = Bun.serve<WsData>({
     // ── JSON API ──
     "/api/instances": {
       GET: () => Response.json({ instances: registry.getAllInstances() }),
+      // 在指定目录 spawn 一个 headless pi 实例，等注册成功后返回 instanceId
+      POST: async (req: Request) => {
+        let body: { cwd?: string };
+        try {
+          body = (await req.json()) as { cwd?: string };
+        } catch {
+          return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+        }
+        const cwd = body.cwd?.trim() ?? "";
+        const invalid = validateCwd(cwd);
+        if (invalid) {
+          return Response.json({ error: invalid }, { status: 400 });
+        }
+        try {
+          const instanceId = await spawnInstance(cwd);
+          return Response.json({ instanceId });
+        } catch (err) {
+          const message = (err as Error).message;
+          log.error(`Failed to spawn instance: ${message}`);
+          return Response.json({ error: message }, { status: 500 });
+        }
+      },
     },
     "/api/health": {
       GET: () => Response.json({ status: "ok", uptime: process.uptime() }),
@@ -131,7 +162,7 @@ const server = Bun.serve<WsData>({
   },
 });
 
-log.info(`Hub server listening on http://0.0.0.0:${server.port}`);
+log.info(`Hub server listening on http://${host}:${server.port}`);
 
 // 优雅退出
 process.on("SIGTERM", async () => {

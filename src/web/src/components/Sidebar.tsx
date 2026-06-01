@@ -1,7 +1,7 @@
 // 侧边栏：pi 实例列表（独立玻璃面板）
 
 import { useState, useRef, useCallback } from "react";
-import { Settings as SettingsIcon, LogOut } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, Plus } from "lucide-react";
 import { useNavigate } from "react-router";
 import type { InstanceInfo, InstanceId } from "../../../protocol/types";
 import { useLogoSrc } from "../hooks/useLogoSrc";
@@ -16,6 +16,7 @@ interface SidebarProps {
   selectedId: InstanceId | null;
   onSelect: (id: InstanceId) => void;
   onShutdown: (id: InstanceId) => void;
+  onNewInstance: () => void;
   connected: boolean;
 }
 
@@ -27,6 +28,7 @@ export function Sidebar({
   selectedId,
   onSelect,
   onShutdown,
+  onNewInstance,
   connected,
 }: SidebarProps) {
   const navigate = useNavigate();
@@ -97,10 +99,19 @@ export function Sidebar({
             <h1 className="text-[16px] leading-[20px] max-md:text-[18px] max-md:leading-[24px] font-semibold text-[var(--label-primary)]">
               Paimon
             </h1>
-            <span
-              className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
-              title={connected ? "Online" : "Offline"}
-            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onNewInstance}
+                title="New instance"
+                className="select-none w-6 h-6 flex items-center justify-center rounded-full text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-all duration-150"
+              >
+                <Plus size={16} />
+              </button>
+              <span
+                className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
+                title={connected ? "Online" : "Offline"}
+              />
+            </div>
           </div>
           <div className="text-[12px] leading-[15px] max-md:text-[13px] max-md:leading-[18px] text-[var(--label-tertiary)]">
             {instances.length} instance{instances.length !== 1 ? "s" : ""}

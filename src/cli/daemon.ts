@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { mkdir, unlink } from "node:fs/promises";
 import { openSync, closeSync } from "node:fs";
 import { DEFAULTS } from "../protocol/types";
+import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
 
 /** 状态目录，展开 ~ */
 const STATE_DIR = resolve(homedir(), ".paimon");
@@ -86,7 +87,7 @@ async function readLogTail(logPath: string, lines = 20): Promise<string> {
 }
 
 /** 启动 Hub daemon */
-export async function startDaemon(port: number): Promise<void> {
+export async function startDaemon(port: number, host: string): Promise<void> {
   // 检查是否已在运行
   const existingPid = await readPid();
   if (existingPid && isProcessAlive(existingPid)) {
@@ -111,7 +112,7 @@ export async function startDaemon(port: number): Promise<void> {
   // Fork Hub 进程
   const hubEntry = resolve(import.meta.dirname!, "../hub/index.ts");
   const child = Bun.spawn(["bun", "run", hubEntry], {
-    env: { ...process.env, PAIMON_PORT: String(port) },
+    env: { ...process.env, PAIMON_PORT: String(port), PAIMON_HOST: host },
     stdin: "ignore",
     // 直接写日志文件 fd，捕获包括运行时崩溃在内的全部输出
     stdout: logFd,
@@ -128,12 +129,16 @@ export async function startDaemon(port: number): Promise<void> {
   closeSync(logFd);
 
   // 轮询健康检查确认启动成功（替代不可靠的固定 sleep）
+  // 健康检查地址需依 host 推导：0.0.0.0 / loopback 走 127.0.0.1；
+  // 绑定到具体 IP（如 192.168.1.5）时服务不监听 loopback，须打该 IP
+  const healthHost =
+    host === "0.0.0.0" || isLoopbackHost(host) ? "127.0.0.1" : host;
   let ok = false;
   for (let i = 0; i < 50; i++) {
     // 进程已退出说明启动失败
     if (child.exitCode !== null) break;
     try {
-      const r = await fetch(`http://127.0.0.1:${port}/api/health`, {
+      const r = await fetch(`http://${healthHost}:${port}/api/health`, {
         signal: AbortSignal.timeout(500),
       });
       if (r.ok) {
@@ -156,9 +161,14 @@ export async function startDaemon(port: number): Promise<void> {
   await writePid(child.pid);
   await writePort(port);
 
-  console.log(`Hub started (PID: ${child.pid}, port: ${port})`);
+  console.log(`Hub started (PID: ${child.pid}, port: ${port}, host: ${host})`);
   console.log(`  Web UI: http://localhost:${port}`);
   console.log(`  Logs:   ${logPath}`);
+
+  // 非 loopback bind 时警告（CLI 侧也提示一次）
+  if (!isLoopbackHost(host)) {
+    console.warn(`\n${nonLoopbackWarning(host)}`);
+  }
 }
 
 /** 停止 Hub daemon */

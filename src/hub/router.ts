@@ -8,6 +8,7 @@ import type {
 } from "../protocol/types";
 import { registry } from "./registry";
 import { forwardToInstanceForWs } from "./forward";
+import { resolveSpawn } from "./spawner";
 import * as log from "./logger";
 
 /** 处理 Extension 消息 */
@@ -28,6 +29,10 @@ export function handleExtensionMessage(
       const info = registry.register(ws, msg.payload);
       // 回复注册确认
       ws.send(JSON.stringify({ type: "registered", payload: { id: info.id } }));
+      // 若携带 spawnToken，说明是 Hub spawn 的实例，唤醒对应的创建请求
+      if (msg.payload.spawnToken) {
+        resolveSpawn(msg.payload.spawnToken, info.id);
+      }
       break;
     }
     case "ping": {

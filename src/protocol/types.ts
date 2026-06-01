@@ -132,6 +132,11 @@ export interface ExtRegisterMessage {
     gitBranch?: string;
     /** 当前思考等级（模型支持 reasoning 时） */
     thinkingLevel?: ThinkingLevel;
+    /**
+     * Hub spawn 实例时注入的一次性 token（来自 PAIMON_SPAWN_TOKEN 环境变量）。
+     * 仅由页面创建的实例携带，用于 Hub 将 spawn 请求与注册成功的实例对应起来。
+     */
+    spawnToken?: string;
   };
 }
 
@@ -544,4 +549,10 @@ export const DEFAULTS = {
   LOG_FILE: "hub.log",
   /** 端口文件名 */
   PORT_FILE: "hub.port",
+  /** Hub spawn 的实例运行时文件子目录（日志、FIFO） */
+  INSTANCES_DIR: "instances",
+  /** 默认 bind 地址（loopback，仅本机可访问） */
+  HOST: "127.0.0.1" as string,
+  /** Hub spawn 实例后等待其注册的超时 (ms) */
+  SPAWN_REGISTER_TIMEOUT: 15_000,
 } as const;

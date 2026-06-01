@@ -43,7 +43,13 @@ async function handleStart(args: string[]): Promise<void> {
     }
   }
 
-  await startDaemon(port);
+  let host = DEFAULTS.HOST;
+  const hostIdx = args.indexOf("--host");
+  if (hostIdx !== -1 && args[hostIdx + 1]) {
+    host = args[hostIdx + 1];
+  }
+
+  await startDaemon(port, host);
 }
 
 async function handleStatus(): Promise<void> {
