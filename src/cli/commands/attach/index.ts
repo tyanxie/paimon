@@ -1,16 +1,17 @@
-// paimon attach: 将一个本机 + 当前目录的实例「迁移」到当前终端获得 TUI
+// paimon attach —— 将一个本机 + 当前目录的实例「迁移」到当前终端获得 TUI
 //
 // 语义：pi 不支持同一 session 文件被多进程同时写，因此 attach = 先关闭目标实例，
 // 再在本地用同一 session 起一个带 TUI 的 pi。被 attach 的原实例（无论 rpc 还是 tui）
 // 都会退出，这是设计本意，由用户自行负责选择目标。
 // 本地新起的 pi 会重新注册到 Hub（新 pid → 新 instanceId），attach 后 Web 上依然可见。
 
+import type { Command } from "@commander-js/extra-typings";
 import { createInterface } from "node:readline/promises";
 import { hostname } from "node:os";
 import { realpathSync } from "node:fs";
-import type { InstanceInfo } from "../protocol/types";
-import { DEFAULTS } from "../protocol/types";
-import { readHubState } from "./daemon";
+import type { InstanceInfo } from "../../../protocol/types";
+import { DEFAULTS } from "../../../protocol/types";
+import { readHubState } from "../../daemon";
 
 /** 轮询实例消失的超时（毫秒） */
 const SHUTDOWN_TIMEOUT_MS = 3000;
@@ -144,9 +145,8 @@ async function spawnLocalPi(cwd: string, sessionId: string): Promise<number> {
   return await proc.exited;
 }
 
-export async function attachCommand(args: string[]): Promise<void> {
-  const idPrefix = args[0];
-
+/** attach 命令的核心逻辑 */
+async function handleAttach(idPrefix: string | undefined): Promise<void> {
   const baseUrl = await resolveBaseUrl();
   await ensureHubRunning(baseUrl);
 
@@ -200,4 +200,15 @@ export async function attachCommand(args: string[]): Promise<void> {
   // 本地接管：在原 cwd 用同一 session 起带 TUI 的 pi
   const code = await spawnLocalPi(target.cwd, target.sessionId);
   process.exit(code);
+}
+
+/** 注册 attach 命令到 program */
+export function registerAttachCommand(program: Command): void {
+  program
+    .command("attach")
+    .description("Attach a local instance to this terminal")
+    .argument("[id]", "instance ID or prefix")
+    .action(async (id) => {
+      await handleAttach(id);
+    });
 }
