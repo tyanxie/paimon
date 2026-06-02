@@ -31,6 +31,7 @@ paimon - Remote observation and control panel for pi coding agent
 Usage:
   paimon hub start [--port 8080] [--host 127.0.0.1]   Start Hub daemon
   paimon hub stop                   Stop Hub
+  paimon hub restart [--port] [--host]                 Restart Hub
   paimon hub status                 Show Hub status
   paimon hub logs [--follow]        View Hub logs
   paimon attach [id]                Attach a local instance to this terminal

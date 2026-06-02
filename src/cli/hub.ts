@@ -4,6 +4,7 @@ import { DEFAULTS } from "../protocol/types";
 import {
   startDaemon,
   stopDaemon,
+  readPort,
   getDaemonStatus,
   getStatePath,
 } from "./daemon";
@@ -18,6 +19,9 @@ export async function hubCommand(args: string[]): Promise<void> {
     case "stop":
       await stopDaemon();
       break;
+    case "restart":
+      await handleRestart(rest);
+      break;
     case "status":
       await handleStatus();
       break;
@@ -26,7 +30,7 @@ export async function hubCommand(args: string[]): Promise<void> {
       break;
     default:
       console.error(`Unknown hub subcommand: ${subcommand}`);
-      console.log("Usage: paimon hub <start|stop|status|logs>");
+      console.log("Usage: paimon hub <start|stop|restart|status|logs>");
       process.exit(1);
   }
 }
@@ -62,6 +66,37 @@ async function handleStatus(): Promise<void> {
   } else {
     console.log("Hub is not running");
   }
+}
+
+async function handleRestart(args: string[]): Promise<void> {
+  // 先读取当前端口（stop 会清理状态文件，必须先读）
+  const currentPort = await readPort();
+
+  // 解析命令行参数（允许覆盖）
+  let port = DEFAULTS.PORT;
+  const portIdx = args.indexOf("--port");
+  if (portIdx !== -1 && args[portIdx + 1]) {
+    port = parseInt(args[portIdx + 1], 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      console.error("Invalid port number");
+      process.exit(1);
+    }
+  } else if (currentPort) {
+    // 未指定则继承之前运行的端口
+    port = currentPort;
+  }
+
+  let host = DEFAULTS.HOST;
+  const hostIdx = args.indexOf("--host");
+  if (hostIdx !== -1 && args[hostIdx + 1]) {
+    host = args[hostIdx + 1];
+  }
+
+  // 停止现有 Hub
+  await stopDaemon();
+
+  // 重新启动
+  await startDaemon(port, host);
 }
 
 async function handleLogs(args: string[]): Promise<void> {
