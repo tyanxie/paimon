@@ -164,15 +164,15 @@ const server = Bun.serve<WsData>({
 
 log.info(`Hub server listening on http://${host}:${server.port}`);
 
-// 优雅退出
-process.on("SIGTERM", async () => {
-  log.info("Received SIGTERM, shutting down...");
-  await server.stop();
+// 优雅退出：立即关闭所有活跃连接（WebSocket 长连接不会自然结束，
+// extension/browser 均有重连机制，无需等待 drain）
+async function shutdown(signal: string): Promise<never> {
+  const t0 = Date.now();
+  log.info(`Received ${signal}, shutting down...`);
+  await server.stop(true);
+  log.info(`server.stop(true) took ${Date.now() - t0}ms`);
   process.exit(0);
-});
+}
 
-process.on("SIGINT", async () => {
-  log.info("Received SIGINT, shutting down...");
-  await server.stop();
-  process.exit(0);
-});
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
