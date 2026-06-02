@@ -2,9 +2,10 @@
 
 import { resolve, join } from "node:path";
 import { homedir } from "node:os";
-import { mkdir, unlink } from "node:fs/promises";
+import { mkdir, unlink, rename } from "node:fs/promises";
 import { openSync, closeSync } from "node:fs";
 import { DEFAULTS } from "../protocol/types";
+import type { HubState } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
 
 /** 状态目录，展开 ~ */
@@ -20,38 +21,34 @@ async function ensureStateDir(): Promise<void> {
   await mkdir(STATE_DIR, { recursive: true });
 }
 
-/** 读取 PID 文件，返回 PID 或 null */
-export async function readPid(): Promise<number | null> {
+/** 读取 Hub 状态文件，返回 HubState 或 null */
+export async function readHubState(): Promise<HubState | null> {
   try {
-    const content = await Bun.file(getStatePath(DEFAULTS.PID_FILE)).text();
-    const pid = parseInt(content.trim(), 10);
-    return isNaN(pid) ? null : pid;
+    const content = await Bun.file(getStatePath(DEFAULTS.STATE_FILE)).text();
+    const state = JSON.parse(content) as HubState;
+    // 基本字段校验
+    if (!state.pid || !state.port || !state.host) return null;
+    return state;
   } catch {
     return null;
   }
 }
 
-/** 写入 PID 文件 */
-async function writePid(pid: number): Promise<void> {
+/** 原子写入 Hub 状态文件（write-tmp + rename） */
+async function writeHubState(state: HubState): Promise<void> {
   await ensureStateDir();
-  await Bun.write(getStatePath(DEFAULTS.PID_FILE), String(pid));
-}
-
-/** 写入端口文件 */
-async function writePort(port: number): Promise<void> {
-  await ensureStateDir();
-  await Bun.write(getStatePath(DEFAULTS.PORT_FILE), String(port));
+  const target = getStatePath(DEFAULTS.STATE_FILE);
+  const tmp = `${target}.tmp`;
+  await Bun.write(tmp, JSON.stringify(state, null, 2));
+  await rename(tmp, target);
 }
 
 /** 删除状态文件 */
-async function cleanStateFiles(): Promise<void> {
-  const files = [DEFAULTS.PID_FILE, DEFAULTS.PORT_FILE];
-  for (const f of files) {
-    try {
-      await unlink(getStatePath(f));
-    } catch {
-      // 文件不存在忽略
-    }
+async function cleanStateFile(): Promise<void> {
+  try {
+    await unlink(getStatePath(DEFAULTS.STATE_FILE));
+  } catch {
+    // 文件不存在忽略
   }
 }
 
@@ -62,17 +59,6 @@ export function isProcessAlive(pid: number): boolean {
     return true;
   } catch {
     return false;
-  }
-}
-
-/** 读取端口 */
-export async function readPort(): Promise<number | null> {
-  try {
-    const content = await Bun.file(getStatePath(DEFAULTS.PORT_FILE)).text();
-    const port = parseInt(content.trim(), 10);
-    return isNaN(port) ? null : port;
-  } catch {
-    return null;
   }
 }
 
@@ -89,17 +75,16 @@ async function readLogTail(logPath: string, lines = 20): Promise<string> {
 /** 启动 Hub daemon */
 export async function startDaemon(port: number, host: string): Promise<void> {
   // 检查是否已在运行
-  const existingPid = await readPid();
-  if (existingPid && isProcessAlive(existingPid)) {
-    const existingPort = await readPort();
+  const existing = await readHubState();
+  if (existing && isProcessAlive(existing.pid)) {
     console.log(
-      `Hub is already running (PID: ${existingPid}, port: ${existingPort ?? "unknown"})`,
+      `Hub is already running (PID: ${existing.pid}, port: ${existing.port})`,
     );
     return;
   }
 
   // 进程已不存活，清理可能残留的 stale 状态文件，避免启动失败时误报运行中
-  await cleanStateFiles();
+  await cleanStateFile();
 
   await ensureStateDir();
   const logPath = getStatePath(DEFAULTS.LOG_FILE);
@@ -157,12 +142,16 @@ export async function startDaemon(port: number, host: string): Promise<void> {
     process.exit(1);
   }
 
-  // 写入 PID 和端口
-  await writePid(child.pid);
-  await writePort(port);
+  // 写入状态文件
+  await writeHubState({
+    pid: child.pid,
+    port,
+    host,
+    startedAt: new Date().toISOString(),
+  });
 
   console.log(`Hub started (PID: ${child.pid}, port: ${port}, host: ${host})`);
-  console.log(`  Web UI: http://localhost:${port}`);
+  console.log(`  Web UI: http://${healthHost}:${port}`);
   console.log(`  Logs:   ${logPath}`);
 
   // 非 loopback bind 时警告（CLI 侧也提示一次）
@@ -173,49 +162,47 @@ export async function startDaemon(port: number, host: string): Promise<void> {
 
 /** 停止 Hub daemon */
 export async function stopDaemon(): Promise<void> {
-  const pid = await readPid();
-  if (!pid) {
-    console.log("Hub is not running (no PID file)");
+  const state = await readHubState();
+  if (!state) {
+    console.log("Hub is not running (no state file)");
     return;
   }
 
-  if (!isProcessAlive(pid)) {
-    console.log("Hub is not running (stale PID file, cleaning up)");
-    await cleanStateFiles();
+  if (!isProcessAlive(state.pid)) {
+    console.log("Hub is not running (stale state file, cleaning up)");
+    await cleanStateFile();
     return;
   }
 
   // 发送 SIGTERM
-  process.kill(pid, "SIGTERM");
-  console.log(`Stopping Hub (PID: ${pid})...`);
+  process.kill(state.pid, "SIGTERM");
+  console.log(`Stopping Hub (PID: ${state.pid})...`);
 
   // 等待进程退出（最多 5s）
   const deadline = Date.now() + 5000;
-  while (Date.now() < deadline && isProcessAlive(pid)) {
+  while (Date.now() < deadline && isProcessAlive(state.pid)) {
     await Bun.sleep(200);
   }
 
-  if (isProcessAlive(pid)) {
+  if (isProcessAlive(state.pid)) {
     // 强制杀死
-    process.kill(pid, "SIGKILL");
+    process.kill(state.pid, "SIGKILL");
     console.log("Hub killed (SIGKILL)");
   } else {
     console.log("Hub stopped");
   }
 
-  await cleanStateFiles();
+  await cleanStateFile();
 }
 
 /** 获取 Hub 状态 */
 export async function getDaemonStatus(): Promise<{
   running: boolean;
-  pid?: number;
-  port?: number;
+  state?: HubState;
 }> {
-  const pid = await readPid();
-  if (!pid || !isProcessAlive(pid)) {
+  const state = await readHubState();
+  if (!state || !isProcessAlive(state.pid)) {
     return { running: false };
   }
-  const port = (await readPort()) ?? undefined;
-  return { running: true, pid, port };
+  return { running: true, state };
 }

@@ -10,7 +10,7 @@ import { hostname } from "node:os";
 import { realpathSync } from "node:fs";
 import type { InstanceInfo } from "../protocol/types";
 import { DEFAULTS } from "../protocol/types";
-import { readPort } from "./daemon";
+import { readHubState } from "./daemon";
 
 /** 轮询实例消失的超时（毫秒） */
 const SHUTDOWN_TIMEOUT_MS = 3000;
@@ -26,10 +26,13 @@ function normalizePath(p: string): string {
   }
 }
 
-/** 解析 Hub 基地址：优先读 hub.port，缺失降级默认端口 */
+/** 解析 Hub 基地址：优先读 hub.json，缺失降级默认值 */
 async function resolveBaseUrl(): Promise<string> {
-  const port = (await readPort()) ?? DEFAULTS.PORT;
-  return `http://localhost:${port}`;
+  const state = await readHubState();
+  const host =
+    state?.host === "0.0.0.0" || !state?.host ? "127.0.0.1" : state.host;
+  const port = state?.port ?? DEFAULTS.PORT;
+  return `http://${host}:${port}`;
 }
 
 /** 探活：Hub 未运行则提示并退出 */

@@ -519,6 +519,18 @@ export interface HubErrorMessage {
 }
 
 // ============================================================
+// Hub 状态文件结构
+// ============================================================
+
+/** Hub daemon 运行时状态（存储于 ~/.paimon/hub.json） */
+export interface HubState {
+  pid: number;
+  port: number;
+  host: string;
+  startedAt: string; // ISO 8601
+}
+
+// ============================================================
 // 常量
 // ============================================================
 
@@ -543,12 +555,10 @@ export const DEFAULTS = {
   RECONNECT_BACKOFF: [1000, 2000, 5000, 10_000, 30_000],
   /** 状态文件目录 */
   STATE_DIR: "~/.paimon",
-  /** PID 文件名 */
-  PID_FILE: "hub.pid",
+  /** Hub 状态文件名（JSON，包含 pid/port/host 等） */
+  STATE_FILE: "hub.json",
   /** 日志文件名 */
   LOG_FILE: "hub.log",
-  /** 端口文件名 */
-  PORT_FILE: "hub.port",
   /** Hub spawn 的实例运行时文件子目录（日志、FIFO） */
   INSTANCES_DIR: "instances",
   /** 默认 bind 地址（loopback，仅本机可访问） */

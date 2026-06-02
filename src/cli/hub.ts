@@ -4,7 +4,7 @@ import { DEFAULTS } from "../protocol/types";
 import {
   startDaemon,
   stopDaemon,
-  readPort,
+  readHubState,
   getDaemonStatus,
   getStatePath,
 } from "./daemon";
@@ -57,22 +57,26 @@ async function handleStart(args: string[]): Promise<void> {
 }
 
 async function handleStatus(): Promise<void> {
-  const status = await getDaemonStatus();
-  if (status.running) {
+  const { running, state } = await getDaemonStatus();
+  if (running && state) {
+    const displayHost =
+      state.host === "0.0.0.0" || state.host === "127.0.0.1"
+        ? "localhost"
+        : state.host;
     console.log(`Hub is running`);
-    console.log(`  PID:  ${status.pid}`);
-    console.log(`  Port: ${status.port ?? "unknown"}`);
-    console.log(`  URL:  http://localhost:${status.port ?? DEFAULTS.PORT}`);
+    console.log(`  PID:  ${state.pid}`);
+    console.log(`  Bind: ${state.host}:${state.port}`);
+    console.log(`  URL:  http://${displayHost}:${state.port}`);
   } else {
     console.log("Hub is not running");
   }
 }
 
 async function handleRestart(args: string[]): Promise<void> {
-  // 先读取当前端口（stop 会清理状态文件，必须先读）
-  const currentPort = await readPort();
+  // 先读取当前状态（stop 会清理状态文件，必须先读）
+  const prevState = await readHubState();
 
-  // 解析命令行参数（允许覆盖）
+  // 解析命令行参数（允许覆盖，未指定则继承之前的值）
   let port = DEFAULTS.PORT;
   const portIdx = args.indexOf("--port");
   if (portIdx !== -1 && args[portIdx + 1]) {
@@ -81,15 +85,16 @@ async function handleRestart(args: string[]): Promise<void> {
       console.error("Invalid port number");
       process.exit(1);
     }
-  } else if (currentPort) {
-    // 未指定则继承之前运行的端口
-    port = currentPort;
+  } else if (prevState?.port) {
+    port = prevState.port;
   }
 
   let host = DEFAULTS.HOST;
   const hostIdx = args.indexOf("--host");
   if (hostIdx !== -1 && args[hostIdx + 1]) {
     host = args[hostIdx + 1];
+  } else if (prevState?.host) {
+    host = prevState.host;
   }
 
   // 停止现有 Hub

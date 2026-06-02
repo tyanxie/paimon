@@ -57,7 +57,7 @@ paimon hub logs [--follow]       # 查看 Hub 日志
 paimon attach [id]               # 将本机 + 当前目录的实例接管到当前终端
 ```
 
-`hub start` 以后台 daemon 方式运行（脱离终端，关闭终端不影响），运行时状态（PID / 端口 / 日志）存储在 `~/.paimon/`。
+`hub start` 以后台 daemon 方式运行（脱离终端，关闭终端不影响），运行时状态（PID / 端口 / Host）存储在 `~/.paimon/hub.json`，日志位于 `~/.paimon/hub.log`。
 
 `--host` 默认 `127.0.0.1`（仅本机可访问）。如需手机/局域网访问可指定 `--host 0.0.0.0`；dev 模式用环境变量 `PAIMON_HOST=0.0.0.0 bun run dev`。
 

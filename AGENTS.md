@@ -15,15 +15,15 @@ bun test         # 运行测试
 
 ## 技术选型
 
-| 组件     | 版本 / 方案                                     |
-| -------- | ----------------------------------------------- |
-| 运行时   | Bun                                             |
-| 语言     | TypeScript 5.8                                  |
-| 后端     | Bun 原生 HTTP + WebSocket                       |
-| 前端     | React 19 + React Router 7 (history mode)        |
-| 样式     | Tailwind CSS 4                                  |
-| 构建     | Vite 6                                          |
-| 进程管理 | Bun.spawn（detached）+ PID 文件（`~/.paimon/`） |
+| 组件     | 版本 / 方案                                             |
+| -------- | ------------------------------------------------------- |
+| 运行时   | Bun                                                     |
+| 语言     | TypeScript 5.8                                          |
+| 后端     | Bun 原生 HTTP + WebSocket                               |
+| 前端     | React 19 + React Router 7 (history mode)                |
+| 样式     | Tailwind CSS 4                                          |
+| 构建     | Vite 6                                                  |
+| 进程管理 | Bun.spawn（detached）+ 状态文件（`~/.paimon/hub.json`） |
 
 **关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react
 
