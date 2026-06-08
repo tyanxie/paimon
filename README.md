@@ -53,21 +53,15 @@ open http://localhost:8080
 
 ## 🛠️ paimon CLI
 
-```bash
-paimon hub start [--port 8080] [--host 127.0.0.1]   # 启动 Hub daemon
-paimon hub stop                  # 停止 Hub
-paimon hub status                # 查看 Hub 状态
-paimon hub logs [--follow]       # 查看 Hub 日志
-paimon attach [id]               # 将本机 + 当前目录的实例接管到当前终端
-```
+| 命令                                                | 说明               |
+| --------------------------------------------------- | ------------------ |
+| `paimon hub start [--port 8080] [--host 127.0.0.1]` | 启动 Hub daemon    |
+| `paimon hub stop`                                   | 停止 Hub           |
+| `paimon hub status`                                 | 查看运行状态       |
+| `paimon hub logs [--follow]`                        | 查看日志           |
+| `paimon attach [id]`                                | 接管实例到当前终端 |
 
-`hub start` 以后台 daemon 方式运行（脱离终端，关闭终端不影响），运行时状态（PID / 端口 / Host）存储在 `~/.paimon/hub.json`，日志位于 `~/.paimon/hub.log`。
-
-`--host` 默认 `127.0.0.1`（仅本机可访问）。如需手机/局域网访问可指定 `--host 0.0.0.0`；dev 模式用环境变量 `PAIMON_HOST=0.0.0.0 bun run dev`。
-
-> ⚠️ **安全提醒**：页面可在 Hub 本机任意目录创建 pi 实例，而 pi 拥有完整系统权限（可执行任意命令）。将 `--host` 设为非 loopback 地址等于把这个能力暴露给网络上任何能访问该地址的人。仅在可信网络中使用。
-
-`attach` 将一个运行中的实例「迁移」到当前终端获得 TUI：先关闭目标实例，再在本地用同一 session 起一个带 TUI 的 pi。仅列出本机且位于当前目录的实例（session 与 cwd 强绑定）。被 attach 的原实例会退出，本地新起的 pi 会以新实例重新注册到 Hub。
+> 🔒 `--host 0.0.0.0` 仅在可信网络使用（页面中指挥 Pi 可在 Hub 本机执行任意命令）。
 
 ## 🧹 卸载
 
