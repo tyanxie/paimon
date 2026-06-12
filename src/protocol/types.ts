@@ -40,6 +40,8 @@ export type InstanceStatus = "idle" | "streaming" | "compacting";
 /** pi 实例信息 */
 export interface InstanceInfo {
   id: InstanceId;
+  /** 所属 Edge 标识 */
+  edgeId: string;
   /** 主机名 */
   hostname: string;
   /** 工作目录 */
@@ -95,10 +97,10 @@ export interface SessionListItem {
 }
 
 // ============================================================
-// Extension → Hub 消息
+// Extension ↔ Edge 消息（Extension 连接本机 Edge）
 // ============================================================
 
-export type ExtensionToHubMessage =
+export type ExtensionToEdgeMessage =
   | ExtRegisterMessage
   | PingMessage
   | ExtEventMessage
@@ -133,8 +135,8 @@ export interface ExtRegisterMessage {
     /** 当前思考等级（模型支持 reasoning 时） */
     thinkingLevel?: ThinkingLevel;
     /**
-     * Hub spawn 实例时注入的一次性 token（来自 PAIMON_SPAWN_TOKEN 环境变量）。
-     * 仅由页面创建的实例携带，用于 Hub 将 spawn 请求与注册成功的实例对应起来。
+     * Edge spawn 实例时注入的一次性 token（来自 PAIMON_SPAWN_TOKEN 环境变量）。
+     * 仅由页面创建的实例携带，用于 Edge 将 spawn 请求与注册成功的实例对应起来。
      */
     spawnToken?: string;
   };
@@ -194,10 +196,10 @@ export interface ExtSessionListMessage {
 }
 
 // ============================================================
-// Hub → Extension 消息
+// Edge → Extension 消息
 // ============================================================
 
-export type HubToExtensionMessage =
+export type EdgeToExtensionMessage =
   | HubRegisteredMessage
   | HubPromptMessage
   | HubSteerMessage
@@ -326,7 +328,7 @@ export type BrowserToHubMessage =
   | BrowserNewSessionMessage
   | BrowserSwitchSessionMessage;
 
-/** 请求实例优雅退出 */
+/** 请求实例优雅退出（Browser → Hub） */
 export interface BrowserShutdownMessage {
   type: "shutdown";
   payload: {
@@ -531,6 +533,271 @@ export interface HubState {
 }
 
 // ============================================================
+// Edge → Hub 消息
+// ============================================================
+
+export type EdgeToHubMessage =
+  | EdgeRegisterMessage
+  | PingMessage
+  | EdgeInstanceRegisterMessage
+  | EdgeInstanceEventMessage
+  | EdgeInstanceStateMessage
+  | EdgeInstanceHistoryMessage
+  | EdgeInstanceSessionListMessage
+  | EdgeInstanceQuitMessage
+  | EdgeSpawnResultMessage;
+
+/** Edge 自身注册 */
+export interface EdgeRegisterMessage {
+  type: "edge_register";
+  payload: {
+    edgeId: string;
+    hostname: string;
+  };
+}
+
+/** 转发：pi 实例注册（多路复用，带 instanceId） */
+export interface EdgeInstanceRegisterMessage {
+  type: "instance_register";
+  payload: {
+    instanceId: InstanceId;
+    hostname: string;
+    cwd: string;
+    model: ModelInfo;
+    sessionId?: string;
+    sessionName?: string;
+    pid: number;
+    availableModels?: ModelInfo[];
+    contextUsage?: ContextUsageInfo;
+    gitBranch?: string;
+    thinkingLevel?: ThinkingLevel;
+  };
+}
+
+/** 转发：pi 事件 */
+export interface EdgeInstanceEventMessage {
+  type: "instance_event";
+  payload: {
+    instanceId: InstanceId;
+    event: string;
+    data: unknown;
+    timestamp: number;
+  };
+}
+
+/** 转发：pi 状态变更 */
+export interface EdgeInstanceStateMessage {
+  type: "instance_state";
+  payload: {
+    instanceId: InstanceId;
+    status?: InstanceStatus;
+    contextUsage?: ContextUsageInfo;
+    gitBranch?: string | null;
+    model?: ModelInfo;
+    thinkingLevel?: ThinkingLevel | null;
+  };
+}
+
+/** 转发：pi 历史响应 */
+export interface EdgeInstanceHistoryMessage {
+  type: "instance_history";
+  payload: {
+    instanceId: InstanceId;
+    entries: unknown[];
+    hasMore: boolean;
+  };
+}
+
+/** 转发：pi session 列表 */
+export interface EdgeInstanceSessionListMessage {
+  type: "instance_session_list";
+  payload: {
+    instanceId: InstanceId;
+    sessions: SessionListItem[];
+  };
+}
+
+/** 转发：pi 主动退出 */
+export interface EdgeInstanceQuitMessage {
+  type: "instance_quit";
+  payload: {
+    instanceId: InstanceId;
+  };
+}
+
+/** Spawn 结果回报 */
+export interface EdgeSpawnResultMessage {
+  type: "spawn_result";
+  payload: {
+    token: string;
+    instanceId?: InstanceId;
+    error?: string;
+  };
+}
+
+// ============================================================
+// Hub → Edge 消息
+// ============================================================
+
+export type HubToEdgeMessage =
+  | HubEdgeRegisteredMessage
+  | PongMessage
+  | HubEdgePromptMessage
+  | HubEdgeSteerMessage
+  | HubEdgeAbortMessage
+  | HubEdgeSetModelMessage
+  | HubEdgeSetThinkingLevelMessage
+  | HubEdgeCompactMessage
+  | HubEdgeShutdownMessage
+  | HubEdgeGetHistoryMessage
+  | HubEdgeListSessionsMessage
+  | HubEdgeNewSessionMessage
+  | HubEdgeSwitchSessionMessage
+  | HubEdgeSpawnMessage;
+
+/** Edge 注册确认 */
+export interface HubEdgeRegisteredMessage {
+  type: "edge_registered";
+  payload: {
+    edgeId: string;
+  };
+}
+
+/** 转发到 pi：发送用户消息 */
+export interface HubEdgePromptMessage {
+  type: "prompt";
+  payload: {
+    instanceId: InstanceId;
+    message: string;
+  };
+}
+
+/** 转发到 pi：发送 steer */
+export interface HubEdgeSteerMessage {
+  type: "steer";
+  payload: {
+    instanceId: InstanceId;
+    message: string;
+  };
+}
+
+/** 转发到 pi：中止 */
+export interface HubEdgeAbortMessage {
+  type: "abort";
+  payload: {
+    instanceId: InstanceId;
+  };
+}
+
+/** 转发到 pi：切换模型 */
+export interface HubEdgeSetModelMessage {
+  type: "set_model";
+  payload: {
+    instanceId: InstanceId;
+    provider: string;
+    id: string;
+  };
+}
+
+/** 转发到 pi：切换思考等级 */
+export interface HubEdgeSetThinkingLevelMessage {
+  type: "set_thinking_level";
+  payload: {
+    instanceId: InstanceId;
+    level: ThinkingLevel;
+  };
+}
+
+/** 转发到 pi：触发压缩 */
+export interface HubEdgeCompactMessage {
+  type: "compact";
+  payload: {
+    instanceId: InstanceId;
+    customInstructions?: string;
+  };
+}
+
+/** 转发到 pi：优雅退出 */
+export interface HubEdgeShutdownMessage {
+  type: "shutdown";
+  payload: {
+    instanceId: InstanceId;
+  };
+}
+
+/** 转发到 pi：请求历史 */
+export interface HubEdgeGetHistoryMessage {
+  type: "get_history";
+  payload: {
+    instanceId: InstanceId;
+    offset?: number;
+    limit?: number;
+  };
+}
+
+/** 转发到 pi：请求 session 列表 */
+export interface HubEdgeListSessionsMessage {
+  type: "list_sessions";
+  payload: {
+    instanceId: InstanceId;
+  };
+}
+
+/** 转发到 pi：创建新 session */
+export interface HubEdgeNewSessionMessage {
+  type: "new_session";
+  payload: {
+    instanceId: InstanceId;
+  };
+}
+
+/** 转发到 pi：切换 session */
+export interface HubEdgeSwitchSessionMessage {
+  type: "switch_session";
+  payload: {
+    instanceId: InstanceId;
+    path: string;
+  };
+}
+
+/** Hub 让 Edge spawn 新实例 */
+export interface HubEdgeSpawnMessage {
+  type: "spawn";
+  payload: {
+    cwd: string;
+    token: string;
+  };
+}
+
+// ============================================================
+// Edge 信息（Hub 侧存储 + 广播给 Browser）
+// ============================================================
+
+/** Edge 节点信息 */
+export interface EdgeInfo {
+  edgeId: string;
+  hostname: string;
+  /** 注册时间 */
+  connectedAt: number;
+  /** 最后心跳时间 */
+  lastHeartbeat: number;
+}
+
+// ============================================================
+// Edge 状态文件结构
+// ============================================================
+
+/** Edge daemon 运行时状态（存储于 ~/.paimon/edge.json） */
+export interface EdgeState {
+  pid: number;
+  port: number;
+  host: string;
+  edgeId: string;
+  hubUrl: string;
+  startedAt: string; // ISO 8601
+}
+
+// ============================================================
 // 常量
 // ============================================================
 
@@ -565,4 +832,14 @@ export const DEFAULTS = {
   HOST: "127.0.0.1" as string,
   /** Hub spawn 实例后等待其注册的超时 (ms) */
   SPAWN_REGISTER_TIMEOUT: 15_000,
+  /** Edge 默认端口 */
+  EDGE_PORT: 8033 as number,
+  /** Edge 默认 bind 地址 */
+  EDGE_HOST: "127.0.0.1" as string,
+  /** Edge 连 Hub 的默认 URL */
+  EDGE_HUB_URL: "ws://127.0.0.1:8080" as string,
+  /** Edge 状态文件名 */
+  EDGE_STATE_FILE: "edge.json" as string,
+  /** Edge 日志文件名 */
+  EDGE_LOG_FILE: "edge.log" as string,
 } as const;

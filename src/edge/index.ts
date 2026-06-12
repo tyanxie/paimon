@@ -1,0 +1,182 @@
+// Edge Server 入口：WS 接 pi extension + WS client 连 Hub
+//
+// Edge 是 pi 实例的本地聚合代理：
+// - 监听本机端口，接收 pi extension 的 WebSocket 连接
+// - 通过单条 WS 连接 Hub，多路复用上报所有本地实例
+// - 接收 Hub 下发的指令，路由到正确的本地 pi 实例
+// - 在本机 spawn pi 实例
+
+import { hostname } from "node:os";
+import type { ServerWebSocket, Server } from "bun";
+import { DEFAULTS, type InstanceId } from "../protocol/types";
+import type { LocalInstanceInfo } from "./registry";
+import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
+import { edgeRegistry, type EdgeWsData } from "./registry";
+import { UpstreamClient } from "./upstream";
+import { handleExtensionMessage, handleUpstreamMessage } from "./router";
+import * as log from "./logger";
+
+const port = parseInt(
+  process.env.PAIMON_EDGE_PORT || String(DEFAULTS.EDGE_PORT),
+  10,
+);
+const host = process.env.PAIMON_EDGE_HOST || DEFAULTS.EDGE_HOST;
+const edgeId = process.env.PAIMON_EDGE_ID || hostname();
+const hubUrl = process.env.PAIMON_HUB_URL || DEFAULTS.EDGE_HUB_URL;
+
+log.info(`Starting Edge server (id: ${edgeId}) on ${host}:${port}...`);
+log.info(`Hub URL: ${hubUrl}`);
+
+// 非 loopback 时警告
+if (!isLoopbackHost(host)) {
+  log.warn(nonLoopbackWarning(host));
+}
+
+// 创建上游 Hub 客户端
+const upstream = new UpstreamClient({
+  hubUrl,
+  onConnected() {
+    // 连接 Hub 后先注册 Edge 自身
+    upstream.send({
+      type: "edge_register",
+      payload: { edgeId, hostname: hostname() },
+    });
+    // 重连后重新上报所有本地实例
+    for (const inst of edgeRegistry.getAllInstances()) {
+      upstream.send({
+        type: "instance_register",
+        payload: {
+          instanceId: inst.instanceId,
+          hostname: inst.hostname,
+          cwd: inst.cwd,
+          model: inst.model,
+          sessionId: inst.sessionId,
+          sessionName: inst.sessionName,
+          pid: inst.pid,
+          availableModels: inst.availableModels,
+          contextUsage: inst.contextUsage,
+          gitBranch: inst.gitBranch ?? undefined,
+          thinkingLevel: inst.thinkingLevel,
+        },
+      });
+    }
+  },
+  onDisconnected() {
+    log.warn("Lost connection to Hub, will reconnect...");
+  },
+  onMessage(msg) {
+    handleUpstreamMessage(msg, upstream);
+  },
+});
+
+// 设置 registry 变更回调：实例注册/注销时同步到 Hub
+edgeRegistry.setChangeCallback(
+  (
+    event: "registered" | "updated" | "unregistered",
+    instanceId: InstanceId,
+    info?: LocalInstanceInfo,
+  ) => {
+    if (!upstream.connected) return;
+
+    switch (event) {
+      case "registered": {
+        if (!info) return;
+        upstream.send({
+          type: "instance_register",
+          payload: {
+            instanceId,
+            hostname: info.hostname,
+            cwd: info.cwd,
+            model: info.model,
+            sessionId: info.sessionId,
+            sessionName: info.sessionName,
+            pid: info.pid,
+            availableModels: info.availableModels,
+            contextUsage: info.contextUsage,
+            gitBranch: info.gitBranch ?? undefined,
+            thinkingLevel: info.thinkingLevel,
+          },
+        });
+        break;
+      }
+      case "unregistered": {
+        upstream.send({
+          type: "instance_quit",
+          payload: { instanceId },
+        });
+        break;
+      }
+      // "updated" 通过 router.ts 中 state 消息直接转发，此处无需额外处理
+    }
+  },
+);
+
+// 启动上游连接
+upstream.connect();
+
+// 心跳：定期向 Hub 发送 ping
+const heartbeatInterval = setInterval(() => {
+  if (upstream.connected) {
+    upstream.send({ type: "ping" });
+  }
+}, DEFAULTS.HEARTBEAT_INTERVAL);
+
+// 启动本地 WS server 接收 pi extension 连接
+const server = Bun.serve<EdgeWsData>({
+  hostname: host,
+  port,
+
+  routes: {
+    "/ws/extension": (req: Request, server: Server<EdgeWsData>) => {
+      const upgraded = server.upgrade(req, { data: {} });
+      if (!upgraded) {
+        return new Response("WebSocket upgrade failed", { status: 400 });
+      }
+      return undefined;
+    },
+    "/api/health": {
+      GET: () =>
+        Response.json({ status: "ok", edgeId, uptime: process.uptime() }),
+    },
+  },
+
+  fetch(req) {
+    return new Response("Not Found", { status: 404 });
+  },
+
+  websocket: {
+    open(ws: ServerWebSocket<EdgeWsData>) {
+      log.debug("Extension WebSocket opened");
+    },
+
+    message(ws: ServerWebSocket<EdgeWsData>, message: string | Buffer) {
+      const raw = typeof message === "string" ? message : message.toString();
+      handleExtensionMessage(ws, raw, upstream);
+    },
+
+    close(ws: ServerWebSocket<EdgeWsData>, code: number) {
+      log.debug(`Extension WebSocket closed (code: ${code})`);
+      const id = ws.data.instanceId;
+      if (id) {
+        const activeWs = edgeRegistry.getInstanceWs(id);
+        if (activeWs === ws || activeWs === undefined) {
+          edgeRegistry.startGracePeriod(id);
+        }
+      }
+    },
+  },
+});
+
+log.info(`Edge server listening on http://${host}:${server.port}`);
+
+// 优雅退出
+async function shutdown(signal: string): Promise<never> {
+  log.info(`Received ${signal}, shutting down...`);
+  clearInterval(heartbeatInterval);
+  upstream.disconnect();
+  await server.stop(true);
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

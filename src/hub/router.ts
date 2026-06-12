@@ -1,60 +1,79 @@
-// 消息路由：处理来自 Extension 和 Browser 的消息
+// 消息路由：处理来自 Edge 和 Browser 的消息
+//
+// Hub 不再直接与 pi extension 通信，所有 pi 相关消息通过 Edge 中转。
 
 import type { ServerWebSocket } from "bun";
-import type { WsData } from "./registry";
+import type { WsData, BrowserWsData } from "./edge";
 import type {
-  ExtensionToHubMessage,
+  EdgeToHubMessage,
   BrowserToHubMessage,
+  HubToEdgeMessage,
+  InstanceId,
 } from "../protocol/types";
-import { registry } from "./registry";
-import { forwardToInstanceForWs } from "./forward";
-import { resolveSpawn } from "./spawner";
+import { hubRegistry } from "./edge";
 import * as log from "./logger";
 
-/** 处理 Extension 消息 */
-export function handleExtensionMessage(
+/** 处理 Edge 消息 */
+export function handleEdgeMessage(
   ws: ServerWebSocket<WsData>,
   raw: string,
 ): void {
-  let msg: ExtensionToHubMessage;
+  let msg: EdgeToHubMessage;
   try {
     msg = JSON.parse(raw);
   } catch {
-    log.warn("Invalid JSON from extension");
+    log.warn("Invalid JSON from edge");
     return;
   }
 
   switch (msg.type) {
-    case "register": {
-      const info = registry.register(ws, msg.payload);
-      // 回复注册确认
-      ws.send(JSON.stringify({ type: "registered", payload: { id: info.id } }));
-      // 若携带 spawnToken，说明是 Hub spawn 的实例，唤醒对应的创建请求
-      if (msg.payload.spawnToken) {
-        resolveSpawn(msg.payload.spawnToken, info.id);
-      }
+    case "edge_register": {
+      const info = hubRegistry.registerEdge(
+        ws,
+        msg.payload.edgeId,
+        msg.payload.hostname,
+      );
+      ws.send(
+        JSON.stringify({
+          type: "edge_registered",
+          payload: { edgeId: info.edgeId },
+        }),
+      );
       break;
     }
     case "ping": {
-      const id = registry.findInstanceByWs(ws);
-      if (id) {
-        registry.heartbeat(id);
-        // 回复 pong 作为确认
+      const edgeId = hubRegistry.findEdgeByWs(ws);
+      if (edgeId) {
+        hubRegistry.edgeHeartbeat(edgeId);
         ws.send(JSON.stringify({ type: "pong" }));
       }
       break;
     }
-    case "event": {
-      const id = registry.findInstanceByWs(ws);
-      if (!id) return;
-
+    case "instance_register": {
+      const edgeId = hubRegistry.findEdgeByWs(ws);
+      if (!edgeId) return;
+      hubRegistry.registerInstance(edgeId, msg.payload.instanceId, {
+        hostname: msg.payload.hostname,
+        cwd: msg.payload.cwd,
+        model: msg.payload.model,
+        sessionId: msg.payload.sessionId,
+        sessionName: msg.payload.sessionName,
+        pid: msg.payload.pid,
+        availableModels: msg.payload.availableModels,
+        contextUsage: msg.payload.contextUsage,
+        gitBranch: msg.payload.gitBranch,
+        thinkingLevel: msg.payload.thinkingLevel,
+      });
+      break;
+    }
+    case "instance_event": {
       // 转发给订阅了该实例的浏览器
-      const subscribers = registry.getSubscribers(id);
+      const subscribers = hubRegistry.getSubscribers(msg.payload.instanceId);
       if (subscribers.length > 0) {
         const forwarded = JSON.stringify({
           type: "forwarded_event",
           payload: {
-            instanceId: id,
+            instanceId: msg.payload.instanceId,
             event: msg.payload.event,
             data: msg.payload.data,
             timestamp: msg.payload.timestamp,
@@ -66,26 +85,20 @@ export function handleExtensionMessage(
       }
       break;
     }
-    case "state": {
-      const id = registry.findInstanceByWs(ws);
-      if (id) {
-        registry.updateState(id, msg.payload);
-      }
+    case "instance_state": {
+      const { instanceId, ...state } = msg.payload;
+      hubRegistry.updateInstanceState(instanceId, state);
       break;
     }
-    case "history": {
-      const id = registry.findInstanceByWs(ws);
-      if (!id) return;
-
-      // 转发给订阅了该实例的浏览器
-      const subscribers = registry.getSubscribers(id);
+    case "instance_history": {
+      const subscribers = hubRegistry.getSubscribers(msg.payload.instanceId);
       if (subscribers.length > 0) {
         const historyMsg = JSON.stringify({
           type: "history",
           payload: {
-            instanceId: id,
+            instanceId: msg.payload.instanceId,
             messages: msg.payload.entries,
-            hasMore: msg.payload.hasMore ?? false,
+            hasMore: msg.payload.hasMore,
           },
         });
         for (const browser of subscribers) {
@@ -94,17 +107,13 @@ export function handleExtensionMessage(
       }
       break;
     }
-    case "session_list": {
-      const id = registry.findInstanceByWs(ws);
-      if (!id) return;
-
-      // 转发给订阅了该实例的浏览器
-      const subscribers = registry.getSubscribers(id);
+    case "instance_session_list": {
+      const subscribers = hubRegistry.getSubscribers(msg.payload.instanceId);
       if (subscribers.length > 0) {
         const sessionListMsg = JSON.stringify({
           type: "session_list",
           payload: {
-            instanceId: id,
+            instanceId: msg.payload.instanceId,
             sessions: msg.payload.sessions,
           },
         });
@@ -114,12 +123,16 @@ export function handleExtensionMessage(
       }
       break;
     }
-    case "quit": {
-      // 实例主动退出，立即注销（跳过 grace period）
-      const id = registry.findInstanceByWs(ws);
-      if (id) {
-        registry.unregister(id);
-      }
+    case "instance_quit": {
+      hubRegistry.unregisterInstance(msg.payload.instanceId);
+      break;
+    }
+    case "spawn_result": {
+      hubRegistry.resolveSpawn(
+        msg.payload.token,
+        msg.payload.instanceId,
+        msg.payload.error,
+      );
       break;
     }
   }
@@ -140,103 +153,116 @@ export function handleBrowserMessage(
 
   switch (msg.type) {
     case "ping": {
-      // 心跳回复 + 重置超时
-      registry.browserHeartbeat(ws);
+      hubRegistry.browserHeartbeat(ws);
       ws.send(JSON.stringify({ type: "pong" }));
       break;
     }
     case "list": {
-      const instances = registry.getAllInstances();
+      const instances = hubRegistry.getAllInstances();
       ws.send(
         JSON.stringify({ type: "instance_list", payload: { instances } }),
       );
       break;
     }
     case "subscribe": {
-      ws.data.subscriptions?.add(msg.payload.instanceId);
+      const wsData = ws.data as BrowserWsData;
+      wsData.subscriptions?.add(msg.payload.instanceId);
       log.debug(`Browser subscribed to ${msg.payload.instanceId}`);
       break;
     }
     case "unsubscribe": {
-      ws.data.subscriptions?.delete(msg.payload.instanceId);
+      const wsData = ws.data as BrowserWsData;
+      wsData.subscriptions?.delete(msg.payload.instanceId);
       log.debug(`Browser unsubscribed from ${msg.payload.instanceId}`);
       break;
     }
-    case "history": {
-      // 向 Extension 请求历史（透传 offset/limit）
-      const payload =
-        msg.payload.offset !== undefined || msg.payload.limit !== undefined
-          ? { offset: msg.payload.offset, limit: msg.payload.limit }
-          : undefined;
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "get_history",
-        payload,
-      });
-      break;
-    }
-    case "prompt": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "prompt",
-        payload: { message: msg.payload.message },
-      });
-      break;
-    }
-    case "steer": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "steer",
-        payload: { message: msg.payload.message },
-      });
-      break;
-    }
-    case "abort": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, { type: "abort" });
-      break;
-    }
-    case "set_model": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "set_model",
-        payload: { provider: msg.payload.provider, id: msg.payload.id },
-      });
-      break;
-    }
-    case "set_thinking_level": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "set_thinking_level",
-        payload: { level: msg.payload.level },
-      });
-      break;
-    }
-    case "list_sessions": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "list_sessions",
-      });
-      break;
-    }
-    case "new_session": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "new_session",
-      });
-      break;
-    }
-    case "switch_session": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "switch_session",
-        payload: { path: msg.payload.path },
-      });
-      break;
-    }
-    case "compact": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, {
-        type: "compact",
-        payload: msg.payload.customInstructions
-          ? { customInstructions: msg.payload.customInstructions }
-          : undefined,
-      });
-      break;
-    }
+    // ── 以下消息透传给 Edge（payload 原样转发） ──
+    case "prompt":
+    case "steer":
+    case "abort":
+    case "set_model":
+    case "set_thinking_level":
+    case "list_sessions":
+    case "new_session":
+    case "switch_session":
+    case "compact":
     case "shutdown": {
-      forwardToInstanceForWs(ws, msg.payload.instanceId, { type: "shutdown" });
+      const payload = msg.payload as { instanceId: InstanceId };
+      forwardToEdge(ws, payload.instanceId, {
+        type: msg.type,
+        payload: msg.payload,
+      } as HubToEdgeMessage);
+      break;
+    }
+    case "history": {
+      // 唯一需要映射 type 的特例：history → get_history
+      forwardToEdge(ws, msg.payload.instanceId, {
+        type: "get_history",
+        payload: msg.payload,
+      } as HubToEdgeMessage);
       break;
     }
   }
+}
+
+/** 转发指令到 Edge（通过 instanceId 查找所属 edge） */
+function forwardToEdge(
+  browserWs: ServerWebSocket<WsData>,
+  instanceId: InstanceId,
+  message: HubToEdgeMessage,
+): void {
+  const edgeId = hubRegistry.getInstanceEdgeId(instanceId);
+  if (!edgeId) {
+    browserWs.send(
+      JSON.stringify({
+        type: "error",
+        payload: {
+          message: `Instance ${instanceId} not found`,
+          code: "INSTANCE_NOT_FOUND",
+        },
+      }),
+    );
+    return;
+  }
+
+  const edgeWs = hubRegistry.getEdgeWs(edgeId);
+  if (!edgeWs) {
+    browserWs.send(
+      JSON.stringify({
+        type: "error",
+        payload: {
+          message: `Edge ${edgeId} is disconnected`,
+          code: "EDGE_DISCONNECTED",
+        },
+      }),
+    );
+    return;
+  }
+
+  edgeWs.send(JSON.stringify(message));
+}
+
+/** 转发指令到 Edge（HTTP 语境，返回 Response 或 null） */
+export function forwardToEdgeForHttp(
+  instanceId: InstanceId,
+  message: HubToEdgeMessage,
+): Response | null {
+  const edgeId = hubRegistry.getInstanceEdgeId(instanceId);
+  if (!edgeId) {
+    return Response.json(
+      { error: `Instance ${instanceId} not found` },
+      { status: 404 },
+    );
+  }
+
+  const edgeWs = hubRegistry.getEdgeWs(edgeId);
+  if (!edgeWs) {
+    return Response.json(
+      { error: `Edge ${edgeId} is disconnected` },
+      { status: 502 },
+    );
+  }
+
+  edgeWs.send(JSON.stringify(message));
+  return null;
 }

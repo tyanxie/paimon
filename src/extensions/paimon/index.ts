@@ -1,4 +1,4 @@
-// Pi Extension 入口：连接 Hub、转发事件、接收指令
+// Pi Extension 入口：连接 Edge、转发事件、接收指令
 
 import { spawnSync } from "child_process";
 import { hostname } from "os";
@@ -10,7 +10,7 @@ import type {
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { DEFAULTS } from "../../protocol/types";
 import type {
-  HubToExtensionMessage,
+  EdgeToExtensionMessage,
   ExtHistoryMessage,
   ExtSessionListMessage,
   ContextUsageInfo,
@@ -26,7 +26,11 @@ import * as sessionControlPatch from "./session_control_patch";
 const SPAWN_TOKEN = process.env.PAIMON_SPAWN_TOKEN;
 
 export default function (pi: ExtensionAPI) {
-  const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
+  // pi extension 连接本机 Edge（不再直连 Hub）
+  const port = parseInt(
+    process.env.PAIMON_EDGE_PORT || String(DEFAULTS.EDGE_PORT),
+    10,
+  );
 
   let registered = false;
   // 保存最新的 ctx 引用，用于响应 get_history
@@ -75,7 +79,7 @@ export default function (pi: ExtensionAPI) {
     onDisconnected() {
       registered = false;
     },
-    onMessage(msg: HubToExtensionMessage) {
+    onMessage(msg: EdgeToExtensionMessage) {
       if (msg.type === "registered") {
         registered = true;
       }
@@ -285,7 +289,7 @@ export default function (pi: ExtensionAPI) {
 /** 处理 Hub 下发的指令 */
 function handleHubMessage(
   pi: ExtensionAPI,
-  msg: HubToExtensionMessage,
+  msg: EdgeToExtensionMessage,
   client: HubClient,
   getCurrentCtx: () => ExtensionContext | null,
 ): void {

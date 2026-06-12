@@ -3,6 +3,7 @@
 
 import { program } from "@commander-js/extra-typings";
 import { registerHubCommand } from "./commands/hub";
+import { registerEdgeCommand } from "./commands/edge";
 import { registerAttachCommand } from "./commands/attach";
 
 program
@@ -11,6 +12,7 @@ program
   .version("0.1.0");
 
 registerHubCommand(program);
+registerEdgeCommand(program);
 registerAttachCommand(program);
 
 program.parse();
