@@ -186,18 +186,11 @@ export function handleBrowserMessage(
     case "new_session":
     case "switch_session":
     case "compact":
-    case "shutdown": {
+    case "shutdown":
+    case "get_history": {
       const payload = msg.payload as { instanceId: InstanceId };
       forwardToEdge(ws, payload.instanceId, {
         type: msg.type,
-        payload: msg.payload,
-      } as HubToEdgeMessage);
-      break;
-    }
-    case "history": {
-      // 唯一需要映射 type 的特例：history → get_history
-      forwardToEdge(ws, msg.payload.instanceId, {
-        type: "get_history",
         payload: msg.payload,
       } as HubToEdgeMessage);
       break;

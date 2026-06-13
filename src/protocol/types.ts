@@ -413,7 +413,7 @@ export interface BrowserListMessage {
 
 /** 请求实例历史消息 */
 export interface BrowserHistoryMessage {
-  type: "history";
+  type: "get_history";
   payload: {
     instanceId: InstanceId;
     /** 从末尾跳过的条目数 */

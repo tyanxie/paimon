@@ -81,7 +81,10 @@ export default function App() {
         payload: { instanceId: selectedInstanceId },
       });
       subscribedRef.current = selectedInstanceId;
-      send({ type: "history", payload: { instanceId: selectedInstanceId } });
+      send({
+        type: "get_history",
+        payload: { instanceId: selectedInstanceId },
+      });
     }
     // exists 为 false 时不更新 ref，等 instances 加载后重试
   }, [selectedInstanceId, instances, connected, send, startInstanceRefresh]);
@@ -91,7 +94,7 @@ export default function App() {
     if (!sessionChangedInstanceId) return;
     if (connected) {
       send({
-        type: "history",
+        type: "get_history",
         payload: { instanceId: sessionChangedInstanceId },
       });
     }
@@ -225,7 +228,7 @@ export default function App() {
     const offset = entries.length;
     startLoadMore();
     send({
-      type: "history",
+      type: "get_history",
       payload: {
         instanceId: selectedInstanceId,
         offset,
