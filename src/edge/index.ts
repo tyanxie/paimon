@@ -6,7 +6,7 @@
 // - 接收 Hub 下发的指令，路由到正确的本地 pi 实例
 // - 在本机 spawn pi 实例
 
-import { hostname } from "node:os";
+import { hostname, homedir } from "node:os";
 import type { ServerWebSocket, Server } from "bun";
 import { DEFAULTS, type InstanceId } from "../protocol/types";
 import type { LocalInstanceInfo } from "./registry";
@@ -39,7 +39,7 @@ const upstream = new UpstreamClient({
     // 连接 Hub 后先注册 Edge 自身
     upstream.send({
       type: "edge_register",
-      payload: { edgeId, hostname: hostname() },
+      payload: { edgeId, hostname: hostname(), homedir: homedir() },
     });
     // 重连后重新上报所有本地实例
     for (const inst of edgeRegistry.getAllInstances()) {

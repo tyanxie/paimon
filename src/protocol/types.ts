@@ -545,7 +545,8 @@ export type EdgeToHubMessage =
   | EdgeInstanceHistoryMessage
   | EdgeInstanceSessionListMessage
   | EdgeInstanceQuitMessage
-  | EdgeSpawnResultMessage;
+  | EdgeSpawnResultMessage
+  | EdgeBrowseResultMessage;
 
 /** Edge 自身注册 */
 export interface EdgeRegisterMessage {
@@ -553,6 +554,8 @@ export interface EdgeRegisterMessage {
   payload: {
     edgeId: string;
     hostname: string;
+    /** Edge 所在机器的 home 目录 */
+    homedir: string;
   };
 }
 
@@ -635,6 +638,38 @@ export interface EdgeSpawnResultMessage {
   };
 }
 
+/** 目录浏览结果 */
+export interface EdgeBrowseResultMessage {
+  type: "browse_result";
+  payload: {
+    token: string;
+    /** 实际解析后的父目录（以 / 结尾） */
+    parent?: string;
+    /** 子目录列表 */
+    entries?: BrowseEntry[];
+    /** 是否因数量限制而截断 */
+    truncated?: boolean;
+    /** 错误信息 */
+    error?: string;
+  };
+}
+
+/** 目录浏览条目 */
+export interface BrowseEntry {
+  /** 目录名 */
+  name: string;
+}
+
+/** 目录浏览结果 */
+export interface BrowseResult {
+  /** 实际解析后的父目录（以 / 结尾） */
+  parent: string;
+  /** 匹配的子目录列表 */
+  entries: BrowseEntry[];
+  /** 是否因数量限制而截断 */
+  truncated: boolean;
+}
+
 // ============================================================
 // Hub → Edge 消息
 // ============================================================
@@ -653,7 +688,8 @@ export type HubToEdgeMessage =
   | HubEdgeListSessionsMessage
   | HubEdgeNewSessionMessage
   | HubEdgeSwitchSessionMessage
-  | HubEdgeSpawnMessage;
+  | HubEdgeSpawnMessage
+  | HubEdgeBrowseMessage;
 
 /** Edge 注册确认 */
 export interface HubEdgeRegisteredMessage {
@@ -769,6 +805,16 @@ export interface HubEdgeSpawnMessage {
   };
 }
 
+/** Hub 让 Edge 浏览目录 */
+export interface HubEdgeBrowseMessage {
+  type: "browse";
+  payload: {
+    /** 用户输入的路径（可能是完整目录或带前缀的部分路径） */
+    path: string;
+    token: string;
+  };
+}
+
 // ============================================================
 // Edge 信息（Hub 侧存储 + 广播给 Browser）
 // ============================================================
@@ -777,6 +823,8 @@ export interface HubEdgeSpawnMessage {
 export interface EdgeInfo {
   edgeId: string;
   hostname: string;
+  /** Edge 所在机器的 home 目录 */
+  homedir: string;
   /** 注册时间 */
   connectedAt: number;
   /** 最后心跳时间 */
@@ -838,6 +886,10 @@ export const DEFAULTS = {
   EDGE_HOST: "127.0.0.1" as string,
   /** Edge 连 Hub 的默认 URL */
   EDGE_HUB_URL: "ws://127.0.0.1:8080" as string,
+  /** 目录浏览请求超时 (ms) */
+  BROWSE_TIMEOUT: 5_000,
+  /** 目录浏览最大返回条目数 */
+  BROWSE_MAX_ENTRIES: 200,
   /** Edge 状态文件名 */
   EDGE_STATE_FILE: "edge.json" as string,
   /** Edge 日志文件名 */

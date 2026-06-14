@@ -14,6 +14,7 @@ import type {
 } from "../protocol/types";
 import { edgeRegistry } from "./registry";
 import { resolveSpawn, spawnInstance, validateCwd } from "./spawner";
+import { browsePath } from "./browser";
 import * as log from "./logger";
 import type { UpstreamClient } from "./upstream";
 
@@ -213,6 +214,11 @@ export function handleUpstreamMessage(
       handleSpawnRequest(msg.payload.cwd, msg.payload.token, upstream);
       break;
     }
+    case "browse": {
+      // Hub 委托 Edge 浏览本机目录
+      handleBrowseRequest(msg.payload.path, msg.payload.token, upstream);
+      break;
+    }
   }
 }
 
@@ -255,6 +261,27 @@ async function handleSpawnRequest(
     log.error(`Spawn failed: ${message}`);
     upstream.send({
       type: "spawn_result",
+      payload: { token, error: message },
+    });
+  }
+}
+
+/** 处理目录浏览请求 */
+function handleBrowseRequest(
+  path: string,
+  token: string,
+  upstream: UpstreamClient,
+): void {
+  try {
+    const result = browsePath(path);
+    upstream.send({
+      type: "browse_result",
+      payload: { token, ...result },
+    });
+  } catch (err) {
+    const message = (err as Error).message;
+    upstream.send({
+      type: "browse_result",
       payload: { token, error: message },
     });
   }

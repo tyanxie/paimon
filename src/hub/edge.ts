@@ -13,8 +13,11 @@ import type {
   ContextUsageInfo,
   ThinkingLevel,
   EdgeInfo,
+  BrowseEntry,
+  BrowseResult,
 } from "../protocol/types";
 import { DEFAULTS } from "../protocol/types";
+import { PendingRequests } from "./pending";
 import * as log from "./logger";
 
 /** Edge WebSocket 上下文数据 */
@@ -49,11 +52,7 @@ interface InstanceRecord {
 }
 
 /** Spawn 等待记录 */
-interface PendingSpawn {
-  resolve: (id: InstanceId) => void;
-  reject: (err: Error) => void;
-  timer: Timer;
-}
+// 已迁移到 PendingRequests 通用工具
 
 class HubEdgeRegistry {
   private edges = new Map<string, EdgeRecord>();
@@ -61,7 +60,9 @@ class HubEdgeRegistry {
   private browserClients = new Set<ServerWebSocket<WsData>>();
   private browserHeartbeatTimers = new Map<ServerWebSocket<WsData>, Timer>();
   /** spawn token → pending 记录 */
-  private pendingSpawns = new Map<string, PendingSpawn>();
+  private pendingSpawns = new PendingRequests<InstanceId>();
+  /** browse token → pending 记录 */
+  private pendingBrowses = new PendingRequests<BrowseResult>();
 
   // ─── Edge 管理 ───
 
@@ -70,6 +71,7 @@ class HubEdgeRegistry {
     ws: ServerWebSocket<WsData>,
     edgeId: string,
     hostname: string,
+    homedir: string,
   ): EdgeInfo {
     const now = Date.now();
     const existing = this.edges.get(edgeId);
@@ -86,6 +88,7 @@ class HubEdgeRegistry {
 
       existing.ws = ws;
       existing.info.hostname = hostname;
+      existing.info.homedir = homedir;
       existing.info.lastHeartbeat = now;
 
       if (existing.heartbeatTimer) clearTimeout(existing.heartbeatTimer);
@@ -103,6 +106,7 @@ class HubEdgeRegistry {
     const info: EdgeInfo = {
       edgeId,
       hostname,
+      homedir,
       connectedAt: now,
       lastHeartbeat: now,
     };
@@ -323,34 +327,53 @@ class HubEdgeRegistry {
     return Array.from(this.instances.values()).map((r) => r.info);
   }
 
-  // ─── Spawn 管理 ───
+  // ─── Spawn 管理（使用通用 PendingRequests） ───
 
   /** 注册 pending spawn（Hub 向 Edge 发出 spawn 后等待结果） */
   registerPendingSpawn(token: string): Promise<InstanceId> {
     // Hub 侧超时比 Edge 侧多 3s 余量，确保 Edge 先超时并上报 error
     const timeout = DEFAULTS.SPAWN_REGISTER_TIMEOUT + 3_000;
-    return new Promise<InstanceId>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pendingSpawns.delete(token);
-        reject(new Error(`Spawn timed out (${timeout / 1000}s)`));
-      }, timeout);
-
-      this.pendingSpawns.set(token, { resolve, reject, timer });
-    });
+    return this.pendingSpawns.register(
+      token,
+      timeout,
+      `Spawn timed out (${timeout / 1000}s)`,
+    );
   }
 
   /** Edge 回报 spawn 结果 */
   resolveSpawn(token: string, instanceId?: InstanceId, error?: string): void {
-    const p = this.pendingSpawns.get(token);
-    if (!p) return;
-    clearTimeout(p.timer);
-    this.pendingSpawns.delete(token);
     if (error) {
-      p.reject(new Error(error));
+      this.pendingSpawns.reject(token, error);
     } else if (instanceId) {
-      p.resolve(instanceId);
+      this.pendingSpawns.resolve(token, instanceId);
     } else {
-      p.reject(new Error("Spawn result missing instanceId"));
+      this.pendingSpawns.reject(token, "Spawn result missing instanceId");
+    }
+  }
+
+  // ─── Browse 管理（使用通用 PendingRequests） ───
+
+  /** 注册 pending browse 请求 */
+  registerPendingBrowse(token: string): Promise<BrowseResult> {
+    return this.pendingBrowses.register(
+      token,
+      DEFAULTS.BROWSE_TIMEOUT,
+      `Browse timed out (${DEFAULTS.BROWSE_TIMEOUT / 1000}s)`,
+    );
+  }
+
+  /** Edge 回报 browse 结果 */
+  resolveBrowse(
+    token: string,
+    result?: { parent: string; entries: BrowseEntry[]; truncated: boolean },
+    error?: string,
+  ): void {
+    if (error) {
+      this.pendingBrowses.reject(token, error);
+    } else if (result) {
+      this.pendingBrowses.resolve(token, result);
+    } else {
+      this.pendingBrowses.reject(token, "Browse result missing data");
     }
   }
 

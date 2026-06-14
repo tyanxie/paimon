@@ -141,6 +141,46 @@ const server = Bun.serve<WsData>({
     "/api/edges": {
       GET: () => Response.json({ edges: hubRegistry.getAllEdges() }),
     },
+    "/api/edges/:edgeId/browse": {
+      GET: async (req: BunRequest<"/api/edges/:edgeId/browse">) => {
+        const { edgeId } = req.params;
+        const url = new URL(req.url);
+        const path = url.searchParams.get("path");
+
+        if (!path) {
+          return Response.json(
+            { error: "Query parameter 'path' is required" },
+            { status: 400 },
+          );
+        }
+
+        const edgeWs = hubRegistry.getEdgeWs(edgeId);
+        if (!edgeWs) {
+          return Response.json(
+            { error: `Edge ${edgeId} is not connected` },
+            { status: 502 },
+          );
+        }
+
+        const token = randomUUID();
+        const browsePromise = hubRegistry.registerPendingBrowse(token);
+
+        edgeWs.send(
+          JSON.stringify({
+            type: "browse",
+            payload: { path, token },
+          }),
+        );
+
+        try {
+          const result = await browsePromise;
+          return Response.json(result);
+        } catch (err) {
+          const message = (err as Error).message;
+          return Response.json({ error: message }, { status: 500 });
+        }
+      },
+    },
     "/api/health": {
       GET: () => Response.json({ status: "ok", uptime: process.uptime() }),
     },

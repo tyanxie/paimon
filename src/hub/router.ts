@@ -32,6 +32,7 @@ export function handleEdgeMessage(
         ws,
         msg.payload.edgeId,
         msg.payload.hostname,
+        msg.payload.homedir,
       );
       ws.send(
         JSON.stringify({
@@ -133,6 +134,19 @@ export function handleEdgeMessage(
         msg.payload.instanceId,
         msg.payload.error,
       );
+      break;
+    }
+    case "browse_result": {
+      const { token, parent, entries, truncated, error } = msg.payload;
+      if (error) {
+        hubRegistry.resolveBrowse(token, undefined, error);
+      } else {
+        hubRegistry.resolveBrowse(token, {
+          parent: parent!,
+          entries: entries!,
+          truncated: truncated ?? false,
+        });
+      }
       break;
     }
   }
