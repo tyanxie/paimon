@@ -92,6 +92,13 @@ export function NewInstanceModal({
     [edges],
   );
 
+  // 组件卸载时中止进行中的 browse 请求
+  useEffect(() => {
+    return () => {
+      browseAbortRef.current?.abort();
+    };
+  }, []);
+
   // 聚焦输入框
   useEffect(() => {
     if (!loadingEdges) {
@@ -341,6 +348,10 @@ export function NewInstanceModal({
               onKeyDown={handleKeyDown}
               onFocus={() => {
                 if (suggestions.length > 0) setShowSuggestions(true);
+              }}
+              onBlur={() => {
+                // 延迟关闭，给 mousedown 事件留时间触发补全选择
+                setTimeout(() => setShowSuggestions(false), 150);
               }}
               placeholder="/path/to/your/project"
               disabled={submitting || loadingEdges}

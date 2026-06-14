@@ -267,13 +267,13 @@ async function handleSpawnRequest(
 }
 
 /** 处理目录浏览请求 */
-function handleBrowseRequest(
+async function handleBrowseRequest(
   path: string,
   token: string,
   upstream: UpstreamClient,
-): void {
+): Promise<void> {
   try {
-    const result = browsePath(path);
+    const result = await browsePath(path);
     upstream.send({
       type: "browse_result",
       payload: { token, ...result },

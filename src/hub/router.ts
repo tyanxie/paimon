@@ -140,12 +140,18 @@ export function handleEdgeMessage(
       const { token, parent, entries, truncated, error } = msg.payload;
       if (error) {
         hubRegistry.resolveBrowse(token, undefined, error);
-      } else {
+      } else if (parent && entries) {
         hubRegistry.resolveBrowse(token, {
-          parent: parent!,
-          entries: entries!,
+          parent,
+          entries,
           truncated: truncated ?? false,
         });
+      } else {
+        hubRegistry.resolveBrowse(
+          token,
+          undefined,
+          "Invalid browse_result: missing parent or entries",
+        );
       }
       break;
     }

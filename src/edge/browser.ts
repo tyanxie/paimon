@@ -5,7 +5,7 @@
 // - 否则 → parent = dirname(path), prefix = basename(path)
 // 过滤：仅目录，排除 "." 和 ".."，prefix 不以 "." 开头时隐藏 dotfiles
 
-import { readdirSync, statSync } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { dirname, basename, isAbsolute } from "node:path";
 import { DEFAULTS } from "../protocol/types";
 import type { BrowseEntry, BrowseResult } from "../protocol/types";
@@ -14,7 +14,7 @@ import type { BrowseEntry, BrowseResult } from "../protocol/types";
  * 浏览指定路径下的目录。
  * @param rawPath 用户输入的原始路径
  */
-export function browsePath(rawPath: string): BrowseResult {
+export async function browsePath(rawPath: string): Promise<BrowseResult> {
   if (!rawPath || !isAbsolute(rawPath)) {
     throw new Error("Path must be absolute");
   }
@@ -29,7 +29,7 @@ export function browsePath(rawPath: string): BrowseResult {
   // 校验 parent 存在且是目录
   let st;
   try {
-    st = statSync(parent);
+    st = await stat(parent);
   } catch {
     throw new Error(`Directory does not exist: ${parent}`);
   }
@@ -40,7 +40,7 @@ export function browsePath(rawPath: string): BrowseResult {
   // 读取目录
   let dirents;
   try {
-    dirents = readdirSync(parent, { withFileTypes: true });
+    dirents = await readdir(parent, { withFileTypes: true });
   } catch (err) {
     throw new Error(
       `Cannot read directory: ${parent} (${(err as Error).message})`,

@@ -51,9 +51,6 @@ interface InstanceRecord {
   info: InstanceInfo;
 }
 
-/** Spawn 等待记录 */
-// 已迁移到 PendingRequests 通用工具
-
 class HubEdgeRegistry {
   private edges = new Map<string, EdgeRecord>();
   private instances = new Map<InstanceId, InstanceRecord>();
