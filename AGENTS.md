@@ -33,8 +33,8 @@ bun test         # 运行测试
 src/
 ├── protocol/types.ts          # 所有消息类型 + 常量（含 Edge 协议）
 ├── cli/                       # paimon CLI 入口（hub / edge / attach 子命令）
-├── hub/                       # Hub 服务端（edge-registry / router / logger）
-├── edge/                      # Edge 服务端（registry / router / upstream / spawner）
+├── hub/                       # Hub 服务端（edge-registry / router / pending / logger）
+├── edge/                      # Edge 服务端（registry / router / upstream / spawner / browser）
 ├── utils/                     # 后端共享工具函数（host 判断与警告等）
 ├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化 + session 控制）
 └── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
@@ -61,6 +61,8 @@ src/
 - **停止信号语义** — `paimon hub stop` / `paimon edge stop` 用 SIGTERM 仅杀对应 daemon 自身。Edge spawn 的 pi 子进程以 `detached: true`（setsid）脱离 Edge 进程组，不会被连带杀死
 - **页面创建实例通过 Edge** — Web 点 “+” 选择 Edge 节点 + 输入 cwd → `POST /api/instances` → Hub 向指定 Edge 发 spawn 指令 → Edge 在本机 spawn `pi --mode rpc`。关键细节：① RPC 模式从 stdin 读命令，stdin EOF 即退出；而 paimon 对话全程走 WS 不需 stdin，故用 **`O_RDWR` 打开的 FIFO** 作 stdin。② `detached: true` + `unref()` 让 pi 脱离 Edge，Edge 退出/重启不影响 pi。③ spawn 时注入 `PAIMON_SPAWN_TOKEN`，extension 注册时回传该 token，Edge 据此把 spawn 请求与注册成功的实例对应，然后上报 Hub。运行时文件在 `~/.paimon/instances/`
 - **页面创建实例由 Edge 执行** — Hub 将 spawn 指令转发给指定 Edge，Edge 在本机起进程。多机场景下前端选择目标 Edge 节点
+- **Hub→Edge request-response 通用模式** — `src/hub/pending.ts` 提供 `PendingRequests<T>` 泛型工具，基于 token 匹配 WS 异步请求与响应。spawn 和目录浏览（browse）均使用此模式
+- **目录浏览 API** — `GET /api/edges/:edgeId/browse?path=xxx`，Hub 转发给 Edge 执行 readdir。Edge 解析 parent/prefix（路径以 `/` 结尾列全部，否则以末段为前缀过滤），仅返回子目录，默认隐藏 dotfiles（前缀以 `.` 开头时显示），最多 200 条（截断时标记 `truncated`）。前端据此实现类 VS Code 的路径补全选择器
 - **bind 地址与安全** — Hub 和 Edge 默认 bind `127.0.0.1`（仅本机）。`--host` 可指定；非 loopback 时 CLI 和日志都会警告
 - **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs`、`paimon edge start/stop/status/logs` 和 `paimon attach` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
 - **attach = 迁移而非双向接管** — pi 不支持同一 session 文件被多进程同时写，所以 `paimon attach` 的语义是：先调 `POST /api/instance/:id/shutdown` 关闭目标实例 → 轮询其从列表消失（3s 超时）→ 本地 `pi --session <sessionId>`（cwd=实例 cwd，stdio inherit）。过滤条件为 hostname + cwd 双重匹配（均 realpath 规范化）。被 attach 的原实例会退出由用户负责
