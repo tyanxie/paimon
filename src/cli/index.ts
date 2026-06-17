@@ -5,11 +5,12 @@ import { program } from "@commander-js/extra-typings";
 import { registerHubCommand } from "./commands/hub";
 import { registerEdgeCommand } from "./commands/edge";
 import { registerAttachCommand } from "./commands/attach";
+import pkg from "../../package.json";
 
 program
   .name("paimon")
   .description("Remote observation and control panel for pi coding agent")
-  .version("0.1.0");
+  .version(pkg.version);
 
 registerHubCommand(program);
 registerEdgeCommand(program);
