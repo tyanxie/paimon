@@ -45,6 +45,7 @@ export function useWebSocket({
     let pongTimeout: ReturnType<typeof setTimeout> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let disposed = false;
+    let hasOpened = false;
 
     function startHeartbeat(ws: WebSocket) {
       pingTimer = setInterval(() => {
@@ -74,6 +75,7 @@ export function useWebSocket({
       wsRef.current = ws;
 
       ws.onopen = () => {
+        hasOpened = true;
         setConnected(true);
         // 请求实例列表
         ws.send(JSON.stringify({ type: "list" }));
@@ -104,16 +106,17 @@ export function useWebSocket({
 
         // HTTP 401 → WS 升级失败，Bun 返回 close code 但不会触发 onopen。
         // 不同浏览器行为略有差异，但通常 code=1006 且从未 open 过。
-        // 我们额外通过尝试 fetch 来确认是否 401。
-        if (!disposed && event.code === 1006 && !connected) {
-          // 尝试用 HTTP 请求确认是否 token 无效
-          fetch(`/api/health`)
+        // 用认证接口精确判断是否 token 无效（避免 health 无需认证导致误判）。
+        if (!disposed && event.code === 1006 && !hasOpened) {
+          const headers: HeadersInit = {};
+          if (token) headers["Authorization"] = `Bearer ${token}`;
+          fetch("/api/instances", { headers })
             .then((r) => {
-              // health 不需认证，如果能通但 WS 被拒，说明是 token 问题
-              if (r.ok) {
+              if (r.status === 401) {
+                // 明确 401，token 无效
                 onAuthErrorRef.current?.();
               } else {
-                // Hub 整体不可用，正常重连
+                // 非 401（可能网络抖动/服务瞬断后恢复），正常重连
                 scheduleReconnect();
               }
             })

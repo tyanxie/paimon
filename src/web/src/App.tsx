@@ -9,11 +9,8 @@ import { Sidebar } from "./components/Sidebar";
 import { EventStream } from "./components/EventStream";
 import { Settings } from "./components/Settings";
 import { NewInstanceModal } from "./components/ui/NewInstanceModal";
-import {
-  LoginPage,
-  getStoredToken,
-  clearStoredToken,
-} from "./components/LoginPage";
+import { LoginPage } from "./components/LoginPage";
+import { getStoredToken, clearStoredToken } from "./utils/token";
 import type { InstanceId, ThinkingLevel } from "../../protocol/types";
 
 /** 从 URL pathname 派生当前选中的实例 ID */

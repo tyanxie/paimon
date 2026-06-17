@@ -4,24 +4,7 @@
 
 import { useState, useCallback, type FormEvent } from "react";
 import { useLogoSrc } from "../hooks/useLogoSrc";
-
-/** localStorage key */
-const TOKEN_KEY = "paimon:accessToken";
-
-/** 读取已存储的 token */
-export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-/** 存储 token */
-export function setStoredToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-}
-
-/** 清除 token */
-export function clearStoredToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
-}
+import { setStoredToken } from "../utils/token";
 
 interface LoginPageProps {
   /** 提交 token 后的回调 */

@@ -8,7 +8,7 @@ import { DEFAULTS } from "../protocol/types";
 import type { EdgeState } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
 import { maskToken } from "../hub/auth";
-import { readHubState, type TokenOption } from "./daemon";
+import { readHubState } from "./daemon";
 
 /** 状态目录 */
 const STATE_DIR = resolve(homedir(), ".paimon");
@@ -80,16 +80,15 @@ type EdgeTokenSource = "env" | "--token" | "hub.json";
 
 /**
  * 确定 Edge 连接 Hub 的 access token。
- * 优先级：环境变量 > TokenOption > hub.json。
+ * 优先级：环境变量 > 显式传入 > hub.json。
  * 全部找不到时返回 null（不携带 token 连接，会被 Hub 拒绝）。
  */
 async function resolveEdgeToken(
-  option?: TokenOption,
+  explicitToken?: string,
 ): Promise<{ token: string; source: EdgeTokenSource } | null> {
   const envToken = process.env.PAIMON_ACCESS_TOKEN;
   if (envToken) return { token: envToken, source: "env" };
-  if (option)
-    return { token: option.token, source: option.source as EdgeTokenSource };
+  if (explicitToken) return { token: explicitToken, source: "--token" };
   // 同机 fallback：尝试从 hub.json 读取
   const hubState = await readHubState();
   if (hubState?.accessToken) {
@@ -104,7 +103,7 @@ export async function startEdgeDaemon(
   host: string,
   edgeId: string,
   hubUrl: string,
-  tokenOption?: TokenOption,
+  explicitToken?: string,
 ): Promise<void> {
   // 检查是否已在运行
   const existing = await readEdgeState();
@@ -122,7 +121,7 @@ export async function startEdgeDaemon(
   const logPath = getEdgeStatePath(DEFAULTS.EDGE_LOG_FILE);
 
   // 解析 access token
-  const tokenResult = await resolveEdgeToken(tokenOption);
+  const tokenResult = await resolveEdgeToken(explicitToken);
 
   const logFd = openSync(logPath, "a");
 

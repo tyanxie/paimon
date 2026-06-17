@@ -13,6 +13,7 @@ export type UpstreamConnectionHandler = () => void;
 export class UpstreamClient {
   private ws: WebSocket | null = null;
   private url: string;
+  private displayUrl: string; // 不含 token 的显示用 URL
   private reconnectIndex = 0;
   private reconnectTimer: Timer | null = null;
   private onMessage: UpstreamMessageHandler;
@@ -32,6 +33,7 @@ export class UpstreamClient {
     // 确保路径正确，并附带 token query 参数
     const base = options.hubUrl.replace(/\/$/, "");
     const wsPath = base.endsWith("/ws/edge") ? base : `${base}/ws/edge`;
+    this.displayUrl = wsPath; // 日志中使用，不含 token
     if (options.accessToken) {
       const urlObj = new URL(wsPath);
       urlObj.searchParams.set("token", options.accessToken);
@@ -82,7 +84,7 @@ export class UpstreamClient {
       this.ws.onopen = () => {
         this._connected = true;
         this.reconnectIndex = 0;
-        log.info(`Connected to Hub: ${this.url}`);
+        log.info(`Connected to Hub: ${this.displayUrl}`);
         this.onConnected();
       };
 

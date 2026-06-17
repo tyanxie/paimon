@@ -73,19 +73,19 @@ async function readLogTail(logPath: string, lines = 20): Promise<string> {
   }
 }
 
-/** Token 来源描述 */
-type TokenSource = "env" | "--token" | "inherited" | "auto-generated";
+/** Hub Token 来源描述 */
+type HubTokenSource = "env" | "--token" | "inherited" | "auto-generated";
 
 /** Token 参数：带来源信息的 token */
 export interface TokenOption {
   token: string;
-  source: TokenSource;
+  source: HubTokenSource;
 }
 
 /** 确定 access token：环境变量 > 显式传入 > 自动生成 */
 function resolveAccessToken(option?: TokenOption): {
   token: string;
-  source: TokenSource;
+  source: HubTokenSource;
 } {
   const envToken = process.env.PAIMON_ACCESS_TOKEN;
   if (envToken) return { token: envToken, source: "env" };
@@ -187,6 +187,7 @@ export async function startDaemon(
 
   console.log(`Hub started (PID: ${child.pid}, port: ${port}, host: ${host})`);
   console.log(`  Web UI: http://${healthHost}:${port}`);
+  // 有意打印完整 token：用户首次启动时需要复制 token 用于 Web 登录和 Edge 配置
   console.log(`  Token:  ${accessToken} (${tokenSource})`);
   console.log(`  Logs:   ${logPath}`);
 

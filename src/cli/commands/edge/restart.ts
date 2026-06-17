@@ -7,7 +7,6 @@ import {
   stopEdgeDaemon,
   startEdgeDaemon,
 } from "../../edge-daemon";
-import type { TokenOption } from "../../daemon";
 
 export async function handleEdgeRestart(
   port: number | undefined,
@@ -29,15 +28,5 @@ export async function handleEdgeRestart(
   }
 
   await stopEdgeDaemon();
-
-  const tokenOption: TokenOption | undefined = token
-    ? { token, source: "--token" }
-    : undefined;
-  await startEdgeDaemon(
-    finalPort,
-    finalHost,
-    finalEdgeId,
-    finalHubUrl,
-    tokenOption,
-  );
+  await startEdgeDaemon(finalPort, finalHost, finalEdgeId, finalHubUrl, token);
 }

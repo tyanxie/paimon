@@ -41,7 +41,7 @@ export function extractToken(req: Request): string | null {
 
 /**
  * 验证 token 是否匹配（常量时间比较，防时序攻击）。
- * 认证关闭时始终返回 true。
+ * 注意：本函数不检查认证开关，调用方需自行判断 isAuthDisabled()。
  */
 export function verifyAccessToken(
   provided: string | null,
