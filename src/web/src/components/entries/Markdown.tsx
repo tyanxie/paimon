@@ -278,7 +278,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
   if (!content.trim()) return null;
 
   return (
-    <div className="markdown-body overflow-hidden">
+    <div className="markdown-body min-w-0 max-w-full break-words">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkFrontmatter, remarkFrontmatterToCode]}
         rehypePlugins={[rehypeHighlight]}
