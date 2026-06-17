@@ -123,11 +123,17 @@ export async function startDaemon(
   const { token: accessToken, source: tokenSource } =
     resolveAccessToken(tokenOption);
 
-  // Fork Hub 进程
-  const hubEntry = resolve(import.meta.dirname!, "../hub/index.ts");
-  const child = Bun.spawn(["bun", "run", hubEntry], {
+  // Fork Hub 进程：通过 PAIMON_ROLE 环境变量让同一二进制以 hub 角色启动
+  // 编译后二进制直接 spawn 自身；源码模式需要带上入口脚本
+  const isCompiled = import.meta.path.startsWith("/$bunfs/");
+  const cliEntry = resolve(import.meta.dirname!, "index.ts");
+  const spawnArgs = isCompiled
+    ? [process.execPath]
+    : [process.execPath, cliEntry];
+  const child = Bun.spawn(spawnArgs, {
     env: {
       ...process.env,
+      PAIMON_ROLE: "hub",
       PAIMON_PORT: String(port),
       PAIMON_HOST: host,
       PAIMON_ACCESS_TOKEN: accessToken,

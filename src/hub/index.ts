@@ -4,7 +4,7 @@
 // Edge 通过 /ws/edge 连接 Hub，Browser 通过 /ws/browser 连接。
 
 import { existsSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { resolve, dirname, sep } from "node:path";
 import type { ServerWebSocket, Server, BunRequest } from "bun";
 import { randomUUID } from "node:crypto";
 import { DEFAULTS } from "../protocol/types";
@@ -28,8 +28,11 @@ const host = process.env.PAIMON_HOST || DEFAULTS.HOST;
 const accessToken = process.env.PAIMON_ACCESS_TOKEN || "";
 const authEnabled = !isAuthDisabled() && accessToken.length > 0;
 
-// 静态文件目录：相对于项目根 dist/web
-const webDir = resolve(import.meta.dir, "../../dist/web");
+// 静态文件目录：编译模式从二进制同级 web/ 读取，源码模式从项目根 dist/web 读取
+const isCompiled = import.meta.path.startsWith("/$bunfs/");
+const webDir = isCompiled
+  ? resolve(dirname(process.execPath), "web")
+  : resolve(import.meta.dir, "../../dist/web");
 
 // 启动前校验 dist/web 存在
 if (!existsSync(webDir)) {

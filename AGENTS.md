@@ -57,7 +57,7 @@ src/
 - **Grace period 在 Edge 级别** — Edge 断连时其下所有 instance 整体进入 grace period，超时后批量移除
 - **开发模式不是 Vite dev server** — `bun run dev` 实际执行 `vite build && concurrently`（先构建再 watch），Web 端通过 Hub 的 HTTP 服务访问静态文件，不走 Vite 自带 dev server
 - **Hub 启动依赖构建产物** — Hub 启动前 `dist/web/` 必须存在，否则进程直接退出。开发时需先 `vite build` 或使用 `bun run dev`
-- **Daemon 进程模型** — Hub 和 Edge 均通过 `Bun.spawn` 以 `detached: true`（POSIX setsid）fork 子进程，父进程 `child.unref()` 后立即退出。stdout/stderr 通过文件 fd 直传日志文件；启动后轮询 `/api/health` 确认就绪。状态文件存储在 `~/.paimon/`
+- **Daemon 进程模型** — Hub 和 Edge 均通过 `Bun.spawn` 以 `detached: true`（POSIX setsid）fork 子进程，父进程 `child.unref()` 后立即退出。stdout/stderr 通过文件 fd 直传日志文件；启动后轮询 `/api/health` 确认就绪。状态文件存储在 `~/.paimon/`。Daemon 通过 `PAIMON_ROLE=hub|edge` 环境变量区分角色——源码模式 spawn `[bun, cli/index.ts]`，编译模式 spawn `[process.execPath]`（二进制自身），CLI 入口顶部根据该变量路由到对应模块
 - **停止信号语义** — `paimon hub stop` / `paimon edge stop` 用 SIGTERM 仅杀对应 daemon 自身。Edge spawn 的 pi 子进程以 `detached: true`（setsid）脱离 Edge 进程组，不会被连带杀死
 - **页面创建实例通过 Edge** — Web 点 “+” 选择 Edge 节点 + 输入 cwd → `POST /api/instances` → Hub 向指定 Edge 发 spawn 指令 → Edge 在本机 spawn `pi --mode rpc`。关键细节：① RPC 模式从 stdin 读命令，stdin EOF 即退出；而 paimon 对话全程走 WS 不需 stdin，故用 **`O_RDWR` 打开的 FIFO** 作 stdin。② `detached: true` + `unref()` 让 pi 脱离 Edge，Edge 退出/重启不影响 pi。③ spawn 时注入 `PAIMON_SPAWN_TOKEN`，extension 注册时回传该 token，Edge 据此把 spawn 请求与注册成功的实例对应，然后上报 Hub。运行时文件在 `~/.paimon/instances/`
 - **页面创建实例由 Edge 执行** — Hub 将 spawn 指令转发给指定 Edge，Edge 在本机起进程。多机场景下前端选择目标 Edge 节点
@@ -69,7 +69,7 @@ src/
 - **Edge token 来源** — 优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 同机 hub.json fallback
 - **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs`、`paimon edge start/stop/status/logs` 和 `paimon attach` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
 - **attach = 迁移而非双向接管** — pi 不支持同一 session 文件被多进程同时写，所以 `paimon attach` 的语义是：先调 `POST /api/instance/:id/shutdown` 关闭目标实例 → 轮询其从列表消失（3s 超时）→ 本地 `pi --session <sessionId>`（cwd=实例 cwd，stdio inherit）。过滤条件为 hostname + cwd 双重匹配（均 realpath 规范化）。被 attach 的原实例会退出由用户负责
-- **CLI 全局安装走 `bun link`** — `package.json` 的 `bin` 指向 `src/cli/index.ts`（非编译产物），bun 直接执行带 shebang 的 ts 源码。`bun link` 在 `~/.bun/bin/` 建软链接回 clone 目录，`bun unlink` 解除。整条链路（CLI → daemon fork `src/hub/index.ts` 或 `src/edge/index.ts` → hub/edge 运行）全程跑 ts 源码
+- **CLI 全局安装走 `bun link`** — `package.json` 的 `bin` 指向 `src/cli/index.ts`（非编译产物），bun 直接执行带 shebang 的 ts 源码。`bun link` 在 `~/.bun/bin/` 建软链接回 clone 目录，`bun unlink` 解除。CLI 入口统一为 `src/cli/index.ts`，通过 `PAIMON_ROLE` 环境变量区分角色（见 Daemon 进程模型）
 
 ## 代码规范
 
