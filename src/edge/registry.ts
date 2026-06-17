@@ -7,6 +7,7 @@ import { createHash } from "crypto";
 import type { ServerWebSocket } from "bun";
 import type {
   InstanceId,
+  InstanceInfo,
   InstanceStatus,
   ModelInfo,
   ContextUsageInfo,
@@ -21,27 +22,9 @@ export interface EdgeWsData {
   instanceId?: InstanceId;
 }
 
-/** 本地实例信息（Edge 侧存储，不含 edgeId） */
-export interface LocalInstanceInfo {
-  instanceId: InstanceId;
-  hostname: string;
-  cwd: string;
-  model: ModelInfo;
-  sessionId?: string;
-  sessionName?: string;
-  pid: number;
-  status: InstanceStatus;
-  availableModels?: ModelInfo[];
-  contextUsage?: ContextUsageInfo;
-  gitBranch?: string | null;
-  thinkingLevel?: ThinkingLevel;
-  connectedAt: number;
-  lastHeartbeat: number;
-}
-
 /** 实例注册记录 */
 interface InstanceRecord {
-  info: LocalInstanceInfo;
+  info: InstanceInfo;
   ws: ServerWebSocket<EdgeWsData> | null;
   heartbeatTimer?: Timer;
   graceTimer?: Timer;
@@ -55,12 +38,18 @@ function computeInstanceId(hostname: string, pid: number): InstanceId {
 export type InstanceChangeCallback = (
   event: "registered" | "updated" | "unregistered",
   instanceId: InstanceId,
-  info?: LocalInstanceInfo,
+  info?: InstanceInfo,
 ) => void;
 
 class EdgeRegistry {
   private instances = new Map<InstanceId, InstanceRecord>();
   private onChange: InstanceChangeCallback | null = null;
+  /** 本 Edge 的标识 */
+  readonly edgeId: string;
+
+  constructor(edgeId: string) {
+    this.edgeId = edgeId;
+  }
 
   /** 设置变更回调（upstream 用于同步到 Hub） */
   setChangeCallback(cb: InstanceChangeCallback): void {
@@ -124,8 +113,9 @@ class EdgeRegistry {
     }
 
     // 全新实例
-    const info: LocalInstanceInfo = {
-      instanceId: id,
+    const info: InstanceInfo = {
+      id,
+      edgeId: this.edgeId,
       hostname: payload.hostname,
       cwd: payload.cwd,
       model: payload.model,
@@ -232,12 +222,12 @@ class EdgeRegistry {
   }
 
   /** 获取实例信息 */
-  getInstance(id: InstanceId): LocalInstanceInfo | undefined {
+  getInstance(id: InstanceId): InstanceInfo | undefined {
     return this.instances.get(id)?.info;
   }
 
   /** 获取所有实例 */
-  getAllInstances(): LocalInstanceInfo[] {
+  getAllInstances(): InstanceInfo[] {
     return Array.from(this.instances.values()).map((r) => r.info);
   }
 
@@ -261,5 +251,8 @@ class EdgeRegistry {
   }
 }
 
-// 单例
-export const edgeRegistry = new EdgeRegistry();
+// 单例（edgeId 从环境变量或 hostname 取得，与 index.ts 保持一致）
+import { hostname as osHostname } from "node:os";
+export const edgeRegistry = new EdgeRegistry(
+  process.env.PAIMON_EDGE_ID || osHostname(),
+);

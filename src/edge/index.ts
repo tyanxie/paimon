@@ -7,9 +7,12 @@
 // - 在本机 spawn pi 实例
 
 import { hostname, homedir } from "node:os";
-import type { ServerWebSocket, Server } from "bun";
-import { DEFAULTS, type InstanceId } from "../protocol/types";
-import type { LocalInstanceInfo } from "./registry";
+import type { ServerWebSocket, Server, BunRequest } from "bun";
+import {
+  DEFAULTS,
+  type InstanceId,
+  type InstanceInfo,
+} from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
 import { edgeRegistry, type EdgeWsData } from "./registry";
 import { UpstreamClient } from "./upstream";
@@ -48,7 +51,7 @@ const upstream = new UpstreamClient({
       upstream.send({
         type: "instance_register",
         payload: {
-          instanceId: inst.instanceId,
+          instanceId: inst.id,
           hostname: inst.hostname,
           cwd: inst.cwd,
           model: inst.model,
@@ -76,7 +79,7 @@ edgeRegistry.setChangeCallback(
   (
     event: "registered" | "updated" | "unregistered",
     instanceId: InstanceId,
-    info?: LocalInstanceInfo,
+    info?: InstanceInfo,
   ) => {
     if (!upstream.connected) return;
 
@@ -139,6 +142,28 @@ const server = Bun.serve<EdgeWsData>({
     "/api/health": {
       GET: () =>
         Response.json({ status: "ok", edgeId, uptime: process.uptime() }),
+    },
+    // CLI（如 paimon attach）通过本机 Edge 获取实例列表
+    "/api/instances": {
+      GET: () => Response.json({ instances: edgeRegistry.getAllInstances() }),
+    },
+    // CLI 通过本机 Edge 直接关闭实例
+    "/api/instance/:id/shutdown": {
+      POST: (req: BunRequest<"/api/instance/:id/shutdown">) => {
+        const id = req.params.id;
+        const inst = edgeRegistry.getInstance(id);
+        if (!inst) {
+          return Response.json(
+            { error: `Instance ${id} not found` },
+            { status: 404 },
+          );
+        }
+        const ws = edgeRegistry.getInstanceWs(id);
+        if (ws) {
+          ws.send(JSON.stringify({ type: "shutdown" }));
+        }
+        return Response.json({ ok: true });
+      },
     },
   },
 

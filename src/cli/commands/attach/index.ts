@@ -3,7 +3,10 @@
 // 语义：pi 不支持同一 session 文件被多进程同时写，因此 attach = 先关闭目标实例，
 // 再在本地用同一 session 起一个带 TUI 的 pi。被 attach 的原实例（无论 rpc 还是 tui）
 // 都会退出，这是设计本意，由用户自行负责选择目标。
-// 本地新起的 pi 会重新注册到 Hub（新 pid → 新 instanceId），attach 后 Web 上依然可见。
+// 本地新起的 pi 会重新注册到 Edge（新 pid → 新 instanceId），attach 后 Web 上依然可见。
+//
+// 架构说明：attach 是纯本机行为，直接与本机 Edge 交互，无需连接 Hub、
+// 无需认证（Edge 仅 bind loopback，同机天然信任）。
 
 import type { Command } from "@commander-js/extra-typings";
 import { createInterface } from "node:readline/promises";
@@ -11,7 +14,7 @@ import { hostname } from "node:os";
 import { realpathSync } from "node:fs";
 import type { InstanceInfo } from "../../../protocol/types";
 import { DEFAULTS } from "../../../protocol/types";
-import { readHubState } from "../../daemon";
+import { readEdgeState } from "../../edge-daemon";
 
 /** 轮询实例消失的超时（毫秒） */
 const SHUTDOWN_TIMEOUT_MS = 3000;
@@ -27,17 +30,17 @@ function normalizePath(p: string): string {
   }
 }
 
-/** 解析 Hub 基地址：优先读 hub.json，缺失降级默认值 */
+/** 解析 Edge 基地址：读 edge.json，缺失降级默认值 */
 async function resolveBaseUrl(): Promise<string> {
-  const state = await readHubState();
+  const state = await readEdgeState();
   const host =
     state?.host === "0.0.0.0" || !state?.host ? "127.0.0.1" : state.host;
-  const port = state?.port ?? DEFAULTS.PORT;
+  const port = state?.port ?? DEFAULTS.EDGE_PORT;
   return `http://${host}:${port}`;
 }
 
-/** 探活：Hub 未运行则提示并退出 */
-async function ensureHubRunning(baseUrl: string): Promise<void> {
+/** 探活：Edge 未运行则提示并退出 */
+async function ensureEdgeRunning(baseUrl: string): Promise<void> {
   try {
     const res = await fetch(`${baseUrl}/api/health`, {
       signal: AbortSignal.timeout(1000),
@@ -46,15 +49,15 @@ async function ensureHubRunning(baseUrl: string): Promise<void> {
   } catch {
     // fall through
   }
-  console.error("Hub is not running. Run 'paimon hub start' first.");
+  console.error("Edge is not running. Run 'paimon edge start' first.");
   process.exit(1);
 }
 
-/** 拉取实例列表 */
+/** 拉取本机实例列表 */
 async function fetchInstances(baseUrl: string): Promise<InstanceInfo[]> {
   const res = await fetch(`${baseUrl}/api/instances`);
   if (!res.ok) {
-    console.error(`Failed to fetch instances (HTTP ${res.status}).`);
+    console.error(`Failed to fetch instances from Edge (HTTP ${res.status}).`);
     process.exit(1);
   }
   const data = (await res.json()) as { instances: InstanceInfo[] };
@@ -104,13 +107,13 @@ async function confirm(message: string): Promise<boolean> {
   }
 }
 
-/** 请求 Hub 关闭目标实例 */
+/** 请求 Edge 关闭目标实例 */
 async function requestShutdown(baseUrl: string, id: string): Promise<void> {
   const res = await fetch(`${baseUrl}/api/instance/${id}/shutdown`, {
     method: "POST",
   });
   if (!res.ok) {
-    console.error(`Failed to stop instance (HTTP ${res.status}).`);
+    console.error(`Failed to stop instance via Edge (HTTP ${res.status}).`);
     process.exit(1);
   }
 }
@@ -148,7 +151,7 @@ async function spawnLocalPi(cwd: string, sessionId: string): Promise<number> {
 /** attach 命令的核心逻辑 */
 async function handleAttach(idPrefix: string | undefined): Promise<void> {
   const baseUrl = await resolveBaseUrl();
-  await ensureHubRunning(baseUrl);
+  await ensureEdgeRunning(baseUrl);
 
   const allInstances = await fetchInstances(baseUrl);
 
