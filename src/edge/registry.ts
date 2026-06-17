@@ -14,6 +14,7 @@ import type {
   ThinkingLevel,
 } from "../protocol/types";
 import { DEFAULTS } from "../protocol/types";
+import { edgeId } from "./config";
 import * as log from "./logger";
 
 /** WebSocket 上下文附加数据 */
@@ -251,8 +252,5 @@ class EdgeRegistry {
   }
 }
 
-// 单例（edgeId 从环境变量或 hostname 取得，与 index.ts 保持一致）
-import { hostname as osHostname } from "node:os";
-export const edgeRegistry = new EdgeRegistry(
-  process.env.PAIMON_EDGE_ID || osHostname(),
-);
+// 单例
+export const edgeRegistry = new EdgeRegistry(edgeId);

@@ -14,6 +14,7 @@ import {
   type InstanceInfo,
 } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
+import { edgeId } from "./config";
 import { edgeRegistry, type EdgeWsData } from "./registry";
 import { UpstreamClient } from "./upstream";
 import { handleExtensionMessage, handleUpstreamMessage } from "./router";
@@ -24,7 +25,7 @@ const port = parseInt(
   10,
 );
 const host = process.env.PAIMON_EDGE_HOST || DEFAULTS.EDGE_HOST;
-const edgeId = process.env.PAIMON_EDGE_ID || hostname();
+
 const hubUrl = process.env.PAIMON_HUB_URL || DEFAULTS.EDGE_HUB_URL;
 const accessToken = process.env.PAIMON_ACCESS_TOKEN || "";
 
