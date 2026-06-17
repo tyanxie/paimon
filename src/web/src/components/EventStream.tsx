@@ -866,9 +866,10 @@ export function EventStream({
   }, [inputValue, instanceStatus, onSendMessage, startBottomFollow]);
 
   // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
+  // keyCode 229 用于拦截 Safari 上 IME 确认拼音时的回车（此时 isComposing 已为 false）
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.nativeEvent.isComposing) return;
+      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
