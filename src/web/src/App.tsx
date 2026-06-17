@@ -9,6 +9,11 @@ import { Sidebar } from "./components/Sidebar";
 import { EventStream } from "./components/EventStream";
 import { Settings } from "./components/Settings";
 import { NewInstanceModal } from "./components/ui/NewInstanceModal";
+import {
+  LoginPage,
+  getStoredToken,
+  clearStoredToken,
+} from "./components/LoginPage";
 import type { InstanceId, ThinkingLevel } from "../../protocol/types";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -19,6 +24,22 @@ function useSelectedInstanceId(): InstanceId | null {
 }
 
 export default function App() {
+  // ── 认证状态 ──
+  const [authToken, setAuthToken] = useState<string | null>(getStoredToken());
+  const [authError, setAuthError] = useState(false);
+
+  const handleLogin = useCallback((token: string) => {
+    setAuthError(false);
+    setAuthToken(token);
+  }, []);
+
+  const handleAuthError = useCallback(() => {
+    // token 无效，清除并回到登录页
+    clearStoredToken();
+    setAuthToken(null);
+    setAuthError(true);
+  }, []);
+
   const {
     instances,
     entries,
@@ -40,7 +61,11 @@ export default function App() {
     clearSessionChanged,
   } = useAppState();
 
-  const { connected, send } = useWebSocket(handleMessage);
+  const { connected, send } = useWebSocket({
+    token: authToken,
+    onMessage: handleMessage,
+    onAuthError: handleAuthError,
+  });
   const navigate = useNavigate();
   useViewportHeight();
   const selectedInstanceId = useSelectedInstanceId();
@@ -242,6 +267,15 @@ export default function App() {
     startLoadMore,
     send,
   ]);
+
+  // 未认证时显示登录页
+  if (!authToken) {
+    return (
+      <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-stretch overflow-hidden">
+        <LoginPage onLogin={handleLogin} error={authError} />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-stretch p-2 gap-2 md:p-3 md:gap-3 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">

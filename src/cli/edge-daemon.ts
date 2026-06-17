@@ -7,6 +7,8 @@ import { openSync, closeSync } from "node:fs";
 import { DEFAULTS } from "../protocol/types";
 import type { EdgeState } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
+import { maskToken } from "../hub/auth";
+import { readHubState, type TokenOption } from "./daemon";
 
 /** 状态目录 */
 const STATE_DIR = resolve(homedir(), ".paimon");
@@ -73,12 +75,36 @@ async function readLogTail(logPath: string, lines = 20): Promise<string> {
   }
 }
 
+/** Token 来源描述 */
+type EdgeTokenSource = "env" | "--token" | "hub.json";
+
+/**
+ * 确定 Edge 连接 Hub 的 access token。
+ * 优先级：环境变量 > TokenOption > hub.json。
+ * 全部找不到时返回 null（不携带 token 连接，会被 Hub 拒绝）。
+ */
+async function resolveEdgeToken(
+  option?: TokenOption,
+): Promise<{ token: string; source: EdgeTokenSource } | null> {
+  const envToken = process.env.PAIMON_ACCESS_TOKEN;
+  if (envToken) return { token: envToken, source: "env" };
+  if (option)
+    return { token: option.token, source: option.source as EdgeTokenSource };
+  // 同机 fallback：尝试从 hub.json 读取
+  const hubState = await readHubState();
+  if (hubState?.accessToken) {
+    return { token: hubState.accessToken, source: "hub.json" };
+  }
+  return null;
+}
+
 /** 启动 Edge daemon */
 export async function startEdgeDaemon(
   port: number,
   host: string,
   edgeId: string,
   hubUrl: string,
+  tokenOption?: TokenOption,
 ): Promise<void> {
   // 检查是否已在运行
   const existing = await readEdgeState();
@@ -95,6 +121,9 @@ export async function startEdgeDaemon(
   await ensureStateDir();
   const logPath = getEdgeStatePath(DEFAULTS.EDGE_LOG_FILE);
 
+  // 解析 access token
+  const tokenResult = await resolveEdgeToken(tokenOption);
+
   const logFd = openSync(logPath, "a");
 
   const edgeEntry = resolve(import.meta.dirname!, "../edge/index.ts");
@@ -105,6 +134,7 @@ export async function startEdgeDaemon(
       PAIMON_EDGE_HOST: host,
       PAIMON_EDGE_ID: edgeId,
       PAIMON_HUB_URL: hubUrl,
+      ...(tokenResult ? { PAIMON_ACCESS_TOKEN: tokenResult.token } : {}),
     },
     stdin: "ignore",
     stdout: logFd,
@@ -152,8 +182,15 @@ export async function startEdgeDaemon(
   });
 
   console.log(`Edge started (PID: ${child.pid}, port: ${port}, id: ${edgeId})`);
-  console.log(`  Hub: ${hubUrl}`);
-  console.log(`  Logs: ${logPath}`);
+  console.log(`  Hub:   ${hubUrl}`);
+  if (tokenResult) {
+    console.log(
+      `  Token: ${maskToken(tokenResult.token)} (from ${tokenResult.source})`,
+    );
+  } else {
+    console.warn(`  Token: (none) — Hub may reject connection`);
+  }
+  console.log(`  Logs:  ${logPath}`);
 
   if (!isLoopbackHost(host)) {
     console.warn(`\n${nonLoopbackWarning(host)}`);

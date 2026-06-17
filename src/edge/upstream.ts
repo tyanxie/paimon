@@ -23,14 +23,22 @@ export class UpstreamClient {
 
   constructor(options: {
     hubUrl: string;
+    accessToken?: string;
     onMessage: UpstreamMessageHandler;
     onConnected: UpstreamConnectionHandler;
     onDisconnected: UpstreamConnectionHandler;
   }) {
     // hubUrl 可能是 ws://host:port 或 ws://host:port/ws/edge
-    // 确保路径正确
+    // 确保路径正确，并附带 token query 参数
     const base = options.hubUrl.replace(/\/$/, "");
-    this.url = base.endsWith("/ws/edge") ? base : `${base}/ws/edge`;
+    const wsPath = base.endsWith("/ws/edge") ? base : `${base}/ws/edge`;
+    if (options.accessToken) {
+      const urlObj = new URL(wsPath);
+      urlObj.searchParams.set("token", options.accessToken);
+      this.url = urlObj.toString();
+    } else {
+      this.url = wsPath;
+    }
     this.onMessage = options.onMessage;
     this.onConnected = options.onConnected;
     this.onDisconnected = options.onDisconnected;

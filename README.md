@@ -17,6 +17,7 @@ Paimon，让你能在浏览器里跟所有 [Pi](https://pi.dev/) 实例对话。
 - 🌐 **多机支持** — 中心化 Hub + 分布式 Edge，管理多台服务器上的 pi 实例
 - ➕ **页面创建实例** — 选择 Edge 节点 + 路径选择器
 - 📋 **Session 管理** — 浏览历史 session，一键新建或切换
+- 🔒 **访问认证** — Access Token 保护所有 API 和 WebSocket 连接
 - 🎨 **毛玻璃风格界面** — 清爽的 macOS 风格设计
 - 📱 **响应式设计** — 桌面/移动端自适应，iOS Safe Area 适配
 
@@ -60,7 +61,7 @@ paimon edge start
 # 启动 pi
 pi
 
-# 打开浏览器
+# 打开浏览器（首次需输入启动时输出的 Access Token）
 open http://localhost:8080
 ```
 
@@ -73,27 +74,27 @@ open http://localhost:8080
 paimon hub start --host 0.0.0.0
 paimon edge start --hub ws://localhost:8080
 
-# 机器 B（远程服务器）
-paimon edge start --hub ws://<hub-ip>:8080
+# 机器 B（远程服务器，需指定 Hub 的 token）
+paimon edge start --hub ws://<hub-ip>:8080 --token <access-token>
 ```
 
 ## 🛠️ paimon CLI
 
-| 命令                                                                                   | 说明               |
-| -------------------------------------------------------------------------------------- | ------------------ |
-| `paimon hub start [--port 8080] [--host 127.0.0.1]`                                    | 启动 Hub daemon    |
-| `paimon hub stop`                                                                      | 停止 Hub           |
-| `paimon hub restart`                                                                   | 重启 Hub           |
-| `paimon hub status`                                                                    | 查看运行状态       |
-| `paimon hub logs [--follow]`                                                           | 查看日志           |
-| `paimon edge start [--port 8033] [--host 127.0.0.1] [--hub ws://...] [--edge-id <id>]` | 启动 Edge daemon   |
-| `paimon edge stop`                                                                     | 停止 Edge          |
-| `paimon edge restart`                                                                  | 重启 Edge          |
-| `paimon edge status`                                                                   | 查看运行状态       |
-| `paimon edge logs [--follow]`                                                          | 查看日志           |
-| `paimon attach [id]`                                                                   | 接管实例到当前终端 |
+| 命令                                                                                                     | 说明               |
+| -------------------------------------------------------------------------------------------------------- | ------------------ |
+| `paimon hub start [--port 8080] [--host 127.0.0.1] [--token <token>]`                                    | 启动 Hub daemon    |
+| `paimon hub stop`                                                                                        | 停止 Hub           |
+| `paimon hub restart [--token <token>]`                                                                   | 重启 Hub           |
+| `paimon hub status`                                                                                      | 查看运行状态       |
+| `paimon hub logs [--follow]`                                                                             | 查看日志           |
+| `paimon edge start [--port 8033] [--host 127.0.0.1] [--hub ws://...] [--edge-id <id>] [--token <token>]` | 启动 Edge daemon   |
+| `paimon edge stop`                                                                                       | 停止 Edge          |
+| `paimon edge restart [--token <token>]`                                                                  | 重启 Edge          |
+| `paimon edge status`                                                                                     | 查看运行状态       |
+| `paimon edge logs [--follow]`                                                                            | 查看日志           |
+| `paimon attach [id]`                                                                                     | 接管实例到当前终端 |
 
-> 🔒 `--host 0.0.0.0` 仅在可信网络使用（页面中指挥 Pi 可在目标机器执行任意命令）。
+> 🔒 即使有 Access Token 保护，`--host 0.0.0.0` 仍建议仅在可信网络使用——当前不支持 TLS，token 明文传输可能被网络嗅探。
 
 ## 🧹 卸载
 

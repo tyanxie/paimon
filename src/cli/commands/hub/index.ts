@@ -11,9 +11,10 @@ export function registerHubCommand(program: Command): void {
     .description("Start Hub daemon")
     .option("--port <port>", "port number", String(DEFAULTS.PORT))
     .option("--host <host>", "bind address", DEFAULTS.HOST)
+    .option("--token <token>", "access token (default: auto-generate)")
     .action(async (opts) => {
       const { handleStart } = await import("./start");
-      await handleStart(parseInt(opts.port), opts.host);
+      await handleStart(parseInt(opts.port), opts.host, opts.token);
     });
 
   hub
@@ -29,11 +30,13 @@ export function registerHubCommand(program: Command): void {
     .description("Restart Hub daemon")
     .option("--port <port>", "port number")
     .option("--host <host>", "bind address")
+    .option("--token <token>", "access token (default: auto-generate)")
     .action(async (opts) => {
       const { handleRestart } = await import("./restart");
       await handleRestart(
         opts.port ? parseInt(opts.port) : undefined,
         opts.host,
+        opts.token,
       );
     });
 

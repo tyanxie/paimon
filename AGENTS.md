@@ -33,7 +33,7 @@ bun test         # 运行测试
 src/
 ├── protocol/types.ts          # 所有消息类型 + 常量（含 Edge 协议）
 ├── cli/                       # paimon CLI 入口（hub / edge / attach 子命令）
-├── hub/                       # Hub 服务端（edge-registry / router / pending / logger）
+├── hub/                       # Hub 服务端（auth / edge-registry / router / pending / logger）
 ├── edge/                      # Edge 服务端（registry / router / upstream / spawner / browser）
 ├── utils/                     # 后端共享工具函数（host 判断与警告等）
 ├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化 + session 控制）
@@ -41,7 +41,7 @@ src/
     └── src/
         ├── stores/            # useAppState, useSettings（全局状态）
         ├── hooks/             # useWebSocket, useLogoSrc
-        ├── utils/             # 工具函数（status 状态判断等）
+        ├── utils/             # 工具函数（status 状态判断、authFetch 等）
         └── components/
             ├── ui/            # 通用组件（ModalShell, MobileNavBar 等）
             └── entries/       # 消息渲染器（Markdown, ThinkingBlock, ToolCallCard）
@@ -64,6 +64,9 @@ src/
 - **Hub→Edge request-response 通用模式** — `src/hub/pending.ts` 提供 `PendingRequests<T>` 泛型工具，基于 token 匹配 WS 异步请求与响应。spawn 和目录浏览（browse）均使用此模式
 - **目录浏览 API** — `GET /api/edges/:edgeId/browse?path=xxx`，Hub 转发给 Edge 执行 readdir。Edge 解析 parent/prefix（路径以 `/` 结尾列全部，否则以末段为前缀过滤），仅返回子目录，默认隐藏 dotfiles（前缀以 `.` 开头时显示），最多 200 条（截断时标记 `truncated`）。前端据此实现类 VS Code 的路径补全选择器
 - **bind 地址与安全** — Hub 和 Edge 默认 bind `127.0.0.1`（仅本机）。`--host` 可指定；非 loopback 时 CLI 和日志都会警告
+- **Access Token 认证** — Hub 启动时生成或接收 access token（优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 自动生成），写入 `hub.json`。Edge/Browser/HTTP API 连接 Hub 时必须携带 token（WS 通过 `?token=xxx`，HTTP 通过 `Authorization: Bearer xxx`）。`/api/health` 不需认证。`PAIMON_AUTH_DISABLED=1` 可关闭认证（仅开发调试）
+- **Token 生命周期** — token 存储于 `hub.json`，随 `paimon hub stop` 删除而失效。`paimon hub restart` 默认继承旧 token（显示来源为 `inherited`）。Pi Extension → Edge 不需认证（Edge 仅 bind loopback，天然同机信任）
+- **Edge token 来源** — 优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 同机 hub.json fallback
 - **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs`、`paimon edge start/stop/status/logs` 和 `paimon attach` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
 - **attach = 迁移而非双向接管** — pi 不支持同一 session 文件被多进程同时写，所以 `paimon attach` 的语义是：先调 `POST /api/instance/:id/shutdown` 关闭目标实例 → 轮询其从列表消失（3s 超时）→ 本地 `pi --session <sessionId>`（cwd=实例 cwd，stdio inherit）。过滤条件为 hostname + cwd 双重匹配（均 realpath 规范化）。被 attach 的原实例会退出由用户负责
 - **CLI 全局安装走 `bun link`** — `package.json` 的 `bin` 指向 `src/cli/index.ts`（非编译产物），bun 直接执行带 shebang 的 ts 源码。`bun link` 在 `~/.bun/bin/` 建软链接回 clone 目录，`bun unlink` 解除。整条链路（CLI → daemon fork `src/hub/index.ts` 或 `src/edge/index.ts` → hub/edge 运行）全程跑 ts 源码
@@ -75,6 +78,7 @@ src/
 - Extension 开发遵循 pi extension 规范
 - **提交需用户确认** — 每次修改完成后，等待用户审阅确认才可执行 `git commit`
 - 功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
+- **localStorage key 格式** — 前端 localStorage 统一使用 `paimon:camelCase` 命名格式（如 `paimon:appearance`、`paimon:accessToken`）
 
 ## 设计风格（摘要）
 

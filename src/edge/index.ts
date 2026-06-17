@@ -23,6 +23,7 @@ const port = parseInt(
 const host = process.env.PAIMON_EDGE_HOST || DEFAULTS.EDGE_HOST;
 const edgeId = process.env.PAIMON_EDGE_ID || hostname();
 const hubUrl = process.env.PAIMON_HUB_URL || DEFAULTS.EDGE_HUB_URL;
+const accessToken = process.env.PAIMON_ACCESS_TOKEN || "";
 
 log.info(`Starting Edge server (id: ${edgeId}) on ${host}:${port}...`);
 log.info(`Hub URL: ${hubUrl}`);
@@ -35,6 +36,7 @@ if (!isLoopbackHost(host)) {
 // 创建上游 Hub 客户端
 const upstream = new UpstreamClient({
   hubUrl,
+  accessToken,
   onConnected() {
     // 连接 Hub 后先注册 Edge 自身
     upstream.send({

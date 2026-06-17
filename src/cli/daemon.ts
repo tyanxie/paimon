@@ -7,6 +7,7 @@ import { openSync, closeSync } from "node:fs";
 import { DEFAULTS } from "../protocol/types";
 import type { HubState } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
+import { generateAccessToken } from "../hub/auth";
 
 /** 状态目录，展开 ~ */
 const STATE_DIR = resolve(homedir(), ".paimon");
@@ -72,8 +73,32 @@ async function readLogTail(logPath: string, lines = 20): Promise<string> {
   }
 }
 
+/** Token 来源描述 */
+type TokenSource = "env" | "--token" | "inherited" | "auto-generated";
+
+/** Token 参数：带来源信息的 token */
+export interface TokenOption {
+  token: string;
+  source: TokenSource;
+}
+
+/** 确定 access token：环境变量 > 显式传入 > 自动生成 */
+function resolveAccessToken(option?: TokenOption): {
+  token: string;
+  source: TokenSource;
+} {
+  const envToken = process.env.PAIMON_ACCESS_TOKEN;
+  if (envToken) return { token: envToken, source: "env" };
+  if (option) return option;
+  return { token: generateAccessToken(), source: "auto-generated" };
+}
+
 /** 启动 Hub daemon */
-export async function startDaemon(port: number, host: string): Promise<void> {
+export async function startDaemon(
+  port: number,
+  host: string,
+  tokenOption?: TokenOption,
+): Promise<void> {
   // 检查是否已在运行
   const existing = await readHubState();
   if (existing && isProcessAlive(existing.pid)) {
@@ -94,10 +119,19 @@ export async function startDaemon(port: number, host: string): Promise<void> {
   // 因此父进程没有任何 pending IO，配合 detached + unref 可立即退出。
   const logFd = openSync(logPath, "a");
 
+  // 确定 access token
+  const { token: accessToken, source: tokenSource } =
+    resolveAccessToken(tokenOption);
+
   // Fork Hub 进程
   const hubEntry = resolve(import.meta.dirname!, "../hub/index.ts");
   const child = Bun.spawn(["bun", "run", hubEntry], {
-    env: { ...process.env, PAIMON_PORT: String(port), PAIMON_HOST: host },
+    env: {
+      ...process.env,
+      PAIMON_PORT: String(port),
+      PAIMON_HOST: host,
+      PAIMON_ACCESS_TOKEN: accessToken,
+    },
     stdin: "ignore",
     // 直接写日志文件 fd，捕获包括运行时崩溃在内的全部输出
     stdout: logFd,
@@ -148,10 +182,12 @@ export async function startDaemon(port: number, host: string): Promise<void> {
     port,
     host,
     startedAt: new Date().toISOString(),
+    accessToken,
   });
 
   console.log(`Hub started (PID: ${child.pid}, port: ${port}, host: ${host})`);
   console.log(`  Web UI: http://${healthHost}:${port}`);
+  console.log(`  Token:  ${accessToken} (${tokenSource})`);
   console.log(`  Logs:   ${logPath}`);
 
   // 非 loopback bind 时警告（CLI 侧也提示一次）

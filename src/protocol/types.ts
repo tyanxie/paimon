@@ -530,6 +530,8 @@ export interface HubState {
   port: number;
   host: string;
   startedAt: string; // ISO 8601
+  /** Hub 访问令牌（Edge / Browser / API 连接时校验） */
+  accessToken: string;
 }
 
 // ============================================================

@@ -9,6 +9,7 @@ import type { ServerWebSocket, Server, BunRequest } from "bun";
 import { randomUUID } from "node:crypto";
 import { DEFAULTS } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
+import { extractToken, verifyAccessToken, isAuthDisabled } from "./auth";
 import {
   hubRegistry,
   type WsData,
@@ -24,6 +25,8 @@ import * as log from "./logger";
 
 const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
 const host = process.env.PAIMON_HOST || DEFAULTS.HOST;
+const accessToken = process.env.PAIMON_ACCESS_TOKEN || "";
+const authEnabled = !isAuthDisabled() && accessToken.length > 0;
 
 // 静态文件目录：相对于项目根 dist/web
 const webDir = resolve(import.meta.dir, "../../dist/web");
@@ -36,6 +39,18 @@ if (!existsSync(webDir)) {
 if (!existsSync(resolve(webDir, "index.html"))) {
   log.error(`dist/web/index.html not found. Run 'vite build' first.`);
   process.exit(1);
+}
+
+/**
+ * 认证请求：提取 token 并校验，失败返回 401 Response。
+ * 认证关闭时始终返回 null（放行）。
+ */
+function authenticate(req: Request): Response | null {
+  if (!authEnabled) return null;
+  if (!verifyAccessToken(extractToken(req), accessToken)) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
 }
 
 /**
@@ -54,6 +69,11 @@ function upgradeWs(
 }
 
 log.info(`Starting Hub server on ${host}:${port}...`);
+if (authEnabled) {
+  log.info("Authentication enabled");
+} else {
+  log.warn("Authentication DISABLED — all requests will be accepted");
+}
 
 // 非 loopback bind 时警告
 if (!isLoopbackHost(host)) {
@@ -67,20 +87,32 @@ const server = Bun.serve<WsData>({
   routes: {
     // ── WebSocket 升级端点 ──
     // /ws/edge：Edge 节点连接（注册 + 转发实例信息 + 接收指令）
-    "/ws/edge": (req: Request, server: Server<WsData>) =>
-      upgradeWs(req, server, { role: "edge" } as EdgeWsData),
+    "/ws/edge": (req: Request, server: Server<WsData>) => {
+      const denied = authenticate(req);
+      if (denied) return denied;
+      return upgradeWs(req, server, { role: "edge" } as EdgeWsData);
+    },
     // /ws/browser：Web 控制面板连接
-    "/ws/browser": (req: Request, server: Server<WsData>) =>
-      upgradeWs(req, server, {
+    "/ws/browser": (req: Request, server: Server<WsData>) => {
+      const denied = authenticate(req);
+      if (denied) return denied;
+      return upgradeWs(req, server, {
         role: "browser",
         subscriptions: new Set(),
-      } as BrowserWsData),
+      } as BrowserWsData);
+    },
 
     // ── JSON API ──
     "/api/instances": {
-      GET: () => Response.json({ instances: hubRegistry.getAllInstances() }),
+      GET: (req: Request) => {
+        const denied = authenticate(req);
+        if (denied) return denied;
+        return Response.json({ instances: hubRegistry.getAllInstances() });
+      },
       // 在指定 Edge 上 spawn 一个 headless pi 实例
       POST: async (req: Request) => {
+        const denied = authenticate(req);
+        if (denied) return denied;
         let body: { cwd?: string; edgeId?: string };
         try {
           body = (await req.json()) as { cwd?: string; edgeId?: string };
@@ -139,10 +171,16 @@ const server = Bun.serve<WsData>({
       },
     },
     "/api/edges": {
-      GET: () => Response.json({ edges: hubRegistry.getAllEdges() }),
+      GET: (req: Request) => {
+        const denied = authenticate(req);
+        if (denied) return denied;
+        return Response.json({ edges: hubRegistry.getAllEdges() });
+      },
     },
     "/api/edges/:edgeId/browse": {
       GET: async (req: BunRequest<"/api/edges/:edgeId/browse">) => {
+        const denied = authenticate(req);
+        if (denied) return denied;
         const { edgeId } = req.params;
         const url = new URL(req.url);
         const path = url.searchParams.get("path");
@@ -188,6 +226,8 @@ const server = Bun.serve<WsData>({
     // 让指定实例优雅退出
     "/api/instance/:id/shutdown": {
       POST: (req: BunRequest<"/api/instance/:id/shutdown">) => {
+        const denied = authenticate(req);
+        if (denied) return denied;
         const id = req.params.id;
         return (
           forwardToEdgeForHttp(id, {

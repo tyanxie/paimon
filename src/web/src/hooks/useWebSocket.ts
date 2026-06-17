@@ -1,4 +1,7 @@
 // WebSocket 连接管理 hook
+//
+// 支持 token 认证：URL 中附带 ?token=xxx。
+// 认证失败（HTTP 401）时通过 onAuthError 回调通知上层。
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import type {
@@ -9,15 +12,34 @@ import { DEFAULTS } from "../../../protocol/types";
 
 type MessageHandler = (msg: HubToBrowserMessage) => void;
 
-export function useWebSocket(onMessage: MessageHandler) {
+export interface UseWebSocketOptions {
+  /** 认证 token（为空时不连接） */
+  token: string | null;
+  /** 消息回调 */
+  onMessage: MessageHandler;
+  /** 认证失败回调（WS 升级被 401 拒绝） */
+  onAuthError?: () => void;
+}
+
+export function useWebSocket({
+  token,
+  onMessage,
+  onAuthError,
+}: UseWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
+  const onAuthErrorRef = useRef(onAuthError);
+  onAuthErrorRef.current = onAuthError;
 
   useEffect(() => {
+    // 无 token 时不尝试连接
+    if (!token) return;
+
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const url = `${protocol}//${window.location.host}/ws/browser`;
+    const base = `${protocol}//${window.location.host}/ws/browser`;
+    const url = `${base}?token=${encodeURIComponent(token)}`;
 
     let pingTimer: ReturnType<typeof setInterval> | null = null;
     let pongTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -75,19 +97,47 @@ export function useWebSocket(onMessage: MessageHandler) {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         setConnected(false);
         wsRef.current = null;
         stopHeartbeat();
-        // 3s 后重连（组件已卸载则不再重连）
+
+        // HTTP 401 → WS 升级失败，Bun 返回 close code 但不会触发 onopen。
+        // 不同浏览器行为略有差异，但通常 code=1006 且从未 open 过。
+        // 我们额外通过尝试 fetch 来确认是否 401。
+        if (!disposed && event.code === 1006 && !connected) {
+          // 尝试用 HTTP 请求确认是否 token 无效
+          fetch(`/api/health`)
+            .then((r) => {
+              // health 不需认证，如果能通但 WS 被拒，说明是 token 问题
+              if (r.ok) {
+                onAuthErrorRef.current?.();
+              } else {
+                // Hub 整体不可用，正常重连
+                scheduleReconnect();
+              }
+            })
+            .catch(() => {
+              // 网络不可达，正常重连
+              scheduleReconnect();
+            });
+          return;
+        }
+
+        // 正常断连后重连
         if (!disposed) {
-          reconnectTimer = setTimeout(connect, 3000);
+          scheduleReconnect();
         }
       };
 
       ws.onerror = () => {
         ws.close();
       };
+    }
+
+    function scheduleReconnect() {
+      if (disposed) return;
+      reconnectTimer = setTimeout(connect, 3000);
     }
 
     connect();
@@ -104,7 +154,7 @@ export function useWebSocket(onMessage: MessageHandler) {
         wsRef.current = null;
       }
     };
-  }, []);
+  }, [token]);
 
   const send = useCallback((msg: BrowserToHubMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

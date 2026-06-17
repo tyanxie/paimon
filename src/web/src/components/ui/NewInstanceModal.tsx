@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { FolderPlus, Folder, Loader2 } from "lucide-react";
 import { ModalShell } from "./ModalShell";
+import { authFetch } from "../../utils/authFetch";
 import type {
   InstanceId,
   EdgeInfo,
@@ -76,7 +77,7 @@ function PathAutocomplete({
 
     setBrowsing(true);
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `/api/edges/${encodeURIComponent(eid)}/browse?path=${encodeURIComponent(path)}`,
         { signal: controller.signal },
       );
@@ -300,7 +301,7 @@ export function NewInstanceModal({
 
   // 加载可用的 Edge 列表
   useEffect(() => {
-    fetch("/api/edges")
+    authFetch("/api/edges")
       .then((res) => res.json())
       .then((data: { edges: EdgeInfo[] }) => {
         setEdges(data.edges);
@@ -345,7 +346,7 @@ export function NewInstanceModal({
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/instances", {
+      const res = await authFetch("/api/instances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cwd: trimmed, edgeId: selectedEdgeId }),

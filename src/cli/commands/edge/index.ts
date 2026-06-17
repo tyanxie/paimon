@@ -14,6 +14,7 @@ export function registerEdgeCommand(program: Command): void {
     .option("--host <host>", "bind address", DEFAULTS.EDGE_HOST)
     .option("--edge-id <id>", "edge identifier", hostname())
     .option("--hub <url>", "Hub WebSocket URL", DEFAULTS.EDGE_HUB_URL)
+    .option("--token <token>", "Hub access token")
     .action(async (opts) => {
       const { handleEdgeStart } = await import("./start");
       await handleEdgeStart(
@@ -21,6 +22,7 @@ export function registerEdgeCommand(program: Command): void {
         opts.host,
         opts.edgeId,
         opts.hub,
+        opts.token,
       );
     });
 
@@ -39,6 +41,7 @@ export function registerEdgeCommand(program: Command): void {
     .option("--host <host>", "bind address")
     .option("--edge-id <id>", "edge identifier")
     .option("--hub <url>", "Hub WebSocket URL")
+    .option("--token <token>", "Hub access token")
     .action(async (opts) => {
       const { handleEdgeRestart } = await import("./restart");
       await handleEdgeRestart(
@@ -46,6 +49,7 @@ export function registerEdgeCommand(program: Command): void {
         opts.host,
         opts.edgeId,
         opts.hub,
+        opts.token,
       );
     });
 
