@@ -1,6 +1,6 @@
 {
-  "name": "paimon",
-  "version": "0.1.0",
+  "name": "@tyanxie/paimon",
+  "version": "1.0.0",
   "description": "Remote observation and control panel for pi coding agent",
   "type": "module",
   "bin": {
@@ -9,6 +9,13 @@
   "pi": {
     "extensions": ["src/extensions"]
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tyanxie/paimon.git"
+  },
+  "homepage": "https://github.com/tyanxie/paimon",
+  "bugs": "https://github.com/tyanxie/paimon/issues",
+  "keywords": ["pi", "coding-agent", "remote-panel", "websocket"],
   "scripts": {
     "dev": "vite build && concurrently -n hub,vite -c blue,green 'bun --watch src/hub/index.ts' 'vite build --watch'",
     "build": "vite build",
