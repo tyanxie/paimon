@@ -87,7 +87,7 @@ function preparePlatformPackage(platform: {
   mkdirSync(binDir, { recursive: true });
 
   // 拷贝二进制
-  const srcBin = join(srcDir, "paimon");
+  const srcBin = join(srcDir, "bin/paimon");
   const destBin = join(binDir, "paimon");
   cpSync(srcBin, destBin);
   chmodSync(destBin, 0o755);

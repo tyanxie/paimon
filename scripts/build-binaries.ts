@@ -71,16 +71,17 @@ async function main(): Promise<void> {
 
   for (const { target, name } of targets) {
     const platformDir = join(distExeDir, name);
-    const outfile = join(platformDir, "paimon");
+    const binDir = join(platformDir, "bin");
+    const outfile = join(binDir, "paimon");
 
-    mkdirSync(platformDir, { recursive: true });
+    mkdirSync(binDir, { recursive: true });
 
     console.log(`  ▸ ${name} (${target})`);
     run(
       `bun build --compile --target=${target} ${entrypoint} --outfile ${outfile}`,
     );
 
-    // 拷贝 web 产物到平台目录
+    // 拷贝 web 产物到平台目录（与 bin/ 同级）
     const webDest = join(platformDir, "web");
     cpSync(distWebDir, webDest, { recursive: true });
   }
@@ -89,7 +90,7 @@ async function main(): Promise<void> {
   console.log("\n✅ Build complete!");
   console.log(`   Output: ${distExeDir}/`);
   for (const { name } of targets) {
-    console.log(`   - ${name}/paimon`);
+    console.log(`   - ${name}/bin/paimon`);
     console.log(`   - ${name}/web/`);
   }
 }
