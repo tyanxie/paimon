@@ -7,6 +7,7 @@ import { openSync, closeSync } from "node:fs";
 import { DEFAULTS } from "../protocol/types";
 import type { HubState } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
+import { isCompiled } from "../utils/runtime";
 import { generateAccessToken } from "../hub/auth";
 
 /** 状态目录，展开 ~ */
@@ -125,7 +126,7 @@ export async function startDaemon(
 
   // Fork Hub 进程：通过 PAIMON_ROLE 环境变量让同一二进制以 hub 角色启动
   // 编译后二进制直接 spawn 自身；源码模式需要带上入口脚本
-  const isCompiled = import.meta.path.startsWith("/$bunfs/");
+
   const cliEntry = resolve(import.meta.dirname!, "index.ts");
   const spawnArgs = isCompiled
     ? [process.execPath]

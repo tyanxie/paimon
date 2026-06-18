@@ -9,6 +9,7 @@ import type { ServerWebSocket, Server, BunRequest } from "bun";
 import { randomUUID } from "node:crypto";
 import { DEFAULTS } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
+import { isCompiled } from "../utils/runtime";
 import { extractToken, verifyAccessToken, isAuthDisabled } from "./auth";
 import {
   hubRegistry,
@@ -29,7 +30,6 @@ const accessToken = process.env.PAIMON_ACCESS_TOKEN || "";
 const authEnabled = !isAuthDisabled() && accessToken.length > 0;
 
 // 静态文件目录：编译模式从二进制上级的 web/ 读取（bin/paimon → ../web），源码模式从项目根 dist/web 读取
-const isCompiled = import.meta.path.startsWith("/$bunfs/");
 const webDir = isCompiled
   ? resolve(dirname(process.execPath), "../web")
   : resolve(import.meta.dir, "../../dist/web");
