@@ -21,51 +21,53 @@ Paimon，让你能在浏览器里跟所有 [Pi](https://pi.dev/) 实例对话。
 - 🎨 **毛玻璃风格界面** — 清爽的 macOS 风格设计
 - 📱 **响应式设计** — 桌面/移动端自适应，iOS Safe Area 适配
 
-## 🏗️ 架构
-
-```
-Browser ◄─WS─► Hub (:8080) ◄─WS─► Edge A (:8033) ◄─WS─► Pi 1..N
-                            ◄─WS─► Edge B (:8033) ◄─WS─► Pi 1..M
-```
-
-- **Hub** — 中心服务，接 Browser 和 Edge，路由消息，服务 Web UI
-- **Edge** — 边缘代理，每台服务器一个，管理本机 pi 实例，聚合上报 Hub
-- **Pi Extension** — pi 插件，连接本机 Edge，转发事件和指令
-
 ## 📋 前置要求
 
 - [Pi](https://pi.dev/) >= 0.78.1
+- Node.js >= 18（npm 安装方式）或 [Bun](https://bun.sh/)（从源码安装）
 
 ## 🚀 快速开始
 
+Paimon 采用三层架构：
+
+- **Hub** — 中心服务，服务 Web UI，接收 Edge 上报
+- **Edge** — 每台机器上的代理，管理本机 pi 实例
+- **Extension** — pi 插件，自动连接本机 Edge
+
+### 安装
+
+**npm 安装（推荐）**
+
 ```bash
-# 克隆并安装依赖
+npm install -g @tyanxie/paimon    # 安装 paimon CLI
+pi install npm:@tyanxie/paimon   # 安装 pi 插件
+```
+
+**从源码安装**
+
+```bash
 git clone https://github.com/tyanxie/paimon.git && cd paimon
-bun install
+bun install       # 安装依赖
+bun run build     # 构建前端
+bun link          # 安装 paimon CLI
+pi install .      # 安装 pi 插件
+```
 
-# 构建前端（Hub 启动依赖 dist/web/）
-bun run build
+### 使用
 
-# 安装 paimon CLI 到全局（软链接回当前目录）
-bun link
-
-# 安装 extension（让 pi 启动时自动加载）
-pi install .
-
+```bash
 # 启动 Hub
 paimon hub start
 
-# 启动 Edge（同一机器）
+# 启动 Edge
 paimon edge start
 
-# 启动 pi
+# 启动 pi（任意目录）
 pi
 
 # 打开浏览器（首次需输入启动时输出的 Access Token）
 open http://localhost:8080
 ```
-
-> ⚠️ `bun link` 通过软链接指向当前 clone 目录，**安装后请勿删除、移动或重命名该目录**，否则 `paimon` 命令会失效。
 
 ### 多机部署
 
@@ -78,44 +80,7 @@ paimon edge start --hub ws://localhost:8080
 paimon edge start --hub ws://<hub-ip>:8080 --token <access-token>
 ```
 
-## 🛠️ paimon CLI
-
-| 命令                                                                                                     | 说明               |
-| -------------------------------------------------------------------------------------------------------- | ------------------ |
-| `paimon hub start [--port 8080] [--host 127.0.0.1] [--token <token>]`                                    | 启动 Hub daemon    |
-| `paimon hub stop`                                                                                        | 停止 Hub           |
-| `paimon hub restart [--token <token>]`                                                                   | 重启 Hub           |
-| `paimon hub status`                                                                                      | 查看运行状态       |
-| `paimon hub logs [--follow]`                                                                             | 查看日志           |
-| `paimon edge start [--port 8033] [--host 127.0.0.1] [--hub ws://...] [--edge-id <id>] [--token <token>]` | 启动 Edge daemon   |
-| `paimon edge stop`                                                                                       | 停止 Edge          |
-| `paimon edge restart [--token <token>]`                                                                  | 重启 Edge          |
-| `paimon edge status`                                                                                     | 查看运行状态       |
-| `paimon edge logs [--follow]`                                                                            | 查看日志           |
-| `paimon attach [id]`                                                                                     | 接管实例到当前终端 |
-
-> 🔒 即使有 Access Token 保护，`--host 0.0.0.0` 仍建议仅在可信网络使用——当前不支持 TLS，token 明文传输可能被网络嗅探。
-
-## 🧹 卸载
-
-```bash
-# 在 clone 目录执行，解除全局链接
-bun unlink
-
-# 清理运行时状态
-rm -rf ~/.paimon
-```
-
-## 💻 开发
-
-```bash
-# 开发模式：构建前端 + 启动 Hub + watch
-bun run dev
-
-# 直接运行 CLI 源码（无需 bun link）
-bun src/cli/index.ts hub start
-bun src/cli/index.ts edge start
-```
+> 🔒 `--host 0.0.0.0` 会暴露服务到公网。当前不支持 TLS，token 明文传输可被网络嗅探，建议仅在可信网络使用或通过反向代理（nginx/caddy）提供 TLS。
 
 ## 📄 License
 
