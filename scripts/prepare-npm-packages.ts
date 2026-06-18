@@ -140,6 +140,11 @@ function prepareMainPackage(): void {
   const destExt = join(extDir, "paimon");
   cpSync(srcExt, destExt, { recursive: true });
 
+  // 拷贝 protocol 类型（extension 通过相对路径 ../../protocol/types 引用）
+  const srcProtocol = join(projectRoot, "src/protocol");
+  const destProtocol = join(outDir, "src/protocol");
+  cpSync(srcProtocol, destProtocol, { recursive: true });
+
   // 拷贝 LICENSE 和 README
   cpSync(join(projectRoot, "LICENSE"), join(outDir, "LICENSE"));
   cpSync(join(projectRoot, "README.md"), join(outDir, "README.md"));
@@ -157,7 +162,7 @@ function prepareMainPackage(): void {
     description: "Remote observation and control panel for pi coding agent",
     license: "MIT",
     bin: { paimon: "bin/paimon.cjs" },
-    files: ["bin/", "src/extensions/", "LICENSE", "README.md"],
+    files: ["bin/", "src/extensions/", "src/protocol/", "LICENSE", "README.md"],
     repository: {
       type: "git",
       url: "git+https://github.com/tyanxie/paimon.git",
