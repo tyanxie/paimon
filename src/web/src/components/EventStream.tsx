@@ -895,7 +895,7 @@ export function EventStream({
     );
   }
 
-  const title = instanceName || "Instance";
+  const title = instanceName || "";
 
   // 实例顶栏 props（PC 和移动端共用）
   const instanceHeaderProps = {
