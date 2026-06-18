@@ -30,3 +30,5 @@ if (role === "hub") {
 
   program.parse();
 }
+
+export {};
