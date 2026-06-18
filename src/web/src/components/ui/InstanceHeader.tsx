@@ -16,7 +16,7 @@ export function InstanceHeader({
   actions,
 }: InstanceHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
+    <div className="flex items-center justify-between gap-2 min-w-0 flex-1 min-h-[40px]">
       <div className="min-w-0 flex-1">
         <div className="truncate text-[14px] leading-[20px] font-medium text-[var(--label-primary)] select-text">
           {title}
