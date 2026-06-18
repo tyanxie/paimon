@@ -92,6 +92,14 @@ bin/
 - 功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
 - **localStorage key 格式** — 前端 localStorage 统一使用 `paimon:camelCase` 命名格式（如 `paimon:appearance`、`paimon:accessToken`）
 
+## 发布流程
+
+- **分支保护** — main 分支要求 PR + CI 通过才能合入，均使用 squash merge
+- **CI 检查** — PR 触发 `.github/workflows/ci.yml`（类型检查 + 前端构建 + 单元测试）
+- **发版提交格式** — `Release version x.y.z`，直接 push main（owner bypass）
+- **发版流程** — 修改 `package.json` version → `git commit -am "Release version x.y.z"` → `git push origin main` → `git tag vx.y.z` → `git push origin vx.y.z`
+- **自动发布** — push `v*` tag 触发 `.github/workflows/release.yml`（全平台编译 → npm publish → GitHub Release）
+
 ## 设计风格（摘要）
 
 参考 macOS 26 Liquid Glass 风格。完整规范见 [docs/design/macos-26-tokens.md](docs/design/macos-26-tokens.md)。
