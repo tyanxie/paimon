@@ -15,7 +15,7 @@
   },
   "homepage": "https://github.com/tyanxie/paimon",
   "bugs": "https://github.com/tyanxie/paimon/issues",
-  "keywords": ["pi", "coding-agent", "remote-panel", "websocket"],
+  "keywords": ["pi", "pi-package", "coding-agent", "remote-panel", "websocket"],
   "scripts": {
     "dev": "vite build && concurrently -n hub,vite -c blue,green 'bun --watch src/hub/index.ts' 'vite build --watch'",
     "build": "vite build",

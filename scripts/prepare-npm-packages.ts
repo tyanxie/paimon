@@ -18,10 +18,8 @@ const projectRoot = resolve(import.meta.dirname!, "..");
 const distExeDir = join(projectRoot, "dist/exe");
 const distNpmDir = join(projectRoot, "dist/npm");
 
-// 读取版本号
+// 读取根 package.json
 const pkg = await Bun.file(join(projectRoot, "package.json")).json();
-const version: string = pkg.version;
-const SCOPE = "@tyanxie";
 
 // 平台定义
 const PLATFORMS = [
@@ -32,7 +30,7 @@ const PLATFORMS = [
 ] as const;
 
 function main(): void {
-  console.log(`📦 Preparing npm packages (v${version})...\n`);
+  console.log(`📦 Preparing npm packages (v${pkg.version})...\n`);
 
   // 校验编译产物存在
   if (!existsSync(distExeDir)) {
@@ -99,18 +97,15 @@ function preparePlatformPackage(platform: {
 
   // 生成 package.json
   const platformPkg = {
-    name: `${SCOPE}/paimon-${name}`,
-    version,
+    name: `${pkg.name}-${name}`,
+    version: pkg.version,
     description: `Paimon binary for ${os} ${cpu}`,
-    license: "MIT",
+    license: pkg.license,
     os: [os],
     cpu: [cpu],
     bin: { paimon: "bin/paimon" },
     files: ["bin/paimon", "web/"],
-    repository: {
-      type: "git",
-      url: "git+https://github.com/tyanxie/paimon.git",
-    },
+    repository: pkg.repository,
   };
 
   Bun.write(
@@ -118,7 +113,7 @@ function preparePlatformPackage(platform: {
     JSON.stringify(platformPkg, null, 2) + "\n",
   );
 
-  console.log(`  ✓ ${SCOPE}/paimon-${name}`);
+  console.log(`  ✓ ${pkg.name}-${name}`);
 }
 
 function prepareMainPackage(): void {
@@ -152,26 +147,23 @@ function prepareMainPackage(): void {
   // 生成 optionalDependencies
   const optionalDependencies: Record<string, string> = {};
   for (const platform of PLATFORMS) {
-    optionalDependencies[`${SCOPE}/paimon-${platform.name}`] = version;
+    optionalDependencies[`${pkg.name}-${platform.name}`] = pkg.version;
   }
 
   // 生成 package.json
   const mainPkg = {
-    name: `${SCOPE}/paimon`,
-    version,
-    description: "Remote observation and control panel for pi coding agent",
-    license: "MIT",
+    name: pkg.name,
+    version: pkg.version,
+    description: pkg.description,
+    license: pkg.license,
     bin: { paimon: "bin/paimon.cjs" },
     files: ["bin/", "src/extensions/", "src/protocol/", "LICENSE", "README.md"],
-    repository: {
-      type: "git",
-      url: "git+https://github.com/tyanxie/paimon.git",
-    },
-    homepage: "https://github.com/tyanxie/paimon",
-    bugs: "https://github.com/tyanxie/paimon/issues",
-    keywords: ["pi", "coding-agent", "remote-panel", "websocket"],
+    repository: pkg.repository,
+    homepage: pkg.homepage,
+    bugs: pkg.bugs,
+    keywords: pkg.keywords,
     optionalDependencies,
-    pi: { extensions: ["src/extensions"] },
+    pi: pkg.pi,
   };
 
   Bun.write(
@@ -179,7 +171,7 @@ function prepareMainPackage(): void {
     JSON.stringify(mainPkg, null, 2) + "\n",
   );
 
-  console.log(`  ✓ ${SCOPE}/paimon (main)`);
+  console.log(`  ✓ ${pkg.name} (main)`);
 }
 
 main();
