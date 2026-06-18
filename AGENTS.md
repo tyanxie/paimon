@@ -11,6 +11,10 @@ bun run dev      # 开发模式：构建前端 + 启动 Hub + watch
 bun run build    # 仅构建前端（Vite）
 bun run start    # 直接启动 Hub
 bun test         # 运行测试
+
+bun run scripts/build-binaries.ts          # 编译全平台二进制（包含 vite build）
+bun run scripts/build-binaries.ts --local  # 仅编译当前平台
+bun run scripts/prepare-npm-packages.ts    # 从编译产物生成 npm 可发布目录
 ```
 
 ## 技术选型
@@ -45,6 +49,11 @@ src/
         └── components/
             ├── ui/            # 通用组件（ModalShell, MobileNavBar 等）
             └── entries/       # 消息渲染器（Markdown, ThinkingBlock, ToolCallCard）
+scripts/
+├── build-binaries.ts          # 多平台编译脚本（vite build + bun build --compile）
+└── prepare-npm-packages.ts    # 生成 npm 可发布目录结构
+bin/
+└── paimon.cjs                 # Node.js 启动器（检测平台 → 找平台包二进制 → exec）
 ```
 
 ## 关键约定
@@ -70,6 +79,9 @@ src/
 - **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs`、`paimon edge start/stop/status/logs` 和 `paimon attach` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
 - **attach = 迁移而非双向接管** — pi 不支持同一 session 文件被多进程同时写，所以 `paimon attach` 的语义是：先调 `POST /api/instance/:id/shutdown` 关闭目标实例 → 轮询其从列表消失（3s 超时）→ 本地 `pi --session <sessionId>`（cwd=实例 cwd，stdio inherit）。过滤条件为 hostname + cwd 双重匹配（均 realpath 规范化）。被 attach 的原实例会退出由用户负责
 - **CLI 全局安装走 `bun link`** — `package.json` 的 `bin` 指向 `src/cli/index.ts`（非编译产物），bun 直接执行带 shebang 的 ts 源码。`bun link` 在 `~/.bun/bin/` 建软链接回 clone 目录，`bun unlink` 解除。CLI 入口统一为 `src/cli/index.ts`，通过 `PAIMON_ROLE` 环境变量区分角色（见 Daemon 进程模型）
+- **npm 分发模式** — 主包 `@tyanxie/paimon`（含 `bin/paimon.cjs` 启动器 + extension 源码）+ 4 个平台包 `@tyanxie/paimon-{darwin-arm64,darwin-x64,linux-arm64,linux-x64}`（含编译二进制 + web 资产）。主包通过 `optionalDependencies` 引用平台包，npm install 时只下载匹配当前系统的那一个
+- **编译模式 web 目录寻址** — 源码模式从 `resolve(import.meta.dir, "../../dist/web")` 读取；编译模式从 `resolve(dirname(process.execPath), "../web")` 读取（二进制在 `bin/paimon`，web 在同级 `web/`）。判断条件：`import.meta.path.startsWith("/$bunfs/")`
+- **版本号来源** — 根 `package.json` 的 `version` 字段为唯一来源，`prepare-npm-packages.ts` 读取并写入所有生成的包
 
 ## 代码规范
 
