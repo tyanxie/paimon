@@ -239,6 +239,8 @@ export function useAppState() {
   }, []);
 
   const [instances, setInstances] = useState<InstanceInfo[]>([]);
+  // 标记是否已收到过 instance_list（避免初始化阶段误判实例不存在）
+  const [instanceListReady, setInstanceListReady] = useState(false);
   const [conversation, setConversation] = useState<ConversationState>(() =>
     createConversationState(),
   );
@@ -285,6 +287,7 @@ export function useAppState() {
       switch (msg.type) {
         case "instance_list":
           setInstances(msg.payload.instances);
+          setInstanceListReady(true);
           // 初始化 sessionId 和 status 跟踪
           for (const inst of msg.payload.instances) {
             sessionIdMapRef.current.set(inst.id, inst.sessionId);
@@ -484,6 +487,7 @@ export function useAppState() {
 
   return {
     instances,
+    instanceListReady,
     entries: conversation.entries,
     streamingEntry: conversation.streamingEntry,
     hasMore: conversation.hasMore,

@@ -11,6 +11,7 @@ import { Settings } from "./components/Settings";
 import { NewInstanceModal } from "./components/ui/NewInstanceModal";
 import { LoginPage } from "./components/LoginPage";
 import { getStoredToken, clearStoredToken } from "./utils/token";
+import { ToastContainer, showToast } from "./components/ui/Toast";
 import type { InstanceId, ThinkingLevel } from "../../protocol/types";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -39,6 +40,7 @@ export default function App() {
 
   const {
     instances,
+    instanceListReady,
     entries,
     streamingEntry,
     hasMore,
@@ -223,8 +225,12 @@ export default function App() {
   const handleShutdown = useCallback(
     (id: InstanceId) => {
       send({ type: "shutdown", payload: { instanceId: id } });
+      // 主动关闭当前查看的实例时直接跳转，避免触发“实例不存在”提示
+      if (id === selectedInstanceId) {
+        navigate("/");
+      }
     },
-    [send],
+    [send, selectedInstanceId, navigate],
   );
 
   // 新建实例创建成功：关闭弹窗并跳转到新实例（订阅由 useEffect 自动响应）
@@ -235,6 +241,16 @@ export default function App() {
     },
     [navigate],
   );
+
+  // 实例不存在时跳转到首页并提示
+  useEffect(() => {
+    if (!instanceListReady || !selectedInstanceId) return;
+    const exists = instances.some((i) => i.id === selectedInstanceId);
+    if (!exists) {
+      showToast("实例不存在");
+      navigate("/");
+    }
+  }, [instanceListReady, selectedInstanceId, instances, navigate]);
 
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
 
@@ -369,6 +385,9 @@ export default function App() {
           onCreated={handleInstanceCreated}
         />
       )}
+
+      {/* 全局 Toast */}
+      <ToastContainer />
     </div>
   );
 }
