@@ -10,6 +10,7 @@ import {
   ContextMenuItem,
   type ContextMenuPosition,
 } from "./ui/ContextMenu";
+import { useTranslation } from "react-i18next";
 
 interface SidebarProps {
   instances: InstanceInfo[];
@@ -33,6 +34,7 @@ export function Sidebar({
 }: SidebarProps) {
   const navigate = useNavigate();
   const logoSrc = useLogoSrc();
+  const { t } = useTranslation();
 
   // 右键/长按菜单状态
   const [contextMenu, setContextMenu] = useState<{
@@ -102,19 +104,19 @@ export function Sidebar({
             <div className="flex items-center gap-2">
               <button
                 onClick={onNewInstance}
-                title="New instance"
+                title={t("sidebar.newInstance")}
                 className="select-none w-6 h-6 flex items-center justify-center rounded-full text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-all duration-150"
               >
                 <Plus size={16} />
               </button>
               <span
                 className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
-                title={connected ? "Online" : "Offline"}
+                title={connected ? t("common.online") : t("common.offline")}
               />
             </div>
           </div>
           <div className="text-[12px] leading-[15px] max-md:text-[13px] max-md:leading-[18px] text-[var(--label-tertiary)]">
-            {instances.length} instance{instances.length !== 1 ? "s" : ""}
+            {t("sidebar.instanceCount", { count: instances.length })}
           </div>
         </div>
       </div>
@@ -123,7 +125,7 @@ export function Sidebar({
       <div className="flex-1 overflow-y-auto px-2 py-1 scrollbar-auto">
         {instances.length === 0 ? (
           <div className="px-3 py-8 text-center text-[var(--label-tertiary)] text-[12px] leading-[16px] max-md:text-[13px] max-md:leading-[18px]">
-            No pi instances connected
+            {t("sidebar.noInstances")}
           </div>
         ) : (
           <ul className="space-y-0.5 max-md:space-y-1">
@@ -157,10 +159,10 @@ export function Sidebar({
                       }`}
                       title={
                         instance.status === "streaming"
-                          ? "Streaming"
+                          ? t("sidebar.statusStreaming")
                           : instance.status === "compacting"
-                            ? "Compacting"
-                            : "Idle"
+                            ? t("sidebar.statusCompacting")
+                            : t("sidebar.statusIdle")
                       }
                     />
                     {/* 工作目录（取最后一段） */}
@@ -202,7 +204,7 @@ export function Sidebar({
         <ContextMenu position={contextMenu.position} onClose={closeContextMenu}>
           <ContextMenuItem
             icon={<LogOut size={14} />}
-            label="退出实例"
+            label={t("sidebar.shutdown")}
             danger
             onClick={() => {
               onShutdown(contextMenu.instanceId);
@@ -220,7 +222,7 @@ export function Sidebar({
         >
           <SettingsIcon size={15} className="max-md:w-4 max-md:h-4" />
           <span className="text-[13px] leading-[18px] max-md:text-[14px] max-md:leading-[20px]">
-            设置
+            {t("sidebar.settings")}
           </span>
         </button>
       </div>

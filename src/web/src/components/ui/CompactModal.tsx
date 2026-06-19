@@ -1,6 +1,7 @@
 // 压缩上下文确认弹窗：输入可选自定义提示词后触发压缩
 
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ModalShell } from "./ModalShell";
 
 interface CompactModalProps {
@@ -9,6 +10,7 @@ interface CompactModalProps {
 }
 
 export function CompactModal({ onClose, onConfirm }: CompactModalProps) {
+  const { t } = useTranslation();
   const [instructions, setInstructions] = useState("");
 
   const handleConfirm = useCallback(() => {
@@ -16,15 +18,15 @@ export function CompactModal({ onClose, onConfirm }: CompactModalProps) {
   }, [instructions, onConfirm]);
 
   return (
-    <ModalShell title="压缩上下文" onClose={onClose}>
+    <ModalShell title={t("compact.title")} onClose={onClose}>
       <div className="px-5 py-4 space-y-3">
         <p className="text-[13px] leading-[18px] text-[var(--label-secondary)] select-none">
-          压缩将总结旧的对话内容以释放上下文空间。可选填自定义提示词来指定压缩时关注的方向。
+          {t("compact.description")}
         </p>
         <textarea
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
-          placeholder="例如：重点保留关于数据库设计的讨论…"
+          placeholder={t("compact.placeholder")}
           rows={3}
           className="w-full px-3 py-2 rounded-[10px] bg-[var(--fill-tertiary)] border border-[var(--separator)] text-[14px] leading-[20px] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none resize-none focus:border-[var(--color-accent)] transition-colors"
         />
@@ -33,13 +35,13 @@ export function CompactModal({ onClose, onConfirm }: CompactModalProps) {
             onClick={onClose}
             className="px-3.5 py-1.5 rounded-[8px] text-[13px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] transition-colors"
           >
-            取消
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleConfirm}
             className="px-3.5 py-1.5 rounded-[8px] text-[13px] font-medium text-white bg-[var(--color-accent)] hover:opacity-90 active:opacity-80 transition-opacity"
           >
-            开始压缩
+            {t("compact.start")}
           </button>
         </div>
       </div>

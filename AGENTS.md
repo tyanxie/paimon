@@ -29,7 +29,7 @@ bun run scripts/prepare-npm-packages.ts    # 从编译产物生成 npm 可发布
 | 构建     | Vite 6                                                                |
 | 进程管理 | Bun.spawn（detached）+ 状态文件（`~/.paimon/hub.json` / `edge.json`） |
 
-**关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react
+**关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, i18next, react-i18next
 
 ## 项目结构（仅非标准部分）
 
@@ -43,6 +43,7 @@ src/
 ├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化 + session 控制）
 └── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
     └── src/
+        ├── i18n/              # 国际化（i18next 配置 + locale 文件）
         ├── stores/            # useAppState, useSettings（全局状态）
         ├── hooks/             # useWebSocket, useLogoSrc
         ├── utils/             # 工具函数（status 状态判断、authFetch 等）
@@ -91,7 +92,8 @@ bin/
 - **提交需用户确认** — 每次修改完成后，等待用户审阅确认才可执行 `git commit`
 - **发版** — 修改 `package.json` version → `git commit -am "Release version x.y.z"`。版本号由用户指定，未提供时须询问
 - 功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
-- **localStorage key 格式** — 前端 localStorage 统一使用 `paimon:camelCase` 命名格式（如 `paimon:appearance`、`paimon:accessToken`）
+- **localStorage key 格式** — 前端 localStorage 统一使用 `paimon:camelCase` 命名格式（如 `paimon:appearance`、`paimon:accessToken`、`paimon:language`）
+- **前端国际化（i18n）** — 使用 `i18next` + `react-i18next`，fallback 语言为中文。所有用户可见的 UI 文本必须通过 `t('namespace.key')` 获取，禁止硬编码。新增 UI 文本时需同时更新 `src/web/src/i18n/locales/zh.ts` 和 `en.ts`。key 按模块分组（如 `sidebar.xxx`、`settings.xxx`）。语言偏好存储在 `paimon:language`
 
 ## 设计风格（摘要）
 

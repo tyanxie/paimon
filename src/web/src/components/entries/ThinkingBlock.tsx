@@ -1,6 +1,7 @@
 // Thinking 区块：streaming 时展开，输出开始后自动折叠
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronRight } from "lucide-react";
 import { MarkdownRenderer } from "./Markdown";
 
@@ -13,6 +14,7 @@ export function ThinkingBlock({
   streaming: boolean;
   autoCollapse: boolean;
 }) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(autoCollapse);
   const hasAutoCollapsed = useRef(false);
 
@@ -40,7 +42,7 @@ export function ThinkingBlock({
           }`}
         />
         <span className="text-[12px] font-medium text-[var(--label-tertiary)]">
-          {streaming ? "思考中..." : "思考"}
+          {streaming ? t("entries.thinkingStreaming") : t("entries.thinking")}
         </span>
       </button>
 

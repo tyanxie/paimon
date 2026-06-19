@@ -35,6 +35,9 @@ beforeAll(async () => {
     },
   });
 
+  // 初始化 i18n（必须在 localStorage mock 之后）
+  await import("../i18n");
+
   ({ ComposerStatusIndicator, getComposerButtonMode } =
     await import("./EventStream"));
 });

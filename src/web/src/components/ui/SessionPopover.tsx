@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Plus, History, Loader2 } from "lucide-react";
 import type { SessionListItem } from "../../../../protocol/types";
 import { Popover } from "./Popover";
+import { useTranslation } from "react-i18next";
 
 interface SessionPopoverProps {
   sessions: SessionListItem[];
@@ -15,12 +16,15 @@ interface SessionPopoverProps {
 }
 
 /** 格式化相对时间 */
-function formatRelativeTime(isoString: string): string {
+function formatRelativeTime(
+  isoString: string,
+  t: (key: string) => string,
+): string {
   const date = new Date(isoString);
   const now = Date.now();
   const diffMs = now - date.getTime();
   const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return "just now";
+  if (diffMin < 1) return t("session.timeJustNow");
   if (diffMin < 60) return `${diffMin}m`;
   const diffHours = Math.floor(diffMin / 60);
   if (diffHours < 24) return `${diffHours}h`;
@@ -40,6 +44,7 @@ export function SessionPopover({
   onSwitchSession,
 }: SessionPopoverProps) {
   const [filter, setFilter] = useState("");
+  const { t } = useTranslation();
 
   const filtered = useMemo(() => {
     if (!filter.trim()) return sessions;
@@ -60,7 +65,7 @@ export function SessionPopover({
               ? "bg-[rgba(0,0,0,0.11)] dark:bg-[rgba(255,255,255,0.11)]"
               : "hover:bg-[var(--fill-tertiary)]"
           } ${disabled ? "opacity-40 pointer-events-none" : ""}`}
-          title="Sessions"
+          title={t("session.title")}
           onClick={() => {
             if (!open) onOpen();
           }}
@@ -77,7 +82,7 @@ export function SessionPopover({
           {/* 头部：标题 + 新建按钮 */}
           <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
             <span className="text-[13px] font-medium text-[var(--label-primary)] select-none">
-              Sessions
+              {t("session.title")}
             </span>
             <button
               onClick={() => {
@@ -88,7 +93,7 @@ export function SessionPopover({
               className="flex items-center gap-1 px-2 py-1 rounded-[6px] text-[12px] text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-40"
             >
               <Plus size={12} />
-              <span>New</span>
+              <span>{t("session.new")}</span>
             </button>
           </div>
 
@@ -97,7 +102,7 @@ export function SessionPopover({
             <div className="px-3 pb-2">
               <input
                 type="text"
-                placeholder="Filter..."
+                placeholder={t("session.filter")}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 className="w-full px-2.5 py-1.5 rounded-[6px] bg-[var(--fill-tertiary)] text-[12px] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none border border-transparent focus:border-[var(--separator)]"
@@ -120,7 +125,7 @@ export function SessionPopover({
               </div>
             ) : filtered.length === 0 ? (
               <div className="py-4 text-center text-[12px] text-[var(--label-tertiary)] select-none">
-                {filter ? "No matching sessions" : "No previous sessions"}
+                {filter ? t("session.noMatch") : t("session.noPrevious")}
               </div>
             ) : (
               filtered.map((session) => (
@@ -147,10 +152,12 @@ export function SessionPopover({
                           : "text-[var(--label-primary)]"
                       }`}
                     >
-                      {session.name || session.firstMessage || "Empty session"}
+                      {session.name ||
+                        session.firstMessage ||
+                        t("session.empty")}
                     </span>
                     <span className="text-[11px] text-[var(--label-tertiary)] whitespace-nowrap shrink-0">
-                      {formatRelativeTime(session.modified)}
+                      {formatRelativeTime(session.modified, t)}
                     </span>
                   </div>
                   {session.name && session.firstMessage && (
@@ -159,8 +166,7 @@ export function SessionPopover({
                     </div>
                   )}
                   <div className="mt-0.5 text-[10px] text-[var(--label-quaternary)]">
-                    {session.messageCount} message
-                    {session.messageCount !== 1 ? "s" : ""}
+                    {t("session.messageCount", { count: session.messageCount })}
                   </div>
                 </button>
               ))

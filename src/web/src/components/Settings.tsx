@@ -1,44 +1,14 @@
-// 设置页面：外观（主题 + 背景）
+// 设置页面：外观（主题 + 背景）+ 语言
 
+import { useTranslation } from "react-i18next";
 import {
   useAppearance,
   useBackground,
   type Appearance,
   type Background,
 } from "../stores/useSettings";
+import { type Language, getStoredLanguage, setStoredLanguage } from "../i18n";
 import { MobileNavBar } from "./ui/MobileNavBar";
-
-// ========================================
-// 配置选项
-// ========================================
-
-const APPEARANCE_OPTIONS: { value: Appearance; label: string }[] = [
-  { value: "light", label: "浅色" },
-  { value: "dark", label: "深色" },
-  { value: "system", label: "系统" },
-];
-
-const BACKGROUND_OPTIONS: {
-  value: Background;
-  label: string;
-  colors: string[];
-}[] = [
-  {
-    value: "mist",
-    label: "雾",
-    colors: ["#e8f0fe", "#f5e6f0", "#e6f0f5", "#f0f5e6"],
-  },
-  {
-    value: "aurora",
-    label: "极光",
-    colors: ["#a8d8ea", "#aa96da", "#8fd3c4", "#c4a8d8"],
-  },
-  {
-    value: "ember",
-    label: "余烬",
-    colors: ["#f8d4b0", "#f0b0c0", "#f8e0a0", "#e8c0d0"],
-  },
-];
 
 // ========================================
 // 通用组件
@@ -102,13 +72,15 @@ function SettingRow({
 function BackgroundPicker({
   value,
   onChange,
+  options,
 }: {
   value: Background;
   onChange: (v: Background) => void;
+  options: { value: Background; label: string; colors: string[] }[];
 }) {
   return (
     <div className="flex items-center gap-3 select-none">
-      {BACKGROUND_OPTIONS.map((opt) => (
+      {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
@@ -144,31 +116,83 @@ function BackgroundPicker({
 // ========================================
 
 export function Settings() {
+  const { t } = useTranslation();
   const [appearance, setAppearance] = useAppearance();
   const [background, setBackground] = useBackground();
+
+  const appearanceOptions: { value: Appearance; label: string }[] = [
+    { value: "light", label: t("settings.themeLight") },
+    { value: "dark", label: t("settings.themeDark") },
+    { value: "system", label: t("settings.themeSystem") },
+  ];
+
+  const backgroundOptions: {
+    value: Background;
+    label: string;
+    colors: string[];
+  }[] = [
+    {
+      value: "mist",
+      label: t("settings.bgMist"),
+      colors: ["#e8f0fe", "#f5e6f0", "#e6f0f5", "#f0f5e6"],
+    },
+    {
+      value: "aurora",
+      label: t("settings.bgAurora"),
+      colors: ["#a8d8ea", "#aa96da", "#8fd3c4", "#c4a8d8"],
+    },
+    {
+      value: "ember",
+      label: t("settings.bgEmber"),
+      colors: ["#f8d4b0", "#f0b0c0", "#f8e0a0", "#e8c0d0"],
+    },
+  ];
+
+  const languageOptions: { value: Language; label: string }[] = [
+    { value: "zh", label: t("settings.langZh") },
+    { value: "en", label: t("settings.langEn") },
+  ];
 
   return (
     <div className="flex-1 flex items-start justify-center p-4 md:p-6 overflow-y-auto scrollbar-auto">
       <div className="w-full max-w-[480px]">
-        <MobileNavBar title="设置" />
+        <MobileNavBar title={t("settings.title")} />
         <h1 className="hidden md:block text-[22px] font-semibold text-[var(--label-primary)] mb-6 px-4 select-none">
-          设置
+          {t("settings.title")}
         </h1>
 
         {/* 外观 */}
         <div className="text-[14px] leading-[20px] font-semibold text-[var(--label-primary)] mb-2 px-4 select-none">
-          外观
+          {t("settings.appearance")}
         </div>
         <section className="glass-panel overflow-hidden">
-          <SettingRow label="主题">
+          <SettingRow label={t("settings.theme")}>
             <SegmentedControl
-              options={APPEARANCE_OPTIONS}
+              options={appearanceOptions}
               value={appearance}
               onChange={setAppearance}
             />
           </SettingRow>
-          <SettingRow label="背景" showSeparator={false}>
-            <BackgroundPicker value={background} onChange={setBackground} />
+          <SettingRow label={t("settings.background")} showSeparator={false}>
+            <BackgroundPicker
+              value={background}
+              onChange={setBackground}
+              options={backgroundOptions}
+            />
+          </SettingRow>
+        </section>
+
+        {/* 语言 */}
+        <div className="text-[14px] leading-[20px] font-semibold text-[var(--label-primary)] mb-2 mt-6 px-4 select-none">
+          {t("settings.language")}
+        </div>
+        <section className="glass-panel overflow-hidden">
+          <SettingRow label={t("settings.language")} showSeparator={false}>
+            <SegmentedControl
+              options={languageOptions}
+              value={getStoredLanguage()}
+              onChange={setStoredLanguage}
+            />
           </SettingRow>
         </section>
       </div>

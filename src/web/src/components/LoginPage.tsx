@@ -3,6 +3,7 @@
 // macOS 26 Liquid Glass 风格：动态渐变背景 + 居中毛玻璃面板。
 
 import { useState, useCallback, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { setStoredToken } from "../utils/token";
 
@@ -16,6 +17,7 @@ interface LoginPageProps {
 export function LoginPage({ onLogin, error }: LoginPageProps) {
   const [token, setToken] = useState("");
   const logoSrc = useLogoSrc();
+  const { t } = useTranslation();
 
   const handleSubmit = useCallback(
     (e: FormEvent) => {
@@ -48,7 +50,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
             Paimon
           </h1>
           <p className="mt-1 text-[13px] text-[var(--label-secondary)]">
-            Enter access token to connect
+            {t("login.subtitle")}
           </p>
         </div>
 
@@ -58,7 +60,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
             type="password"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            placeholder="Access Token"
+            placeholder={t("login.placeholder")}
             autoFocus
             className={`w-full h-9 px-3 rounded-[9px] text-[13px] bg-[var(--fill-primary)] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] border outline-none transition-colors ${
               error
@@ -68,7 +70,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
           />
           {error && (
             <p className="mt-2 text-[11px] text-red-500">
-              Invalid token. Please check and try again.
+              {t("login.invalidToken")}
             </p>
           )}
         </div>
@@ -79,16 +81,14 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
           disabled={!token.trim()}
           className="w-full h-9 rounded-[1000px] bg-[var(--color-accent)] text-white text-[13px] font-medium transition-opacity disabled:opacity-40 hover:opacity-90 active:opacity-80"
         >
-          Connect
+          {t("login.connect")}
         </button>
 
         {/* 提示 */}
-        <p className="text-[11px] text-[var(--label-tertiary)] text-center leading-relaxed">
-          Find your token in{" "}
-          <code className="px-1 py-0.5 rounded bg-[var(--fill-secondary)] text-[var(--label-secondary)]">
-            ~/.paimon/hub.json
-          </code>
-        </p>
+        <p
+          className="text-[11px] text-[var(--label-tertiary)] text-center leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: t("login.tokenHint") }}
+        />
       </form>
     </div>
   );
