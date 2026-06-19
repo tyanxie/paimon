@@ -19,6 +19,7 @@ Paimon，让你能在浏览器里跟所有 [Pi](https://pi.dev/) 实例对话。
 - 📋 **Session 管理** — 浏览历史 session，一键新建或切换
 - 🔒 **访问认证** — Access Token 保护所有 API 和 WebSocket 连接
 - 🎨 **毛玻璃风格界面** — 清爽的 macOS 风格设计
+- 🌐 **多语言支持** — 中文/英文界面，设置页一键切换
 - 📱 **响应式设计** — 桌面/移动端自适应，iOS Safe Area 适配
 
 ## 📋 前置要求

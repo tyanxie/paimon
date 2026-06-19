@@ -24,6 +24,7 @@ import { ModelSelector } from "./ui/ModelSelector";
 import { ThinkingSelector } from "./ui/ThinkingSelector";
 import { SessionPopover } from "./ui/SessionPopover";
 import { CompactModal } from "./ui/CompactModal";
+import { useTranslation } from "react-i18next";
 
 const LOAD_MORE_SUPPRESS_MS = 350;
 const ENTRY_KEY_ATTR = "data-entry-key";
@@ -381,6 +382,7 @@ export function EventStream({
   onSwitchSession,
   onCompact,
 }: EventStreamProps) {
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -892,7 +894,7 @@ export function EventStream({
             className="w-16 h-16 mx-auto mb-4 opacity-80"
           />
           <div className="text-[14px] text-[var(--label-tertiary)] tracking-wide">
-            守望 · 交互 · 掌控
+            {t("eventStream.tagline")}
           </div>
         </div>
       </div>
@@ -1004,7 +1006,7 @@ export function EventStream({
             <button
               onClick={scrollToBottom}
               className="select-none w-9 h-9 rounded-full bg-[var(--btn-solid)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--btn-solid-hover)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
-              title="Scroll to bottom"
+              title={t("eventStream.scrollToBottom")}
             >
               <ChevronsDown size={16} />
             </button>
@@ -1033,7 +1035,7 @@ export function EventStream({
                           <button
                             onClick={() => setShowCompactModal(true)}
                             disabled={compactDisabled}
-                            title="压缩上下文"
+                            title={t("eventStream.compactContext")}
                             className="shrink-0 inline-flex items-center justify-center p-0.5 rounded-[4px] text-[var(--label-secondary)] hover:text-[var(--color-accent)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
                           >
                             <Minimize2 size={12} />
@@ -1064,7 +1066,7 @@ export function EventStream({
                 <textarea
                   ref={textareaRef}
                   rows={1}
-                  placeholder="Send a message..."
+                  placeholder={t("eventStream.sendPlaceholder")}
                   value={inputValue}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
@@ -1075,7 +1077,7 @@ export function EventStream({
                     <button
                       onClick={onAbort}
                       className="select-none w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
-                      title="Stop"
+                      title={t("eventStream.stop")}
                     >
                       <Square size={12} fill="currentColor" />
                     </button>
@@ -1088,7 +1090,7 @@ export function EventStream({
                           ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
                           : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
                       }`}
-                      title="Send"
+                      title={t("eventStream.send")}
                     >
                       <ArrowUp size={16} strokeWidth={2.5} />
                     </button>
@@ -1142,6 +1144,7 @@ export function ComposerStatusIndicator({
 }: {
   status?: InstanceStatus;
 }) {
+  const { t } = useTranslation();
   if (!status) return null;
 
   const isRunning = status === "streaming";
@@ -1159,7 +1162,11 @@ export function ComposerStatusIndicator({
       ? "bg-amber-500 animate-pulse"
       : "bg-green-500";
 
-  const label = isRunning ? "执行中" : isCompacting ? "压缩中" : "在线";
+  const label = isRunning
+    ? t("eventStream.statusRunning")
+    : isCompacting
+      ? t("eventStream.statusCompacting")
+      : t("eventStream.statusOnline");
 
   return (
     <span

@@ -15,6 +15,7 @@ import {
 import { ModalShell } from "../ui/ModalShell";
 import type { SessionEntry } from "../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
+import { useTranslation } from "react-i18next";
 
 /** 工具图标映射 */
 function getToolIcon(name: string) {
@@ -263,20 +264,22 @@ interface DetailModalProps {
 
 /** 执行中指示器 */
 function RunningIndicator() {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
       <Loader2 size={14} className="animate-spin" />
-      <span>执行中...</span>
+      <span>{t("entries.running")}</span>
     </div>
   );
 }
 
 /** 已终止指示器 */
 function AbortedIndicator() {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 text-[12px] text-red-400">
       <CircleX size={14} />
-      <span>已终止</span>
+      <span>{t("entries.aborted")}</span>
     </div>
   );
 }
@@ -423,6 +426,7 @@ function WriteDetailModal({
   isAborted,
   onClose,
 }: DetailModalProps) {
+  const { t } = useTranslation();
   const path = args.path ?? "";
   const content = args.content ?? "";
   const language = getLanguageFromPath(path);
@@ -451,7 +455,7 @@ function WriteDetailModal({
         {result !== null && (
           <section>
             <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
-              结果
+              {t("entries.result")}
             </h4>
             <pre
               className={`text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 ${
@@ -582,13 +586,14 @@ function DefaultDetailModal({
   isAborted,
   onClose,
 }: DetailModalProps) {
+  const { t } = useTranslation();
   return (
     <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
       <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 space-y-3 scrollbar-auto">
         {/* 参数 */}
         <section>
           <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
-            参数
+            {t("entries.params")}
           </h4>
           <pre className="text-[13px] leading-[20px] text-[var(--label-secondary)] whitespace-pre-wrap break-words bg-[var(--fill-tertiary)] rounded-[8px] px-3 py-2 overflow-x-auto">
             {JSON.stringify(args, null, 2)}
@@ -599,7 +604,7 @@ function DefaultDetailModal({
         {result !== null && (
           <section>
             <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
-              结果
+              {t("entries.result")}
             </h4>
             <pre
               className={`text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 overflow-x-auto ${

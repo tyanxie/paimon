@@ -8,6 +8,7 @@ import yaml from "js-yaml";
 import { useState, useCallback } from "react";
 import type { Components } from "react-markdown";
 import { Copy, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /**
  * 自定义 remark 插件：将 remark-frontmatter 解析出的 yaml 节点
@@ -90,6 +91,7 @@ function CodeBlock({
   language: string;
   children?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const code = extractText(children).replace(/\n$/, "");
 
@@ -111,7 +113,7 @@ function CodeBlock({
           className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)] hover:text-[var(--label-secondary)] transition-colors"
         >
           {copied ? <Check size={12} /> : <Copy size={12} />}
-          {copied ? "已复制" : "复制"}
+          {copied ? t("entries.copied") : t("entries.copy")}
         </button>
       </div>
       {/* 代码内容 */}

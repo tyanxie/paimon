@@ -9,6 +9,7 @@ import type {
   EdgeInfo,
   BrowseEntry,
 } from "../../../../protocol/types";
+import { useTranslation } from "react-i18next";
 
 // ─── PathAutocomplete ────────────────────────────────────────────────────────
 // 路径自动补全输入框：输入时通过 Edge browse API 列出匹配的子目录
@@ -46,6 +47,7 @@ function PathAutocomplete({
   autoFocus = false,
   onSubmit,
 }: PathAutocompleteProps) {
+  const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState<BrowseEntry[]>([]);
   const [truncated, setTruncated] = useState(false);
   const [browsing, setBrowsing] = useState(false);
@@ -222,7 +224,7 @@ function PathAutocomplete({
             // 延迟关闭，给 mousedown 事件留时间触发补全选择
             setTimeout(() => setShowSuggestions(false), 150);
           }}
-          placeholder="/path/to/your/project"
+          placeholder={t("newInstance.pathPlaceholder")}
           disabled={disabled}
           spellCheck={false}
           autoComplete="off"
@@ -271,7 +273,7 @@ function PathAutocomplete({
           ))}
           {truncated && (
             <div className="px-3 py-1.5 text-[12px] text-[var(--label-tertiary)] border-t border-[var(--separator)]">
-              输入更多字符以缩小范围…
+              {t("newInstance.truncatedHint")}
             </div>
           )}
         </div>
@@ -292,6 +294,7 @@ export function NewInstanceModal({
   onClose,
   onCreated,
 }: NewInstanceModalProps) {
+  const { t } = useTranslation();
   const [cwd, setCwd] = useState("");
   const [edges, setEdges] = useState<EdgeInfo[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
@@ -317,7 +320,7 @@ export function NewInstanceModal({
       })
       .catch(() => {
         setLoadingEdges(false);
-        setError("Failed to fetch edge list");
+        setError(t("newInstance.fetchEdgeError"));
       });
   }, []);
 
@@ -340,7 +343,7 @@ export function NewInstanceModal({
     const trimmed = cwd.trim();
     if (!trimmed || submitting) return;
     if (!selectedEdgeId) {
-      setError("No edge selected");
+      setError(t("newInstance.noEdgeSelected"));
       return;
     }
     setSubmitting(true);
@@ -357,7 +360,9 @@ export function NewInstanceModal({
         error?: string;
       };
       if (!res.ok || !data.instanceId) {
-        setError(data.error || `Request failed (HTTP ${res.status})`);
+        setError(
+          data.error || t("newInstance.requestFailed", { status: res.status }),
+        );
         setSubmitting(false);
         return;
       }
@@ -365,8 +370,8 @@ export function NewInstanceModal({
     } catch (err) {
       const message =
         (err as Error).name === "TimeoutError"
-          ? "Request timed out"
-          : (err as Error).message || "Network error";
+          ? t("newInstance.requestTimeout")
+          : (err as Error).message || t("newInstance.networkError");
       setError(message);
       setSubmitting(false);
     }
@@ -377,7 +382,7 @@ export function NewInstanceModal({
       title={
         <>
           <FolderPlus size={16} />
-          <span>新建实例</span>
+          <span>{t("newInstance.title")}</span>
         </>
       }
       onClose={onClose}
@@ -386,15 +391,15 @@ export function NewInstanceModal({
         {/* Edge 选择 */}
         <div className="flex flex-col gap-1.5">
           <label className="text-[13px] text-[var(--label-secondary)]">
-            Edge 节点
+            {t("newInstance.edgeNode")}
           </label>
           {loadingEdges ? (
             <div className="text-[13px] text-[var(--label-tertiary)]">
-              加载中…
+              {t("common.loading")}
             </div>
           ) : edges.length === 0 ? (
             <div className="text-[12px] text-[#ff4245]">
-              没有可用的 Edge 节点
+              {t("newInstance.noEdges")}
             </div>
           ) : edges.length === 1 ? (
             <div className="text-[13px] text-[var(--label-primary)]">
@@ -422,7 +427,7 @@ export function NewInstanceModal({
         {/* 工作目录 */}
         <div className="flex flex-col gap-1.5">
           <label className="text-[13px] text-[var(--label-secondary)]">
-            工作目录
+            {t("newInstance.workingDir")}
           </label>
           <PathAutocomplete
             value={cwd}
@@ -445,14 +450,14 @@ export function NewInstanceModal({
             disabled={submitting}
             className="px-3.5 py-1.5 rounded-[8px] text-[13px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-50"
           >
-            取消
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting || !cwd.trim() || !selectedEdgeId}
             className="px-3.5 py-1.5 rounded-[8px] text-[13px] font-medium text-white bg-[var(--color-accent)] hover:opacity-90 transition-opacity disabled:opacity-40"
           >
-            {submitting ? "创建中…" : "创建"}
+            {submitting ? t("newInstance.creating") : t("newInstance.create")}
           </button>
         </div>
       </div>

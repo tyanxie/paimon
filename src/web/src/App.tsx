@@ -13,6 +13,7 @@ import { LoginPage } from "./components/LoginPage";
 import { getStoredToken, clearStoredToken } from "./utils/token";
 import { ToastContainer, showToast } from "./components/ui/Toast";
 import type { InstanceId, ThinkingLevel } from "../../protocol/types";
+import { useTranslation } from "react-i18next";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
 function useSelectedInstanceId(): InstanceId | null {
@@ -22,6 +23,8 @@ function useSelectedInstanceId(): InstanceId | null {
 }
 
 export default function App() {
+  const { t } = useTranslation();
+
   // ── 认证状态 ──
   const [authToken, setAuthToken] = useState<string | null>(getStoredToken());
   const [authError, setAuthError] = useState(false);
@@ -247,7 +250,7 @@ export default function App() {
     if (!instanceListReady || !selectedInstanceId) return;
     const exists = instances.some((i) => i.id === selectedInstanceId);
     if (!exists) {
-      showToast("实例不存在");
+      showToast(t("eventStream.instanceNotFound"));
       navigate("/");
     }
   }, [instanceListReady, selectedInstanceId, instances, navigate]);

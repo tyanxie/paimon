@@ -8,6 +8,7 @@ import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
 import { ModalShell } from "../ui/ModalShell";
+import { useTranslation } from "react-i18next";
 
 export function EntryItem({
   entry,
@@ -209,8 +210,12 @@ function AssistantBlock({
 
 /** 元信息条目（compaction / branch_summary） */
 function MetaEntry({ type, summary }: { type: string; summary: string }) {
+  const { t } = useTranslation();
   const [showDetail, setShowDetail] = useState(false);
-  const label = type === "compaction" ? "上下文已压缩" : "分支摘要";
+  const label =
+    type === "compaction"
+      ? t("entries.contextCompacted")
+      : t("entries.branchSummary");
 
   return (
     <>
@@ -244,6 +249,7 @@ function MetaEntry({ type, summary }: { type: string; summary: string }) {
 
 /** API 错误卡片 */
 function ErrorCard({ message }: { message: string }) {
+  const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
 
   // 尝试提取简要信息
@@ -301,7 +307,10 @@ function ErrorCard({ message }: { message: string }) {
       </div>
 
       {showModal && (
-        <ModalShell title="错误详情" onClose={() => setShowModal(false)}>
+        <ModalShell
+          title={t("error.title")}
+          onClose={() => setShowModal(false)}
+        >
           <div className="flex-1 overflow-y-auto px-5 py-6 scrollbar-auto">
             {/* 顶部图标 + 状态码 */}
             <div className="flex flex-col items-center text-center mb-5">
@@ -314,12 +323,16 @@ function ErrorCard({ message }: { message: string }) {
             </div>
             {/* 错误信息 */}
             <div className="rounded-[10px] bg-[var(--fill-card)] p-4 space-y-3">
-              <ErrorDetailRow label="错误信息" value={detail} />
+              <ErrorDetailRow label={t("error.message")} value={detail} />
               {errorType && (
-                <ErrorDetailRow label="错误类型" value={errorType} />
+                <ErrorDetailRow label={t("error.type")} value={errorType} />
               )}
               {requestId && (
-                <ErrorDetailRow label="请求 ID" value={requestId} mono />
+                <ErrorDetailRow
+                  label={t("error.requestId")}
+                  value={requestId}
+                  mono
+                />
               )}
             </div>
           </div>
