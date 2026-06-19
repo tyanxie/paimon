@@ -35,19 +35,16 @@ export function ModelSelector({
     <Popover
       disabled={!canSelect}
       width={280}
+      align="left"
       trigger={({ open }) => (
         <button
-          className={`flex items-center gap-0.5 ${
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-[9px] bg-[var(--fill-tertiary)] text-[12px] transition-colors ${
             canSelect
-              ? "hover:text-[var(--label-primary)] cursor-pointer"
+              ? "hover:bg-[var(--fill-secondary)] hover:text-[var(--label-primary)] cursor-pointer"
               : "cursor-default"
-          } transition-colors`}
+          } text-[var(--label-secondary)]`}
         >
-          {/* PC: provider/id, Mobile: name */}
-          <span className="hidden md:inline select-text">
-            {currentModel.provider}/{currentModel.id}
-          </span>
-          <span className="md:hidden select-text">
+          <span className="max-w-[140px] truncate select-text">
             {currentModel.name || currentModel.id}
           </span>
           {canSelect && (

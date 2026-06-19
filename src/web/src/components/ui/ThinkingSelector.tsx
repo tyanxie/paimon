@@ -27,13 +27,14 @@ export function ThinkingSelector({
     <Popover
       disabled={!canSelect}
       width={160}
+      align="left"
       trigger={({ open }) => (
         <button
-          className={`flex items-center gap-0.5 ${
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-[9px] bg-[var(--fill-tertiary)] text-[12px] transition-colors ${
             canSelect
-              ? "hover:text-[var(--label-primary)] cursor-pointer"
+              ? "hover:bg-[var(--fill-secondary)] hover:text-[var(--label-primary)] cursor-pointer"
               : "cursor-default"
-          } transition-colors`}
+          } text-[var(--label-secondary)]`}
         >
           <span className="select-text">{currentLevel}</span>
           {canSelect && (
