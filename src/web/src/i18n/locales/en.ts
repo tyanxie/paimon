@@ -1,4 +1,4 @@
-// English language pack
+// 英文语言包
 
 import type { LocaleResource } from "./zh";
 
@@ -18,7 +18,7 @@ const en: LocaleResource = {
     placeholder: "Access Token",
     invalidToken: "Invalid token. Please check and try again.",
     connect: "Connect",
-    tokenHint: "Find your token in <code>~/.paimon/hub.json</code>",
+    tokenHint: "Find your token in <1>~/.paimon/hub.json</1>",
   },
 
   // ─── Sidebar ───
@@ -84,6 +84,11 @@ const en: LocaleResource = {
     create: "Create",
     creating: "Creating…",
     truncatedHint: "Type more to narrow results…",
+    fetchEdgeError: "Failed to fetch edge list",
+    noEdgeSelected: "No edge selected",
+    requestTimeout: "Request timed out",
+    networkError: "Network error",
+    requestFailed: "Request failed (HTTP {{status}})",
   },
 
   // ─── Session Panel ───

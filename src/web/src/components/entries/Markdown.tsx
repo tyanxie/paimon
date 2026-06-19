@@ -91,9 +91,9 @@ function CodeBlock({
   language: string;
   children?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const code = extractText(children).replace(/\n$/, "");
-  const { t } = useTranslation();
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(code);

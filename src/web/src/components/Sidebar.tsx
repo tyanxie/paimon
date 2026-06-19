@@ -32,9 +32,9 @@ export function Sidebar({
   onNewInstance,
   connected,
 }: SidebarProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const logoSrc = useLogoSrc();
-  const { t } = useTranslation();
 
   // 右键/长按菜单状态
   const [contextMenu, setContextMenu] = useState<{

@@ -7,7 +7,7 @@ import {
   type Appearance,
   type Background,
 } from "../stores/useSettings";
-import { type Language, getStoredLanguage, setStoredLanguage } from "../i18n";
+import { type Language, setStoredLanguage } from "../i18n";
 import { MobileNavBar } from "./ui/MobileNavBar";
 
 // ========================================
@@ -116,7 +116,7 @@ function BackgroundPicker({
 // ========================================
 
 export function Settings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [appearance, setAppearance] = useAppearance();
   const [background, setBackground] = useBackground();
 
@@ -190,7 +190,7 @@ export function Settings() {
           <SettingRow label={t("settings.language")} showSeparator={false}>
             <SegmentedControl
               options={languageOptions}
-              value={getStoredLanguage()}
+              value={i18n.language as Language}
               onChange={setStoredLanguage}
             />
           </SettingRow>

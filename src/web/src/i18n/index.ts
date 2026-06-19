@@ -25,27 +25,10 @@ export function setStoredLanguage(lang: Language) {
   i18n.changeLanguage(lang);
 }
 
-// 将嵌套对象结构转为 i18next 所需的 dot-notation 扁平结构
-function flattenObject(
-  obj: Record<string, any>,
-  prefix = "",
-): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const key of Object.keys(obj)) {
-    const fullKey = prefix ? `${prefix}.${key}` : key;
-    if (typeof obj[key] === "object" && obj[key] !== null) {
-      Object.assign(result, flattenObject(obj[key], fullKey));
-    } else {
-      result[fullKey] = obj[key];
-    }
-  }
-  return result;
-}
-
 i18n.use(initReactI18next).init({
   resources: {
-    zh: { translation: flattenObject(zh) },
-    en: { translation: flattenObject(en) },
+    zh: { translation: zh },
+    en: { translation: en },
   },
   lng: getStoredLanguage(),
   fallbackLng: "zh",

@@ -382,6 +382,7 @@ export function EventStream({
   onSwitchSession,
   onCompact,
 }: EventStreamProps) {
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -389,7 +390,6 @@ export function EventStream({
   const bottomChromeRef = useRef<HTMLDivElement>(null);
   const bottomSafeGapRef = useRef<HTMLDivElement>(null);
   const logoSrc = useLogoSrc();
-  const { t } = useTranslation();
   const [showCompactModal, setShowCompactModal] = useState(false);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;

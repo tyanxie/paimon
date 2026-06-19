@@ -224,7 +224,7 @@ function PathAutocomplete({
             // 延迟关闭，给 mousedown 事件留时间触发补全选择
             setTimeout(() => setShowSuggestions(false), 150);
           }}
-          placeholder="/path/to/your/project"
+          placeholder={t("newInstance.pathPlaceholder")}
           disabled={disabled}
           spellCheck={false}
           autoComplete="off"
@@ -294,14 +294,13 @@ export function NewInstanceModal({
   onClose,
   onCreated,
 }: NewInstanceModalProps) {
+  const { t } = useTranslation();
   const [cwd, setCwd] = useState("");
   const [edges, setEdges] = useState<EdgeInfo[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
   const [loadingEdges, setLoadingEdges] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { t } = useTranslation();
 
   // 加载可用的 Edge 列表
   useEffect(() => {
@@ -321,7 +320,7 @@ export function NewInstanceModal({
       })
       .catch(() => {
         setLoadingEdges(false);
-        setError("Failed to fetch edge list");
+        setError(t("newInstance.fetchEdgeError"));
       });
   }, []);
 
@@ -344,7 +343,7 @@ export function NewInstanceModal({
     const trimmed = cwd.trim();
     if (!trimmed || submitting) return;
     if (!selectedEdgeId) {
-      setError("No edge selected");
+      setError(t("newInstance.noEdgeSelected"));
       return;
     }
     setSubmitting(true);
@@ -361,7 +360,9 @@ export function NewInstanceModal({
         error?: string;
       };
       if (!res.ok || !data.instanceId) {
-        setError(data.error || `Request failed (HTTP ${res.status})`);
+        setError(
+          data.error || t("newInstance.requestFailed", { status: res.status }),
+        );
         setSubmitting(false);
         return;
       }
@@ -369,8 +370,8 @@ export function NewInstanceModal({
     } catch (err) {
       const message =
         (err as Error).name === "TimeoutError"
-          ? "Request timed out"
-          : (err as Error).message || "Network error";
+          ? t("newInstance.requestTimeout")
+          : (err as Error).message || t("newInstance.networkError");
       setError(message);
       setSubmitting(false);
     }

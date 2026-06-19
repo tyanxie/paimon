@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Plus, History, Loader2 } from "lucide-react";
+import type { TFunction } from "i18next";
 import type { SessionListItem } from "../../../../protocol/types";
 import { Popover } from "./Popover";
 import { useTranslation } from "react-i18next";
@@ -16,10 +17,7 @@ interface SessionPopoverProps {
 }
 
 /** 格式化相对时间 */
-function formatRelativeTime(
-  isoString: string,
-  t: (key: string) => string,
-): string {
+function formatRelativeTime(isoString: string, t: TFunction): string {
   const date = new Date(isoString);
   const now = Date.now();
   const diffMs = now - date.getTime();
@@ -43,8 +41,8 @@ export function SessionPopover({
   onNewSession,
   onSwitchSession,
 }: SessionPopoverProps) {
-  const [filter, setFilter] = useState("");
   const { t } = useTranslation();
+  const [filter, setFilter] = useState("");
 
   const filtered = useMemo(() => {
     if (!filter.trim()) return sessions;

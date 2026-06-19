@@ -3,7 +3,7 @@
 // macOS 26 Liquid Glass 风格：动态渐变背景 + 居中毛玻璃面板。
 
 import { useState, useCallback, type FormEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { setStoredToken } from "../utils/token";
 
@@ -15,9 +15,9 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, error }: LoginPageProps) {
+  const { t } = useTranslation();
   const [token, setToken] = useState("");
   const logoSrc = useLogoSrc();
-  const { t } = useTranslation();
 
   const handleSubmit = useCallback(
     (e: FormEvent) => {
@@ -85,10 +85,16 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
         </button>
 
         {/* 提示 */}
-        <p
-          className="text-[11px] text-[var(--label-tertiary)] text-center leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: t("login.tokenHint") }}
-        />
+        <p className="text-[11px] text-[var(--label-tertiary)] text-center leading-relaxed">
+          <Trans
+            i18nKey="login.tokenHint"
+            components={{
+              1: (
+                <code className="px-1 py-0.5 rounded bg-[var(--fill-secondary)] text-[var(--label-secondary)]" />
+              ),
+            }}
+          />
+        </p>
       </form>
     </div>
   );

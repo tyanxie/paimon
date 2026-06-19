@@ -16,7 +16,7 @@ const zh = {
     placeholder: "Access Token",
     invalidToken: "Token 无效，请检查后重试。",
     connect: "连接",
-    tokenHint: "Token 可在 <code>~/.paimon/hub.json</code> 中找到",
+    tokenHint: "Token 可在 <1>~/.paimon/hub.json</1> 中找到",
   },
 
   // ─── 侧边栏 ───
@@ -82,6 +82,11 @@ const zh = {
     create: "创建",
     creating: "创建中…",
     truncatedHint: "输入更多字符以缩小范围…",
+    fetchEdgeError: "获取 Edge 列表失败",
+    noEdgeSelected: "未选择 Edge 节点",
+    requestTimeout: "请求超时",
+    networkError: "网络错误",
+    requestFailed: "请求失败 (HTTP {{status}})",
   },
 
   // ─── Session 面板 ───

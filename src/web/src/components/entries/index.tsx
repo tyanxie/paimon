@@ -249,8 +249,8 @@ function MetaEntry({ type, summary }: { type: string; summary: string }) {
 
 /** API 错误卡片 */
 function ErrorCard({ message }: { message: string }) {
-  const [showModal, setShowModal] = useState(false);
   const { t } = useTranslation();
+  const [showModal, setShowModal] = useState(false);
 
   // 尝试提取简要信息
   let brief = message;
