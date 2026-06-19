@@ -167,6 +167,8 @@ interface EventStreamProps {
   onLoadMore?: () => void;
   contextUsage?: ContextUsageInfo;
   gitBranch?: string | null;
+  instanceCwd?: string;
+  instanceHomedir?: string;
   instanceName?: string;
   instanceModel?: ModelInfo;
   availableModels?: ModelInfo[];
@@ -366,6 +368,8 @@ export function EventStream({
   onLoadMore,
   contextUsage,
   gitBranch,
+  instanceCwd,
+  instanceHomedir,
   instanceName,
   instanceModel,
   availableModels,
@@ -900,6 +904,8 @@ export function EventStream({
   // 实例顶栏 props（PC 和移动端共用）
   const instanceHeaderProps = {
     title,
+    cwd: instanceCwd,
+    homedir: instanceHomedir,
     gitBranch,
     actions:
       onListSessions && onNewSession && onSwitchSession ? (

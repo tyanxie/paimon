@@ -327,6 +327,8 @@ export default function App() {
               onLoadMore={handleLoadMore}
               contextUsage={selectedInstance?.contextUsage}
               gitBranch={selectedInstance?.gitBranch}
+              instanceCwd={selectedInstance?.cwd}
+              instanceHomedir={selectedInstance?.homedir}
               instanceName={
                 selectedInstance?.cwd.split("/").pop() || selectedInstance?.cwd
               }

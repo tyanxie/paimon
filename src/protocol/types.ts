@@ -46,6 +46,8 @@ export interface InstanceInfo {
   hostname: string;
   /** 工作目录 */
   cwd: string;
+  /** 所在机器的 home 目录（用于前端 ~ 缩写） */
+  homedir: string;
   /** 模型信息 */
   model: ModelInfo;
   /** 当前 session ID（来自 pi sessionManager） */
