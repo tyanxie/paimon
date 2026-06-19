@@ -109,7 +109,7 @@ function CopyableInfo({
       <span className="shrink-0 opacity-70">
         {copied ? <Check size={11} className="text-green-500" /> : icon}
       </span>
-      <span className="truncate select-text">{text}</span>
+      <span className="truncate">{text}</span>
     </button>
   );
 }

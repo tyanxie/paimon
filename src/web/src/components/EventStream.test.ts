@@ -175,9 +175,8 @@ describe("文本选择边界", () => {
     expect(instanceHeaderSource).toContain(
       "font-medium text-[var(--label-primary)] select-text",
     );
-    expect(instanceHeaderSource).toContain(
-      'className="truncate select-text">{gitBranch}</span>',
-    );
+    // CopyableInfo 点击即复制，无需允许拖选（显示的还可能是截断值）
+    expect(instanceHeaderSource).not.toContain('select-text">{text}</span>');
     expect(eventStreamSource).toContain(
       '<span className="text-[11px] font-medium leading-none">{label}</span>',
     );
