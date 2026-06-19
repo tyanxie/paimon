@@ -1054,10 +1054,10 @@ export function EventStream({
                   value={inputValue}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  className="resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[16px] leading-[24px] px-3 py-[9px] outline-none overflow-hidden md:px-4 md:py-[10px] md:text-[14px] md:leading-[22px]"
+                  className="resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[16px] leading-[24px] px-3 pt-[9px] pb-0 outline-none overflow-hidden md:px-4 md:pt-[10px] md:text-[14px] md:leading-[22px]"
                 />
                 {/* 操作行：模型/thinking + 发送/停止 */}
-                <div className="flex items-center justify-between px-1.5 pb-1.5">
+                <div className="flex items-center justify-between px-1.5 pt-[9px] pb-1.5 md:pt-[10px]">
                   <div className="flex items-center gap-1">
                     {instanceModel && (
                       <ModelSelector
