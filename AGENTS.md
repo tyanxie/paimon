@@ -83,6 +83,7 @@ bin/
 - **npm 分发模式** — 主包 `@tyanxie/paimon`（含 `bin/paimon.cjs` 启动器 + extension 源码）+ 4 个平台包 `@tyanxie/paimon-{darwin-arm64,darwin-x64,linux-arm64,linux-x64}`（含编译二进制 + web 资产）。主包通过 `optionalDependencies` 引用平台包，npm install 时只下载匹配当前系统的那一个
 - **编译模式 web 目录寻址** — 源码模式从 `resolve(import.meta.dir, "../../dist/web")` 读取；编译模式从 `resolve(dirname(process.execPath), "../web")` 读取（二进制在 `bin/paimon`，web 在同级 `web/`）。判断条件：`import.meta.path.startsWith("/$bunfs/")`
 - **版本号来源** — 根 `package.json` 的 `version` 字段为唯一来源，`prepare-npm-packages.ts` 读取并写入所有生成的包
+- **图片传输协议** — prompt 消息的 payload 支持可选的 `images?: ImageData[]` 字段（`{ data: base64, mimeType: string }`），从 Browser → Hub → Edge → Extension 透传。Extension 端收到后组装为 pi SDK 的 `(TextContent | ImageContent)[]` 调用 `sendUserMessage`。前端通过 Canvas API 压缩图片（max 2048px，JPEG quality 0.85，上限 5MB），不依赖外部库。Bun WS 默认 16MB payload 限制足够
 
 ## 代码规范
 

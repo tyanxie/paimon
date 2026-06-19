@@ -41,6 +41,7 @@ const en: LocaleResource = {
     scrollToBottom: "Scroll to bottom",
     stop: "Stop",
     send: "Send",
+    attachImage: "Attach image",
     statusRunning: "Running",
     statusCompacting: "Compacting",
     statusOnline: "Online",

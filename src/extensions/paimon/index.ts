@@ -294,9 +294,26 @@ function handleHubMessage(
   getCurrentCtx: () => ExtensionContext | null,
 ): void {
   switch (msg.type) {
-    case "prompt":
-      pi.sendUserMessage(msg.payload.message);
+    case "prompt": {
+      // 如果附带图片，构造 content blocks
+      if (msg.payload.images?.length) {
+        const content:
+          | { type: "text"; text: string }[]
+          | { type: "image"; data: string; mimeType: string }[] = [];
+        (content as any[]).push({ type: "text", text: msg.payload.message });
+        for (const img of msg.payload.images) {
+          (content as any[]).push({
+            type: "image",
+            data: img.data,
+            mimeType: img.mimeType,
+          });
+        }
+        pi.sendUserMessage(content as any);
+      } else {
+        pi.sendUserMessage(msg.payload.message);
+      }
       break;
+    }
     case "steer":
       pi.sendUserMessage(msg.payload.message, { deliverAs: "steer" });
       break;

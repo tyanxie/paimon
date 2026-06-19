@@ -12,7 +12,11 @@ import { NewInstanceModal } from "./components/ui/NewInstanceModal";
 import { LoginPage } from "./components/LoginPage";
 import { getStoredToken, clearStoredToken } from "./utils/token";
 import { ToastContainer, showToast } from "./components/ui/Toast";
-import type { InstanceId, ThinkingLevel } from "../../protocol/types";
+import type {
+  InstanceId,
+  ImageData,
+  ThinkingLevel,
+} from "../../protocol/types";
 import { useTranslation } from "react-i18next";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -137,11 +141,15 @@ export default function App() {
   );
 
   const handleSendMessage = useCallback(
-    (message: string) => {
+    (message: string, images?: ImageData[]) => {
       if (!selectedInstanceId) return;
       send({
         type: "prompt",
-        payload: { instanceId: selectedInstanceId, message },
+        payload: {
+          instanceId: selectedInstanceId,
+          message,
+          images: images?.length ? images : undefined,
+        },
       });
       setDraft(selectedInstanceId, "");
     },

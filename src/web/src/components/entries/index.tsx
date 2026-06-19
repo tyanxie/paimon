@@ -8,6 +8,7 @@ import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
 import { ModalShell } from "../ui/ModalShell";
+import { ImageLightbox } from "../ui/ImageLightbox";
 import { useTranslation } from "react-i18next";
 
 export function EntryItem({
@@ -76,24 +77,64 @@ function RichMessageItem({
 
 /** 用户消息：右对齐气泡 */
 function UserBubble({ content }: { content: unknown }) {
-  const text =
-    typeof content === "string"
-      ? content
-      : Array.isArray(content)
-        ? content
-            .filter((b: any) => b.type === "text")
-            .map((b: any) => b.text)
-            .join("")
-        : JSON.stringify(content);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  // 提取文本和图片
+  let text = "";
+  let images: { data: string; mimeType: string }[] = [];
+
+  if (typeof content === "string") {
+    text = content;
+  } else if (Array.isArray(content)) {
+    text = content
+      .filter((b: any) => b.type === "text")
+      .map((b: any) => b.text)
+      .join("");
+    images = content.filter((b: any) => b.type === "image");
+  } else {
+    text = JSON.stringify(content);
+  }
 
   return (
-    <div className="flex justify-end px-4 py-1.5">
-      <div className="max-w-[80%] px-3.5 py-2 rounded-[16px] rounded-br-[4px] bg-[var(--color-accent)] text-white">
-        <p className="text-[14px] leading-[21px] whitespace-pre-wrap break-words">
-          {text}
-        </p>
+    <>
+      <div className="flex justify-end px-4 py-1.5">
+        <div className="max-w-[80%] rounded-[16px] rounded-br-[4px] bg-[var(--color-accent)] text-white">
+          {/* 图片展示 */}
+          {images.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 p-2 pb-0">
+              {images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() =>
+                    setLightboxSrc(`data:${img.mimeType};base64,${img.data}`)
+                  }
+                  className="block rounded-[8px] overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  <img
+                    src={`data:${img.mimeType};base64,${img.data}`}
+                    alt={`Attached image ${i + 1}`}
+                    className="max-w-[200px] max-h-[150px] object-cover"
+                    draggable={false}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+          {/* 文本内容 */}
+          {text && (
+            <p className="text-[14px] leading-[21px] whitespace-pre-wrap break-words px-3.5 py-2">
+              {text}
+            </p>
+          )}
+          {/* 仅有图片无文本时的底部间距 */}
+          {!text && images.length > 0 && <div className="h-2" />}
+        </div>
       </div>
-    </div>
+      {/* 大图查看 */}
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      )}
+    </>
   );
 }
 
