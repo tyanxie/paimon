@@ -40,6 +40,7 @@ const zhCN = {
     stop: "停止",
     send: "发送",
     attachImage: "添加图片",
+    imageProcessFailed: "图片处理失败，请检查图片格式",
     statusRunning: "执行中",
     statusCompacting: "压缩中",
     statusOnline: "在线",

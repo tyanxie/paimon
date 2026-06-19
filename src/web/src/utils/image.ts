@@ -111,20 +111,6 @@ export function getImagesFromClipboard(clipboardData: DataTransfer): File[] {
   return files;
 }
 
-/**
- * 从拖放事件中提取图片文件列表
- */
-export function getImagesFromDrop(dataTransfer: DataTransfer): File[] {
-  const files: File[] = [];
-  for (let i = 0; i < dataTransfer.files.length; i++) {
-    const file = dataTransfer.files[i];
-    if (file.type.startsWith("image/")) {
-      files.push(file);
-    }
-  }
-  return files;
-}
-
 /** 计算等比缩放后的尺寸 */
 function calculateResizedDimensions(
   originalWidth: number,

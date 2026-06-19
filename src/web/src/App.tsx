@@ -14,7 +14,7 @@ import { getStoredToken, clearStoredToken } from "./utils/token";
 import { ToastContainer, showToast } from "./components/ui/Toast";
 import type {
   InstanceId,
-  ImageData,
+  ImagePayload,
   ThinkingLevel,
 } from "../../protocol/types";
 import { useTranslation } from "react-i18next";
@@ -141,7 +141,7 @@ export default function App() {
   );
 
   const handleSendMessage = useCallback(
-    (message: string, images?: ImageData[]) => {
+    (message: string, images?: ImagePayload[]) => {
       if (!selectedInstanceId) return;
       send({
         type: "prompt",

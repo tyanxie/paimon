@@ -8,8 +8,8 @@
 /** pi 实例唯一标识（Hub 分配） */
 export type InstanceId = string;
 
-/** 图片数据（base64 编码） */
-export interface ImageData {
+/** 消息中附带的图片载荷（base64 编码，四层透传：Browser → Hub → Edge → Extension） */
+export interface ImagePayload {
   /** base64 编码的图片数据 */
   data: string;
   /** MIME 类型，如 "image/png", "image/jpeg" */
@@ -243,7 +243,7 @@ export interface HubPromptMessage {
   payload: {
     message: string;
     /** 附带的图片列表（base64） */
-    images?: ImageData[];
+    images?: ImagePayload[];
   };
 }
 
@@ -371,7 +371,7 @@ export interface BrowserPromptMessage {
     instanceId: InstanceId;
     message: string;
     /** 附带的图片列表（base64） */
-    images?: ImageData[];
+    images?: ImagePayload[];
   };
 }
 
@@ -722,7 +722,7 @@ export interface HubEdgePromptMessage {
     instanceId: InstanceId;
     message: string;
     /** 附带的图片列表（base64） */
-    images?: ImageData[];
+    images?: ImagePayload[];
   };
 }
 

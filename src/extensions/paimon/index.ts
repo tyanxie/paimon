@@ -8,6 +8,7 @@ import type {
   SessionShutdownEvent,
 } from "@earendil-works/pi-coding-agent";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
+import type { TextContent, ImageContent } from "@earendil-works/pi-ai";
 import { DEFAULTS } from "../../protocol/types";
 import type {
   EdgeToExtensionMessage,
@@ -297,18 +298,15 @@ function handleHubMessage(
     case "prompt": {
       // 如果附带图片，构造 content blocks
       if (msg.payload.images?.length) {
-        const content:
-          | { type: "text"; text: string }[]
-          | { type: "image"; data: string; mimeType: string }[] = [];
-        (content as any[]).push({ type: "text", text: msg.payload.message });
-        for (const img of msg.payload.images) {
-          (content as any[]).push({
-            type: "image",
+        const content: (TextContent | ImageContent)[] = [
+          { type: "text", text: msg.payload.message },
+          ...msg.payload.images.map((img) => ({
+            type: "image" as const,
             data: img.data,
             mimeType: img.mimeType,
-          });
-        }
-        pi.sendUserMessage(content as any);
+          })),
+        ];
+        pi.sendUserMessage(content);
       } else {
         pi.sendUserMessage(msg.payload.message);
       }

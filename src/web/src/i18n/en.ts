@@ -42,6 +42,7 @@ const en: LocaleResource = {
     stop: "Stop",
     send: "Send",
     attachImage: "Attach image",
+    imageProcessFailed: "Image processing failed, please check the format",
     statusRunning: "Running",
     statusCompacting: "Compacting",
     statusOnline: "Online",

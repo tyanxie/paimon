@@ -12,7 +12,7 @@ import {
 import type {
   InstanceId,
   ContextUsageInfo,
-  ImageData,
+  ImagePayload,
   ModelInfo,
   ThinkingLevel,
   SessionListItem,
@@ -32,6 +32,7 @@ import {
 } from "../utils/image";
 import { EntryItem } from "./entries";
 import { ImageLightbox } from "./ui/ImageLightbox";
+import { showToast } from "./ui/Toast";
 import { MobileNavBar } from "./ui/MobileNavBar";
 import { InstanceHeader } from "./ui/InstanceHeader";
 import { ModelSelector } from "./ui/ModelSelector";
@@ -173,7 +174,7 @@ interface EventStreamProps {
   onScrollToBottomHandled: () => void;
   inputValue: string;
   onInputChange: (value: string) => void;
-  onSendMessage: (message: string, images?: ImageData[]) => void;
+  onSendMessage: (message: string, images?: ImagePayload[]) => void;
   onAbort: () => void;
   onSetModel?: (provider: string, id: string) => void;
   onSetThinkingLevel?: (level: ThinkingLevel) => void;
@@ -878,15 +879,19 @@ export function EventStream({
     [onInputChange, resizeTextarea],
   );
 
+  // 发送条件
+  const canSend =
+    !isBusy(instanceStatus) &&
+    (!!inputValue.trim() || attachedImages.length > 0);
+
   // 发送消息
-  // 发送消息（包含图片）
   const handleSend = useCallback(() => {
     if (
       isBusy(instanceStatus) ||
       (!inputValue.trim() && attachedImages.length === 0)
     )
       return;
-    const images: ImageData[] | undefined = attachedImages.length
+    const images: ImagePayload[] | undefined = attachedImages.length
       ? attachedImages.map((img) => ({
           data: img.data,
           mimeType: img.mimeType,
@@ -925,12 +930,16 @@ export function EventStream({
       const files = getImagesFromClipboard(e.clipboardData);
       if (files.length === 0) return;
       e.preventDefault();
-      // 异步处理图片
-      Promise.all(files.map(processImageFile)).then((processed) => {
-        setAttachedImages((prev) => [...prev, ...processed]);
-      });
+      Promise.all(files.map(processImageFile))
+        .then((processed) => {
+          setAttachedImages((prev) => [...prev, ...processed]);
+        })
+        .catch((err) => {
+          showToast(t("eventStream.imageProcessFailed"));
+          console.error("Image process failed:", err);
+        });
     },
-    [],
+    [t],
   );
 
   // 文件上传处理
@@ -938,13 +947,18 @@ export function EventStream({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? []);
       if (files.length === 0) return;
-      Promise.all(files.map(processImageFile)).then((processed) => {
-        setAttachedImages((prev) => [...prev, ...processed]);
-      });
+      Promise.all(files.map(processImageFile))
+        .then((processed) => {
+          setAttachedImages((prev) => [...prev, ...processed]);
+        })
+        .catch((err) => {
+          showToast(t("eventStream.imageProcessFailed"));
+          console.error("Image process failed:", err);
+        });
       // 重置 input 以便再次选择相同文件
       e.target.value = "";
     },
-    [],
+    [t],
   );
 
   // 移除已附加的图片
@@ -1200,13 +1214,9 @@ export function EventStream({
                     ) : (
                       <button
                         onClick={handleSend}
-                        disabled={
-                          isBusy(instanceStatus) ||
-                          (!inputValue.trim() && attachedImages.length === 0)
-                        }
+                        disabled={!canSend}
                         className={`select-none w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
-                          !isBusy(instanceStatus) &&
-                          (inputValue.trim() || attachedImages.length > 0)
+                          canSend
                             ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
                             : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
                         }`}

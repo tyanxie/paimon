@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { AlertCircle, ChevronRight } from "lucide-react";
+import type { ImagePayload } from "../../../../protocol/types";
 import type { SessionEntry } from "../../stores/useAppState";
 import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
@@ -81,7 +82,7 @@ function UserBubble({ content }: { content: unknown }) {
 
   // 提取文本和图片
   let text = "";
-  let images: { data: string; mimeType: string }[] = [];
+  let images: ImagePayload[] = [];
 
   if (typeof content === "string") {
     text = content;
@@ -102,22 +103,23 @@ function UserBubble({ content }: { content: unknown }) {
           {/* 图片展示 */}
           {images.length > 0 && (
             <div className="flex flex-wrap gap-1.5 p-2 pb-0">
-              {images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() =>
-                    setLightboxSrc(`data:${img.mimeType};base64,${img.data}`)
-                  }
-                  className="block rounded-[8px] overflow-hidden hover:opacity-90 transition-opacity"
-                >
-                  <img
-                    src={`data:${img.mimeType};base64,${img.data}`}
-                    alt={`Attached image ${i + 1}`}
-                    className="max-w-[200px] max-h-[150px] object-cover"
-                    draggable={false}
-                  />
-                </button>
-              ))}
+              {images.map((img, i) => {
+                const src = `data:${img.mimeType};base64,${img.data}`;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setLightboxSrc(src)}
+                    className="block rounded-[8px] overflow-hidden hover:opacity-90 transition-opacity"
+                  >
+                    <img
+                      src={src}
+                      alt={`Attached image ${i + 1}`}
+                      className="max-w-[200px] max-h-[150px] object-cover"
+                      draggable={false}
+                    />
+                  </button>
+                );
+              })}
             </div>
           )}
           {/* 文本内容 */}
