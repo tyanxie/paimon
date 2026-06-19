@@ -8,7 +8,6 @@ let ComposerStatusIndicator: (props: {
 }) => React.ReactNode;
 let getComposerButtonMode: (args: {
   instanceStatus?: InstanceStatus;
-  inputValue: string;
 }) => "send" | "stop";
 
 beforeAll(async () => {
@@ -87,7 +86,6 @@ describe("ComposerStatusIndicator", () => {
     expect(
       getComposerButtonMode({
         instanceStatus: "streaming",
-        inputValue: "queued draft",
       }),
     ).toBe("stop");
   });
@@ -96,7 +94,6 @@ describe("ComposerStatusIndicator", () => {
     expect(
       getComposerButtonMode({
         instanceStatus: "compacting",
-        inputValue: "test",
       }),
     ).toBe("send");
   });

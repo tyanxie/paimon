@@ -22,14 +22,11 @@ import {
   getSessionEntryRenderKey,
   type ConversationLoadState,
   type SessionEntry,
+  type InputDraft,
 } from "../stores/useAppState";
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { isStreaming as isStatusStreaming, isBusy } from "../utils/status";
-import {
-  processImageFile,
-  getImagesFromClipboard,
-  type AttachedImage,
-} from "../utils/image";
+import { processImageFile, getImagesFromClipboard } from "../utils/image";
 import { EntryItem } from "./entries";
 import { ImageLightbox } from "./ui/ImageLightbox";
 import { showToast } from "./ui/Toast";
@@ -86,7 +83,6 @@ export function getComposerButtonMode({
   instanceStatus,
 }: {
   instanceStatus?: InstanceStatus;
-  inputValue: string;
 }) {
   return isStatusStreaming(instanceStatus) ? "stop" : "send";
 }
@@ -172,8 +168,8 @@ interface EventStreamProps {
   errorMessage: string | null;
   shouldScrollToBottom: boolean;
   onScrollToBottomHandled: () => void;
-  inputValue: string;
-  onInputChange: (value: string) => void;
+  draft: InputDraft;
+  onDraftChange: (value: InputDraft) => void;
   onSendMessage: (message: string, images?: ImagePayload[]) => void;
   onAbort: () => void;
   onSetModel?: (provider: string, id: string) => void;
@@ -373,8 +369,8 @@ export function EventStream({
   errorMessage,
   shouldScrollToBottom,
   onScrollToBottomHandled,
-  inputValue,
-  onInputChange,
+  draft,
+  onDraftChange,
   onSendMessage,
   onAbort,
   onSetModel,
@@ -407,14 +403,12 @@ export function EventStream({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoSrc = useLogoSrc();
   const [showCompactModal, setShowCompactModal] = useState(false);
-  const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const isRefreshing = loadState === "refreshing";
   const composerButtonMode = getComposerButtonMode({
     instanceStatus,
-    inputValue,
   });
   // 上下文信息 + 压缩按钮作为整体：tokens 有值时同时展示，最后一条是 compaction entry 时不显示压缩按钮（无内容可压缩）
   const lastEntryIsCompaction =
@@ -868,48 +862,40 @@ export function EventStream({
     if (textareaRef.current) {
       resizeTextarea(textareaRef.current);
     }
-  }, [inputValue, resizeTextarea]);
+  }, [draft.text, resizeTextarea]);
 
   // textarea 自动调整高度
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onInputChange(e.target.value);
+      onDraftChange({ ...draft, text: e.target.value });
       resizeTextarea(e.target);
     },
-    [onInputChange, resizeTextarea],
+    [draft, onDraftChange, resizeTextarea],
   );
 
   // 发送条件
   const canSend =
-    !isBusy(instanceStatus) &&
-    (!!inputValue.trim() || attachedImages.length > 0);
+    !isBusy(instanceStatus) && (!!draft.text.trim() || draft.images.length > 0);
 
   // 发送消息
   const handleSend = useCallback(() => {
     if (
       isBusy(instanceStatus) ||
-      (!inputValue.trim() && attachedImages.length === 0)
+      (!draft.text.trim() && draft.images.length === 0)
     )
       return;
-    const images: ImagePayload[] | undefined = attachedImages.length
-      ? attachedImages.map((img) => ({
+    const images: ImagePayload[] | undefined = draft.images.length
+      ? draft.images.map((img) => ({
           data: img.data,
           mimeType: img.mimeType,
         }))
       : undefined;
-    onSendMessage(inputValue.trim(), images);
-    setAttachedImages([]);
+    onSendMessage(draft.text.trim(), images);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
     startBottomFollow();
-  }, [
-    inputValue,
-    attachedImages,
-    instanceStatus,
-    onSendMessage,
-    startBottomFollow,
-  ]);
+  }, [draft, instanceStatus, onSendMessage, startBottomFollow]);
 
   // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
   // keyCode 229 用于拦截 Safari 上 IME 确认拼音时的回车（此时 isComposing 已为 false）
@@ -932,14 +918,14 @@ export function EventStream({
       e.preventDefault();
       Promise.all(files.map(processImageFile))
         .then((processed) => {
-          setAttachedImages((prev) => [...prev, ...processed]);
+          onDraftChange({ ...draft, images: [...draft.images, ...processed] });
         })
         .catch((err) => {
           showToast(t("eventStream.imageProcessFailed"));
           console.error("Image process failed:", err);
         });
     },
-    [t],
+    [draft, onDraftChange, t],
   );
 
   // 文件上传处理
@@ -949,7 +935,7 @@ export function EventStream({
       if (files.length === 0) return;
       Promise.all(files.map(processImageFile))
         .then((processed) => {
-          setAttachedImages((prev) => [...prev, ...processed]);
+          onDraftChange({ ...draft, images: [...draft.images, ...processed] });
         })
         .catch((err) => {
           showToast(t("eventStream.imageProcessFailed"));
@@ -958,13 +944,19 @@ export function EventStream({
       // 重置 input 以便再次选择相同文件
       e.target.value = "";
     },
-    [t],
+    [draft, onDraftChange, t],
   );
 
   // 移除已附加的图片
-  const handleRemoveImage = useCallback((id: string) => {
-    setAttachedImages((prev) => prev.filter((img) => img.id !== id));
-  }, []);
+  const handleRemoveImage = useCallback(
+    (id: string) => {
+      onDraftChange({
+        ...draft,
+        images: draft.images.filter((img) => img.id !== id),
+      });
+    },
+    [draft, onDraftChange],
+  );
 
   if (!instanceId) {
     return (
@@ -1130,9 +1122,9 @@ export function EventStream({
               {/* 输入框区域：textarea + 图片预览 + 操作行在同一个 border 内 */}
               <div className="flex flex-col overflow-hidden rounded-[14px] border border-[var(--separator)]">
                 {/* 图片预览条 */}
-                {attachedImages.length > 0 && (
+                {draft.images.length > 0 && (
                   <div className="flex gap-2 px-3 pt-2 pb-0 overflow-x-auto scrollbar-none md:px-4">
-                    {attachedImages.map((img) => (
+                    {draft.images.map((img) => (
                       <div
                         key={img.id}
                         className="relative flex-shrink-0 group"
@@ -1163,7 +1155,7 @@ export function EventStream({
                   ref={textareaRef}
                   rows={1}
                   placeholder={t("eventStream.sendPlaceholder")}
-                  value={inputValue}
+                  value={draft.text}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}

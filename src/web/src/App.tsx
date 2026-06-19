@@ -17,6 +17,7 @@ import type {
   ImagePayload,
   ThinkingLevel,
 } from "../../protocol/types";
+import type { InputDraft } from "./stores/useAppState";
 import { useTranslation } from "react-i18next";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -151,13 +152,13 @@ export default function App() {
           images: images?.length ? images : undefined,
         },
       });
-      setDraft(selectedInstanceId, "");
+      setDraft(selectedInstanceId, { text: "", images: [] });
     },
     [selectedInstanceId, send, setDraft],
   );
 
   const handleDraftChange = useCallback(
-    (value: string) => {
+    (value: InputDraft) => {
       if (!selectedInstanceId) return;
       setDraft(selectedInstanceId, value);
     },
@@ -327,8 +328,8 @@ export default function App() {
               errorMessage={errorMessage}
               shouldScrollToBottom={shouldScrollToBottom}
               onScrollToBottomHandled={clearScrollToBottom}
-              inputValue={draft}
-              onInputChange={handleDraftChange}
+              draft={draft}
+              onDraftChange={handleDraftChange}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
               onSetModel={handleSetModel}
@@ -380,8 +381,8 @@ export default function App() {
                   errorMessage={null}
                   shouldScrollToBottom={false}
                   onScrollToBottomHandled={clearScrollToBottom}
-                  inputValue=""
-                  onInputChange={() => {}}
+                  draft={{ text: "", images: [] }}
+                  onDraftChange={() => {}}
                   onSendMessage={handleSendMessage}
                   onAbort={handleAbort}
                 />
