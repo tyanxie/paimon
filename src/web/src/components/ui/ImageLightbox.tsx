@@ -36,13 +36,13 @@ export function ImageLightbox({ src, alt, onClose }: ImageLightboxProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[30px] animate-in fade-in duration-150"
       onClick={onClose}
     >
       {/* 关闭按钮 */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+        className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-[var(--badge-bg)] hover:bg-[var(--badge-bg-hover)] text-[var(--badge-text)] flex items-center justify-center transition-colors"
         aria-label="Close"
       >
         <X size={18} />

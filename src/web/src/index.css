@@ -112,6 +112,11 @@
   /* 实色按钮 */
   --btn-solid: #f6f6f6;
   --btn-solid-hover: #dddddd;
+
+  /* 媒体覆盖 badge（叠在图片/视频上的小控件，不随主题翻转） */
+  --badge-bg: rgba(0, 0, 0, 0.5);
+  --badge-bg-hover: rgba(0, 0, 0, 0.7);
+  --badge-text: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
