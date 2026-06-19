@@ -1,4 +1,4 @@
-// 中文语言包（fallback 语言）
+// 中文语言包
 
 const zh = {
   // ─── 通用 ───
@@ -127,4 +127,9 @@ const zh = {
 
 export default zh;
 
-export type LocaleResource = typeof zh;
+// 递归将所有叶子节点从字面量类型放宽为 string，保留 key 结构约束
+type DeepStringify<T> = {
+  [K in keyof T]: T[K] extends string ? string : DeepStringify<T[K]>;
+};
+
+export type LocaleResource = DeepStringify<typeof zh>;
