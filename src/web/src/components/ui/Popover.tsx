@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 
 /** 弹出方向 */
 export type PopoverPlacement = "top" | "bottom";
+/** 水平对齐 */
+export type PopoverAlign = "left" | "right";
 
 interface PopoverProps {
   /** 渲染触发按钮，接收 open 状态 */
@@ -17,33 +19,43 @@ interface PopoverProps {
   disabled?: boolean;
   /** 弹出方向：top（向上，默认）或 bottom（向下） */
   placement?: PopoverPlacement;
+  /** 水平对齐：left（左对齐锚点）或 right（右对齐锚点，默认） */
+  align?: PopoverAlign;
 }
 
 interface PopoverPosition {
-  right: number;
+  left?: number;
+  right?: number;
   top?: number;
   bottom?: number;
 }
 
-/** 计算 Popover 位置：向上弹出，右对齐锚点 */
+/** 计算 Popover 位置 */
 export function calcPosition(
-  anchorRect: Pick<DOMRect, "top" | "bottom" | "right">,
+  anchorRect: Pick<DOMRect, "top" | "bottom" | "left" | "right">,
   placement: PopoverPlacement = "top",
+  align: PopoverAlign = "right",
   margin = 8,
   viewportPadding = 12,
 ): PopoverPosition {
   const { innerWidth, innerHeight } = window;
-  const right = Math.max(viewportPadding, innerWidth - anchorRect.right);
 
+  // 水平定位
+  const horizontal: Pick<PopoverPosition, "left" | "right"> =
+    align === "left"
+      ? { left: Math.max(viewportPadding, anchorRect.left) }
+      : { right: Math.max(viewportPadding, innerWidth - anchorRect.right) };
+
+  // 垂直定位
   if (placement === "bottom") {
     return {
-      right,
+      ...horizontal,
       top: Math.max(viewportPadding, anchorRect.bottom + margin),
     };
   }
 
   return {
-    right,
+    ...horizontal,
     bottom: Math.max(viewportPadding, innerHeight - anchorRect.top + margin),
   };
 }
@@ -54,6 +66,7 @@ export function Popover({
   children,
   disabled = false,
   placement = "top",
+  align = "right",
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
@@ -100,7 +113,7 @@ export function Popover({
     }
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPosition(calcPosition(rect, placement));
+    setPosition(calcPosition(rect, placement, align));
     setOpen(true);
   };
 
@@ -114,7 +127,9 @@ export function Popover({
             className="glass-popover z-50"
             style={{
               position: "fixed",
-              right: position.right,
+              ...(position.left !== undefined
+                ? { left: position.left }
+                : { right: position.right }),
               ...(position.top !== undefined
                 ? { top: position.top }
                 : { bottom: position.bottom }),

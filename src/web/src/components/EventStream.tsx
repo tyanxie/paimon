@@ -1020,31 +1020,45 @@ export function EventStream({
         >
           <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
             <div className="glass-panel glass-panel-input px-3 py-2 md:px-4">
-              {/* 状态 + 上下文 + 模型信息 */}
-              {(instanceStatus || contextUsage || instanceModel) && (
-                <div className="mb-1.5 flex items-center justify-between gap-3 px-1 text-[12px] text-[var(--label-secondary)]">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <ComposerStatusIndicator status={instanceStatus} />
-                    {showContextInfo && (
-                      <span className="min-w-0 flex items-center gap-2">
-                        <span className="min-w-0 truncate">
-                          <ContextIndicator contextUsage={contextUsage} />
-                        </span>
-                        {/* 压缩按钮：最后一条是 compaction entry 时不显示（无内容可压缩） */}
-                        {!lastEntryIsCompaction && onCompact && (
-                          <button
-                            onClick={() => setShowCompactModal(true)}
-                            disabled={compactDisabled}
-                            title={t("eventStream.compactContext")}
-                            className="shrink-0 inline-flex items-center justify-center p-0.5 rounded-[4px] text-[var(--label-secondary)] hover:text-[var(--color-accent)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                          >
-                            <Minimize2 size={12} />
-                          </button>
-                        )}
+              {/* 信息行：状态 + 上下文 + 压缩按钮 */}
+              {(instanceStatus || showContextInfo) && (
+                <div className="mb-1.5 flex items-center gap-2 px-1 text-[12px] leading-[15px] text-[var(--label-secondary)]">
+                  <ComposerStatusIndicator status={instanceStatus} />
+                  {showContextInfo && (
+                    <span className="min-w-0 flex items-center gap-1">
+                      <span className="min-w-0 truncate">
+                        <ContextIndicator contextUsage={contextUsage} />
                       </span>
-                    )}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2.5">
+                      {/* 压缩按钮：最后一条是 compaction entry 时不显示（无内容可压缩） */}
+                      {!lastEntryIsCompaction && onCompact && (
+                        <button
+                          onClick={() => setShowCompactModal(true)}
+                          disabled={compactDisabled}
+                          title={t("eventStream.compactContext")}
+                          className="shrink-0 inline-flex items-center justify-center p-0.5 rounded-[4px] text-[var(--label-secondary)] hover:text-[var(--color-accent)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                        >
+                          <Minimize2 size={12} />
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* 输入框区域：textarea + 操作行在同一个 border 内 */}
+              <div className="flex flex-col overflow-hidden rounded-[14px] border border-[var(--separator)]">
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  placeholder={t("eventStream.sendPlaceholder")}
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  className="resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[16px] leading-[24px] px-3 py-[9px] outline-none overflow-hidden md:px-4 md:py-[10px] md:text-[14px] md:leading-[22px]"
+                />
+                {/* 操作行：模型/thinking + 发送/停止 */}
+                <div className="flex items-center justify-between px-1.5 pb-1.5">
+                  <div className="flex items-center gap-1">
                     {instanceModel && (
                       <ModelSelector
                         currentModel={instanceModel}
@@ -1058,43 +1072,31 @@ export function EventStream({
                         onSelect={onSetThinkingLevel}
                       />
                     )}
-                  </span>
-                </div>
-              )}
-
-              <div className="relative flex items-end overflow-hidden rounded-[14px] border border-[var(--separator)] bg-transparent">
-                <textarea
-                  ref={textareaRef}
-                  rows={1}
-                  placeholder={t("eventStream.sendPlaceholder")}
-                  value={inputValue}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  className="flex-1 resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[16px] leading-[24px] px-3 py-[9px] outline-none overflow-hidden md:px-4 md:py-[10px] md:text-[14px] md:leading-[22px]"
-                />
-                <div className="flex-shrink-0 pb-[5px] pr-[5px] pointer-events-auto md:pb-[6px] md:pr-[6px]">
-                  {composerButtonMode === "stop" ? (
-                    <button
-                      onClick={onAbort}
-                      className="select-none w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
-                      title={t("eventStream.stop")}
-                    >
-                      <Square size={12} fill="currentColor" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleSend}
-                      disabled={isBusy(instanceStatus) || !inputValue.trim()}
-                      className={`select-none w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
-                        !isBusy(instanceStatus) && inputValue.trim()
-                          ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
-                          : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
-                      }`}
-                      title={t("eventStream.send")}
-                    >
-                      <ArrowUp size={16} strokeWidth={2.5} />
-                    </button>
-                  )}
+                  </div>
+                  <div className="flex-shrink-0">
+                    {composerButtonMode === "stop" ? (
+                      <button
+                        onClick={onAbort}
+                        className="select-none w-[28px] h-[28px] rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-90 active:opacity-80 transition-opacity"
+                        title={t("eventStream.stop")}
+                      >
+                        <Square size={12} fill="currentColor" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleSend}
+                        disabled={isBusy(instanceStatus) || !inputValue.trim()}
+                        className={`select-none w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
+                          !isBusy(instanceStatus) && inputValue.trim()
+                            ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
+                            : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
+                        }`}
+                        title={t("eventStream.send")}
+                      >
+                        <ArrowUp size={16} strokeWidth={2.5} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

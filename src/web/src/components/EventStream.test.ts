@@ -187,7 +187,7 @@ describe("文本选择边界", () => {
     expect(modalShellSource).toContain(
       "text-[var(--label-primary)] select-text",
     );
-    expect(modelSelectorSource).toContain("hidden md:inline select-text");
+    expect(modelSelectorSource).toContain("max-w-[140px] truncate select-text");
   });
 
   test("加载和空状态占位文案禁用选择", () => {
