@@ -1,10 +1,18 @@
 // 事件流画布：展示选中实例的对话 entries
 
 import { useRef, useLayoutEffect, useState, useCallback } from "react";
-import { ArrowUp, Square, ChevronsDown, Minimize2 } from "lucide-react";
+import {
+  ArrowUp,
+  Square,
+  ChevronsDown,
+  Minimize2,
+  ImagePlus,
+  X,
+} from "lucide-react";
 import type {
   InstanceId,
   ContextUsageInfo,
+  ImagePayload,
   ModelInfo,
   ThinkingLevel,
   SessionListItem,
@@ -14,10 +22,15 @@ import {
   getSessionEntryRenderKey,
   type ConversationLoadState,
   type SessionEntry,
+  type InputDraft,
+  type InputDraftUpdater,
 } from "../stores/useAppState";
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { isStreaming as isStatusStreaming, isBusy } from "../utils/status";
+import { processImageFile, getImagesFromClipboard } from "../utils/image";
 import { EntryItem } from "./entries";
+import { ImageLightbox } from "./ui/ImageLightbox";
+import { showToast } from "./ui/Toast";
 import { MobileNavBar } from "./ui/MobileNavBar";
 import { InstanceHeader } from "./ui/InstanceHeader";
 import { ModelSelector } from "./ui/ModelSelector";
@@ -67,12 +80,7 @@ export function calculatePrependScrollTop({
   return previousScrollTop + nextScrollHeight - previousScrollHeight;
 }
 
-export function getComposerButtonMode({
-  instanceStatus,
-}: {
-  instanceStatus?: InstanceStatus;
-  inputValue: string;
-}) {
+export function getComposerButtonMode(instanceStatus?: InstanceStatus) {
   return isStatusStreaming(instanceStatus) ? "stop" : "send";
 }
 
@@ -157,9 +165,9 @@ interface EventStreamProps {
   errorMessage: string | null;
   shouldScrollToBottom: boolean;
   onScrollToBottomHandled: () => void;
-  inputValue: string;
-  onInputChange: (value: string) => void;
-  onSendMessage: (message: string) => void;
+  draft: InputDraft;
+  onDraftChange: (value: InputDraftUpdater) => void;
+  onSendMessage: (message: string, images?: ImagePayload[]) => void;
   onAbort: () => void;
   onSetModel?: (provider: string, id: string) => void;
   onSetThinkingLevel?: (level: ThinkingLevel) => void;
@@ -358,8 +366,8 @@ export function EventStream({
   errorMessage,
   shouldScrollToBottom,
   onScrollToBottomHandled,
-  inputValue,
-  onInputChange,
+  draft,
+  onDraftChange,
   onSendMessage,
   onAbort,
   onSetModel,
@@ -389,15 +397,16 @@ export function EventStream({
   const topChromeRef = useRef<HTMLDivElement>(null);
   const bottomChromeRef = useRef<HTMLDivElement>(null);
   const bottomSafeGapRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const logoSrc = useLogoSrc();
   const [showCompactModal, setShowCompactModal] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const isRefreshing = loadState === "refreshing";
-  const composerButtonMode = getComposerButtonMode({
-    instanceStatus,
-    inputValue,
-  });
+  const composerButtonMode = getComposerButtonMode(instanceStatus);
   // 上下文信息 + 压缩按钮作为整体：tokens 有值时同时展示，最后一条是 compaction entry 时不显示压缩按钮（无内容可压缩）
   const lastEntryIsCompaction =
     entries.length > 0 && entries[entries.length - 1].type === "compaction";
@@ -850,26 +859,41 @@ export function EventStream({
     if (textareaRef.current) {
       resizeTextarea(textareaRef.current);
     }
-  }, [inputValue, resizeTextarea]);
+  }, [draft.text, resizeTextarea]);
 
   // textarea 自动调整高度
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onInputChange(e.target.value);
+      onDraftChange((prev) => ({ ...prev, text: e.target.value }));
       resizeTextarea(e.target);
     },
-    [onInputChange, resizeTextarea],
+    [onDraftChange, resizeTextarea],
   );
+
+  // 发送条件
+  const canSend =
+    !isBusy(instanceStatus) && (!!draft.text.trim() || draft.images.length > 0);
 
   // 发送消息
   const handleSend = useCallback(() => {
-    if (isBusy(instanceStatus) || !inputValue.trim()) return;
-    onSendMessage(inputValue.trim());
+    const current = draftRef.current;
+    if (
+      isBusy(instanceStatus) ||
+      (!current.text.trim() && current.images.length === 0)
+    )
+      return;
+    const images: ImagePayload[] | undefined = current.images.length
+      ? current.images.map((img) => ({
+          data: img.data,
+          mimeType: img.mimeType,
+        }))
+      : undefined;
+    onSendMessage(current.text.trim(), images);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
     startBottomFollow();
-  }, [inputValue, instanceStatus, onSendMessage, startBottomFollow]);
+  }, [instanceStatus, onSendMessage, startBottomFollow]);
 
   // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
   // keyCode 229 用于拦截 Safari 上 IME 确认拼音时的回车（此时 isComposing 已为 false）
@@ -882,6 +906,60 @@ export function EventStream({
       }
     },
     [handleSend],
+  );
+
+  // 粘贴图片处理
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const files = getImagesFromClipboard(e.clipboardData);
+      if (files.length === 0) return;
+      e.preventDefault();
+      Promise.all(files.map(processImageFile))
+        .then((processed) => {
+          onDraftChange((prev) => ({
+            ...prev,
+            images: [...prev.images, ...processed],
+          }));
+        })
+        .catch((err) => {
+          showToast(t("eventStream.imageProcessFailed"));
+          console.error("Image process failed:", err);
+        });
+    },
+    [onDraftChange, t],
+  );
+
+  // 文件上传处理
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      if (files.length === 0) return;
+      Promise.all(files.map(processImageFile))
+        .then((processed) => {
+          onDraftChange((prev) => ({
+            ...prev,
+            images: [...prev.images, ...processed],
+          }));
+        })
+        .catch((err) => {
+          showToast(t("eventStream.imageProcessFailed"));
+          console.error("Image process failed:", err);
+        });
+      // 重置 input 以便再次选择相同文件
+      e.target.value = "";
+    },
+    [onDraftChange, t],
+  );
+
+  // 移除已附加的图片
+  const handleRemoveImage = useCallback(
+    (id: string) => {
+      onDraftChange((prev) => ({
+        ...prev,
+        images: prev.images.filter((img) => img.id !== id),
+      }));
+    },
+    [onDraftChange],
   );
 
   if (!instanceId) {
@@ -1045,18 +1123,49 @@ export function EventStream({
                 </div>
               )}
 
-              {/* 输入框区域：textarea + 操作行在同一个 border 内 */}
+              {/* 输入框区域：textarea + 图片预览 + 操作行在同一个 border 内 */}
               <div className="flex flex-col overflow-hidden rounded-[14px] border border-[var(--separator)]">
+                {/* 图片预览条 */}
+                {draft.images.length > 0 && (
+                  <div className="flex gap-2 px-3 pt-2 pb-0 overflow-x-auto scrollbar-none md:px-4">
+                    {draft.images.map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative flex-shrink-0 group"
+                      >
+                        <button
+                          onClick={() => setLightboxSrc(img.previewUrl)}
+                          className="block rounded-[8px] overflow-hidden border border-[var(--separator)] hover:border-[var(--color-accent)] transition-colors"
+                        >
+                          <img
+                            src={img.previewUrl}
+                            alt="Attached"
+                            className="w-[60px] h-[60px] object-cover"
+                            draggable={false}
+                          />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveImage(img.id)}
+                          className="absolute -top-1 -right-1 w-[14px] h-[14px] rounded-full bg-[var(--badge-bg)] text-[var(--badge-text)] flex items-center justify-center hover:bg-[var(--badge-bg-hover)] transition-colors"
+                          aria-label="Remove image"
+                        >
+                          <X size={8} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   ref={textareaRef}
                   rows={1}
                   placeholder={t("eventStream.sendPlaceholder")}
-                  value={inputValue}
+                  value={draft.text}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
                   className="resize-none bg-transparent text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] text-[16px] leading-[24px] px-3 pt-[9px] pb-0 outline-none overflow-hidden md:px-4 md:pt-[10px] md:text-[14px] md:leading-[22px]"
                 />
-                {/* 操作行：模型/thinking + 发送/停止 */}
+                {/* 操作行：模型/thinking/上传 + 发送/停止 */}
                 <div className="flex items-center justify-between px-1.5 pt-[9px] pb-1.5 md:pt-[10px]">
                   <div className="flex items-center gap-1">
                     {instanceModel && (
@@ -1072,6 +1181,22 @@ export function EventStream({
                         onSelect={onSetThinkingLevel}
                       />
                     )}
+                    {/* 上传图片按钮 */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="select-none h-[26px] px-1.5 rounded-[6px] flex items-center justify-center text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-colors"
+                      title={t("eventStream.attachImage")}
+                    >
+                      <ImagePlus size={15} />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/gif,image/webp"
+                      multiple
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
                   </div>
                   <div className="flex-shrink-0">
                     {composerButtonMode === "stop" ? (
@@ -1085,9 +1210,9 @@ export function EventStream({
                     ) : (
                       <button
                         onClick={handleSend}
-                        disabled={isBusy(instanceStatus) || !inputValue.trim()}
+                        disabled={!canSend}
                         className={`select-none w-[28px] h-[28px] rounded-full flex items-center justify-center transition-opacity ${
-                          !isBusy(instanceStatus) && inputValue.trim()
+                          canSend
                             ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:opacity-80"
                             : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"
                         }`}
@@ -1117,6 +1242,10 @@ export function EventStream({
             setShowCompactModal(false);
           }}
         />
+      )}
+      {/* 图片大图查看 */}
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
       )}
     </div>
   );

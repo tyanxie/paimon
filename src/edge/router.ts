@@ -137,7 +137,10 @@ export function handleUpstreamMessage(
     case "prompt": {
       forwardToLocalInstance(msg.payload.instanceId, {
         type: "prompt",
-        payload: { message: msg.payload.message },
+        payload: {
+          message: msg.payload.message,
+          images: msg.payload.images,
+        },
       });
       break;
     }

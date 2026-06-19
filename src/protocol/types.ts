@@ -8,6 +8,14 @@
 /** pi 实例唯一标识（Hub 分配） */
 export type InstanceId = string;
 
+/** 消息中附带的图片载荷（base64 编码，四层透传：Browser → Hub → Edge → Extension） */
+export interface ImagePayload {
+  /** base64 编码的图片数据 */
+  data: string;
+  /** MIME 类型，如 "image/png", "image/jpeg" */
+  mimeType: string;
+}
+
 /** 思考等级（与 pi 内部 ModelThinkingLevel 一致） */
 export type ThinkingLevel =
   | "off"
@@ -234,6 +242,8 @@ export interface HubPromptMessage {
   type: "prompt";
   payload: {
     message: string;
+    /** 附带的图片列表（base64） */
+    images?: ImagePayload[];
   };
 }
 
@@ -360,6 +370,8 @@ export interface BrowserPromptMessage {
   payload: {
     instanceId: InstanceId;
     message: string;
+    /** 附带的图片列表（base64） */
+    images?: ImagePayload[];
   };
 }
 
@@ -709,6 +721,8 @@ export interface HubEdgePromptMessage {
   payload: {
     instanceId: InstanceId;
     message: string;
+    /** 附带的图片列表（base64） */
+    images?: ImagePayload[];
   };
 }
 

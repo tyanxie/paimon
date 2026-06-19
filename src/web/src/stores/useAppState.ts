@@ -8,6 +8,7 @@ import type {
   InstanceId,
   SessionListItem,
 } from "../../../protocol/types";
+import type { AttachedImage } from "../utils/image";
 
 /** 统一的 session entry（来自 getBranch 或实时事件构造） */
 export interface SessionEntry {
@@ -28,6 +29,19 @@ export interface SessionEntry {
 
 type RenderKeySource = "history" | "streaming" | "live";
 
+/** 输入框草稿（文本 + 图片），per-instance 存储 */
+export interface InputDraft {
+  text: string;
+  images: AttachedImage[];
+}
+
+export type InputDraftUpdater = InputDraft | ((prev: InputDraft) => InputDraft);
+
+export const EMPTY_DRAFT: InputDraft = Object.freeze({
+  text: "",
+  images: [],
+}) as InputDraft;
+
 export type ConversationLoadState =
   | "idle"
   | "refreshing"
@@ -42,7 +56,7 @@ export interface ConversationState {
   loadState: ConversationLoadState;
   errorMessage: string | null;
   shouldScrollToBottom: boolean;
-  drafts: Map<InstanceId, string>;
+  drafts: Map<InstanceId, InputDraft>;
   sessionList: SessionListItem[];
   sessionListLoading: boolean;
 }
@@ -117,20 +131,20 @@ export function createConversationState(): ConversationState {
 }
 
 export function getInstanceDraft(
-  drafts: Map<InstanceId, string>,
+  drafts: Map<InstanceId, InputDraft>,
   instanceId: InstanceId | null,
-): string {
-  if (!instanceId) return "";
-  return drafts.get(instanceId) ?? "";
+): InputDraft {
+  if (!instanceId) return EMPTY_DRAFT;
+  return drafts.get(instanceId) ?? EMPTY_DRAFT;
 }
 
 export function setInstanceDraft(
-  drafts: Map<InstanceId, string>,
+  drafts: Map<InstanceId, InputDraft>,
   instanceId: InstanceId,
-  value: string,
-): Map<InstanceId, string> {
+  value: InputDraft,
+): Map<InstanceId, InputDraft> {
   const next = new Map(drafts);
-  if (value) {
+  if (value.text || value.images.length > 0) {
     next.set(instanceId, value);
   } else {
     next.delete(instanceId);
@@ -267,12 +281,19 @@ export function useAppState() {
     setConversation((prev) => beginLoadMore(prev));
   }, []);
 
-  const setDraft = useCallback((instanceId: InstanceId, value: string) => {
-    setConversation((prev) => ({
-      ...prev,
-      drafts: setInstanceDraft(prev.drafts, instanceId, value),
-    }));
-  }, []);
+  const setDraft = useCallback(
+    (instanceId: InstanceId, value: InputDraftUpdater) => {
+      setConversation((prev) => {
+        const current = getInstanceDraft(prev.drafts, instanceId);
+        const next = typeof value === "function" ? value(current) : value;
+        return {
+          ...prev,
+          drafts: setInstanceDraft(prev.drafts, instanceId, next),
+        };
+      });
+    },
+    [],
+  );
 
   const clearScrollToBottom = useCallback(() => {
     setConversation((prev) => {

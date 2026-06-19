@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { InstanceId } from "../../../protocol/types";
-import type { SessionEntry } from "./useAppState";
+import type { SessionEntry, InputDraft } from "./useAppState";
 import {
   applyHistoryResponse,
   beginInstanceRefresh,
@@ -28,7 +28,10 @@ describe("当前实例对话状态", () => {
     state.entries = [entry("old")];
     state.streamingEntry = entry("streaming");
     state.hasMore = true;
-    state.drafts = setInstanceDraft(state.drafts, a, "draft A");
+    state.drafts = setInstanceDraft(state.drafts, a, {
+      text: "draft A",
+      images: [],
+    });
 
     const next = beginInstanceRefresh(state, b);
 
@@ -37,8 +40,11 @@ describe("当前实例对话状态", () => {
     expect(next.streamingEntry).toBeNull();
     expect(next.hasMore).toBe(false);
     expect(next.loadState).toBe("refreshing");
-    expect(getInstanceDraft(next.drafts, a)).toBe("draft A");
-    expect(getInstanceDraft(next.drafts, b)).toBe("");
+    expect(getInstanceDraft(next.drafts, a)).toEqual({
+      text: "draft A",
+      images: [],
+    });
+    expect(getInstanceDraft(next.drafts, b)).toEqual({ text: "", images: [] });
   });
 
   test("刷新态收到当前实例 history 时替换 entries", () => {
@@ -84,14 +90,17 @@ describe("当前实例对话状态", () => {
   test("草稿按实例隔离保存", () => {
     const a = "A" as InstanceId;
     const b = "B" as InstanceId;
-    let drafts = new Map<InstanceId, string>();
+    let drafts = new Map<InstanceId, InputDraft>();
 
-    drafts = setInstanceDraft(drafts, a, "hello A");
-    drafts = setInstanceDraft(drafts, b, "hello B");
-    drafts = setInstanceDraft(drafts, a, "");
+    drafts = setInstanceDraft(drafts, a, { text: "hello A", images: [] });
+    drafts = setInstanceDraft(drafts, b, { text: "hello B", images: [] });
+    drafts = setInstanceDraft(drafts, a, { text: "", images: [] });
 
-    expect(getInstanceDraft(drafts, a)).toBe("");
-    expect(getInstanceDraft(drafts, b)).toBe("hello B");
+    expect(getInstanceDraft(drafts, a)).toEqual({ text: "", images: [] });
+    expect(getInstanceDraft(drafts, b)).toEqual({
+      text: "hello B",
+      images: [],
+    });
   });
 
   test("错误状态保留可展示的错误信息", () => {
