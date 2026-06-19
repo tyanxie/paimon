@@ -6,9 +6,7 @@ import type { InstanceStatus } from "../../../protocol/types";
 let ComposerStatusIndicator: (props: {
   status?: InstanceStatus;
 }) => React.ReactNode;
-let getComposerButtonMode: (args: {
-  instanceStatus?: InstanceStatus;
-}) => "send" | "stop";
+let getComposerButtonMode: (instanceStatus?: InstanceStatus) => "send" | "stop";
 
 beforeAll(async () => {
   const storage = new Map<string, string>();
@@ -83,18 +81,10 @@ describe("ComposerStatusIndicator", () => {
   });
 
   test("keeps stop action visible while streaming with a draft", () => {
-    expect(
-      getComposerButtonMode({
-        instanceStatus: "streaming",
-      }),
-    ).toBe("stop");
+    expect(getComposerButtonMode("streaming")).toBe("stop");
   });
 
   test("shows send button during compacting", () => {
-    expect(
-      getComposerButtonMode({
-        instanceStatus: "compacting",
-      }),
-    ).toBe("send");
+    expect(getComposerButtonMode("compacting")).toBe("send");
   });
 });

@@ -17,7 +17,7 @@ import type {
   ImagePayload,
   ThinkingLevel,
 } from "../../protocol/types";
-import type { InputDraft } from "./stores/useAppState";
+import { EMPTY_DRAFT, type InputDraftUpdater } from "./stores/useAppState";
 import { useTranslation } from "react-i18next";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -152,13 +152,13 @@ export default function App() {
           images: images?.length ? images : undefined,
         },
       });
-      setDraft(selectedInstanceId, { text: "", images: [] });
+      setDraft(selectedInstanceId, EMPTY_DRAFT);
     },
     [selectedInstanceId, send, setDraft],
   );
 
   const handleDraftChange = useCallback(
-    (value: InputDraft) => {
+    (value: InputDraftUpdater) => {
       if (!selectedInstanceId) return;
       setDraft(selectedInstanceId, value);
     },
@@ -381,7 +381,7 @@ export default function App() {
                   errorMessage={null}
                   shouldScrollToBottom={false}
                   onScrollToBottomHandled={clearScrollToBottom}
-                  draft={{ text: "", images: [] }}
+                  draft={EMPTY_DRAFT}
                   onDraftChange={() => {}}
                   onSendMessage={handleSendMessage}
                   onAbort={handleAbort}

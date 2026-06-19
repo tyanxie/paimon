@@ -35,7 +35,12 @@ export interface InputDraft {
   images: AttachedImage[];
 }
 
-const EMPTY_DRAFT: InputDraft = { text: "", images: [] };
+export type InputDraftUpdater = InputDraft | ((prev: InputDraft) => InputDraft);
+
+export const EMPTY_DRAFT: InputDraft = Object.freeze({
+  text: "",
+  images: [],
+}) as InputDraft;
 
 export type ConversationLoadState =
   | "idle"
@@ -276,12 +281,19 @@ export function useAppState() {
     setConversation((prev) => beginLoadMore(prev));
   }, []);
 
-  const setDraft = useCallback((instanceId: InstanceId, value: InputDraft) => {
-    setConversation((prev) => ({
-      ...prev,
-      drafts: setInstanceDraft(prev.drafts, instanceId, value),
-    }));
-  }, []);
+  const setDraft = useCallback(
+    (instanceId: InstanceId, value: InputDraftUpdater) => {
+      setConversation((prev) => {
+        const current = getInstanceDraft(prev.drafts, instanceId);
+        const next = typeof value === "function" ? value(current) : value;
+        return {
+          ...prev,
+          drafts: setInstanceDraft(prev.drafts, instanceId, next),
+        };
+      });
+    },
+    [],
+  );
 
   const clearScrollToBottom = useCallback(() => {
     setConversation((prev) => {

@@ -23,6 +23,7 @@ import {
   type ConversationLoadState,
   type SessionEntry,
   type InputDraft,
+  type InputDraftUpdater,
 } from "../stores/useAppState";
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { isStreaming as isStatusStreaming, isBusy } from "../utils/status";
@@ -79,11 +80,7 @@ export function calculatePrependScrollTop({
   return previousScrollTop + nextScrollHeight - previousScrollHeight;
 }
 
-export function getComposerButtonMode({
-  instanceStatus,
-}: {
-  instanceStatus?: InstanceStatus;
-}) {
+export function getComposerButtonMode(instanceStatus?: InstanceStatus) {
   return isStatusStreaming(instanceStatus) ? "stop" : "send";
 }
 
@@ -169,7 +166,7 @@ interface EventStreamProps {
   shouldScrollToBottom: boolean;
   onScrollToBottomHandled: () => void;
   draft: InputDraft;
-  onDraftChange: (value: InputDraft) => void;
+  onDraftChange: (value: InputDraftUpdater) => void;
   onSendMessage: (message: string, images?: ImagePayload[]) => void;
   onAbort: () => void;
   onSetModel?: (provider: string, id: string) => void;
@@ -404,12 +401,12 @@ export function EventStream({
   const logoSrc = useLogoSrc();
   const [showCompactModal, setShowCompactModal] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const isRefreshing = loadState === "refreshing";
-  const composerButtonMode = getComposerButtonMode({
-    instanceStatus,
-  });
+  const composerButtonMode = getComposerButtonMode(instanceStatus);
   // 上下文信息 + 压缩按钮作为整体：tokens 有值时同时展示，最后一条是 compaction entry 时不显示压缩按钮（无内容可压缩）
   const lastEntryIsCompaction =
     entries.length > 0 && entries[entries.length - 1].type === "compaction";
@@ -867,10 +864,10 @@ export function EventStream({
   // textarea 自动调整高度
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onDraftChange({ ...draft, text: e.target.value });
+      onDraftChange((prev) => ({ ...prev, text: e.target.value }));
       resizeTextarea(e.target);
     },
-    [draft, onDraftChange, resizeTextarea],
+    [onDraftChange, resizeTextarea],
   );
 
   // 发送条件
@@ -879,23 +876,24 @@ export function EventStream({
 
   // 发送消息
   const handleSend = useCallback(() => {
+    const current = draftRef.current;
     if (
       isBusy(instanceStatus) ||
-      (!draft.text.trim() && draft.images.length === 0)
+      (!current.text.trim() && current.images.length === 0)
     )
       return;
-    const images: ImagePayload[] | undefined = draft.images.length
-      ? draft.images.map((img) => ({
+    const images: ImagePayload[] | undefined = current.images.length
+      ? current.images.map((img) => ({
           data: img.data,
           mimeType: img.mimeType,
         }))
       : undefined;
-    onSendMessage(draft.text.trim(), images);
+    onSendMessage(current.text.trim(), images);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
     startBottomFollow();
-  }, [draft, instanceStatus, onSendMessage, startBottomFollow]);
+  }, [instanceStatus, onSendMessage, startBottomFollow]);
 
   // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
   // keyCode 229 用于拦截 Safari 上 IME 确认拼音时的回车（此时 isComposing 已为 false）
@@ -918,14 +916,17 @@ export function EventStream({
       e.preventDefault();
       Promise.all(files.map(processImageFile))
         .then((processed) => {
-          onDraftChange({ ...draft, images: [...draft.images, ...processed] });
+          onDraftChange((prev) => ({
+            ...prev,
+            images: [...prev.images, ...processed],
+          }));
         })
         .catch((err) => {
           showToast(t("eventStream.imageProcessFailed"));
           console.error("Image process failed:", err);
         });
     },
-    [draft, onDraftChange, t],
+    [onDraftChange, t],
   );
 
   // 文件上传处理
@@ -935,7 +936,10 @@ export function EventStream({
       if (files.length === 0) return;
       Promise.all(files.map(processImageFile))
         .then((processed) => {
-          onDraftChange({ ...draft, images: [...draft.images, ...processed] });
+          onDraftChange((prev) => ({
+            ...prev,
+            images: [...prev.images, ...processed],
+          }));
         })
         .catch((err) => {
           showToast(t("eventStream.imageProcessFailed"));
@@ -944,18 +948,18 @@ export function EventStream({
       // 重置 input 以便再次选择相同文件
       e.target.value = "";
     },
-    [draft, onDraftChange, t],
+    [onDraftChange, t],
   );
 
   // 移除已附加的图片
   const handleRemoveImage = useCallback(
     (id: string) => {
-      onDraftChange({
-        ...draft,
-        images: draft.images.filter((img) => img.id !== id),
-      });
+      onDraftChange((prev) => ({
+        ...prev,
+        images: prev.images.filter((img) => img.id !== id),
+      }));
     },
-    [draft, onDraftChange],
+    [onDraftChange],
   );
 
   if (!instanceId) {
