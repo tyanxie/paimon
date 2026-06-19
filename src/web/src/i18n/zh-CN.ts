@@ -1,6 +1,6 @@
-// 中文语言包
+// 简体中文语言包
 
-const zh = {
+const zhCN = {
   // ─── 通用 ───
   common: {
     cancel: "取消",
@@ -68,7 +68,7 @@ const zh = {
     bgAurora: "极光",
     bgEmber: "余烬",
     language: "语言",
-    langZh: "中文",
+    langZhCN: "简体中文",
     langEn: "English",
   },
 
@@ -125,11 +125,11 @@ const zh = {
   },
 } as const;
 
-export default zh;
+export default zhCN;
 
 // 递归将所有叶子节点从字面量类型放宽为 string，保留 key 结构约束
 type DeepStringify<T> = {
   [K in keyof T]: T[K] extends string ? string : DeepStringify<T[K]>;
 };
 
-export type LocaleResource = DeepStringify<typeof zh>;
+export type LocaleResource = DeepStringify<typeof zhCN>;

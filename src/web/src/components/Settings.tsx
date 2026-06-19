@@ -149,7 +149,7 @@ export function Settings() {
   ];
 
   const languageOptions: { value: Language; label: string }[] = [
-    { value: "zh", label: t("settings.langZh") },
+    { value: "zh-CN", label: t("settings.langZhCN") },
     { value: "en", label: t("settings.langEn") },
   ];
 

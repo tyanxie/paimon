@@ -93,7 +93,7 @@ bin/
 - **发版** — 修改 `package.json` version → `git commit -am "Release version x.y.z"`。版本号由用户指定，未提供时须询问
 - 功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
 - **localStorage key 格式** — 前端 localStorage 统一使用 `paimon:camelCase` 命名格式（如 `paimon:appearance`、`paimon:accessToken`、`paimon:language`）
-- **前端国际化（i18n）** — 使用 `i18next` + `react-i18next`，fallback 语言为中文。所有用户可见的 UI 文本必须通过 `t('namespace.key')` 获取，禁止硬编码。新增 UI 文本时需同时更新 `src/web/src/i18n/locales/zh.ts` 和 `en.ts`。key 按模块分组（如 `sidebar.xxx`、`settings.xxx`）。语言偏好存储在 `paimon:language`
+- **前端国际化（i18n）** — 使用 `i18next` + `react-i18next`，fallback 语言为简体中文。所有用户可见的 UI 文本必须通过 `t('namespace.key')` 获取，禁止硬编码。新增 UI 文本时需同时更新 `src/web/src/i18n/zh-CN.ts` 和 `en.ts`。key 按模块分组（如 `sidebar.xxx`、`settings.xxx`）。语言偏好存储在 `paimon:language`
 
 ## 设计风格（摘要）
 

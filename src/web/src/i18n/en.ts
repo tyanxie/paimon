@@ -1,6 +1,6 @@
 // 英文语言包
 
-import type { LocaleResource } from "./zh";
+import type { LocaleResource } from "./zh-CN";
 
 const en: LocaleResource = {
   // ─── Common ───
@@ -70,7 +70,7 @@ const en: LocaleResource = {
     bgAurora: "Aurora",
     bgEmber: "Ember",
     language: "Language",
-    langZh: "中文",
+    langZhCN: "简体中文",
     langEn: "English",
   },
 
