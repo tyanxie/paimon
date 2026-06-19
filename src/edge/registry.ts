@@ -4,6 +4,7 @@
 // Edge 作为 pi 的"本地 Hub"，负责心跳检测和 grace period。
 
 import { createHash } from "crypto";
+import { homedir } from "node:os";
 import type { ServerWebSocket } from "bun";
 import type {
   InstanceId,
@@ -90,6 +91,7 @@ class EdgeRegistry {
       existing.ws = ws;
       existing.info.hostname = payload.hostname;
       existing.info.cwd = payload.cwd;
+      existing.info.homedir = homedir();
       existing.info.model = payload.model;
       existing.info.sessionId = payload.sessionId;
       existing.info.sessionName = payload.sessionName;
@@ -119,6 +121,7 @@ class EdgeRegistry {
       edgeId: this.edgeId,
       hostname: payload.hostname,
       cwd: payload.cwd,
+      homedir: homedir(),
       model: payload.model,
       sessionId: payload.sessionId,
       sessionName: payload.sessionName,

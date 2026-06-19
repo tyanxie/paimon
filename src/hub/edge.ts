@@ -203,6 +203,7 @@ class HubEdgeRegistry {
     },
   ): InstanceInfo {
     const now = Date.now();
+    const edgeHomedir = this.edges.get(edgeId)?.info.homedir ?? "";
     const existing = this.instances.get(instanceId);
 
     if (existing) {
@@ -210,6 +211,7 @@ class HubEdgeRegistry {
       existing.info.edgeId = edgeId;
       existing.info.hostname = payload.hostname;
       existing.info.cwd = payload.cwd;
+      existing.info.homedir = edgeHomedir;
       existing.info.model = payload.model;
       existing.info.sessionId = payload.sessionId;
       existing.info.sessionName = payload.sessionName;
@@ -238,6 +240,7 @@ class HubEdgeRegistry {
       edgeId,
       hostname: payload.hostname,
       cwd: payload.cwd,
+      homedir: edgeHomedir,
       model: payload.model,
       sessionId: payload.sessionId,
       sessionName: payload.sessionName,
