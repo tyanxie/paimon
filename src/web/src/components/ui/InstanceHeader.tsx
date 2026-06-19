@@ -24,6 +24,7 @@ interface InstanceHeaderProps {
 function abbreviatePath(fullPath: string, homedir?: string): string {
   if (homedir && fullPath.startsWith(homedir)) {
     const rest = fullPath.slice(homedir.length);
+    if (!rest || rest === "/") return "~";
     return "~" + (rest.startsWith("/") ? rest : "/" + rest);
   }
   return fullPath;
@@ -67,8 +68,6 @@ const CHAR_WIDTH_PX = 6.2;
 const ICON_SPACE_PX = 20;
 /** 两个 CopyableInfo 之间的 gap（px） */
 const GAP_PX = 8;
-/** 分支名固定保留末尾字符数 */
-const BRANCH_TAIL_CHARS = 10;
 
 /** 可点击复制的元信息项（icon 点击后短暂变为 ✓），支持中间截断 */
 function CopyableInfo({
@@ -84,6 +83,14 @@ function CopyableInfo({
 }) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 组件卸载时清理 timer，避免对已卸载组件 setState
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   const handleClick = useCallback(() => {
     navigator.clipboard.writeText(copyText);
@@ -176,6 +183,7 @@ export function InstanceHeader({
           >
             {truncatedPath && (
               <CopyableInfo
+                key={cwd}
                 icon={<Folder size={11} />}
                 text={truncatedPath}
                 copyText={cwd!}
@@ -184,6 +192,7 @@ export function InstanceHeader({
             )}
             {truncatedBranch && (
               <CopyableInfo
+                key={gitBranch}
                 icon={<GitBranch size={11} />}
                 text={truncatedBranch}
                 copyText={gitBranch!}

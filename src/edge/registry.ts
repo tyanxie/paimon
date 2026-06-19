@@ -91,6 +91,7 @@ class EdgeRegistry {
       existing.ws = ws;
       existing.info.hostname = payload.hostname;
       existing.info.cwd = payload.cwd;
+      existing.info.homedir = homedir();
       existing.info.model = payload.model;
       existing.info.sessionId = payload.sessionId;
       existing.info.sessionName = payload.sessionName;
