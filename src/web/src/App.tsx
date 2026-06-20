@@ -6,7 +6,7 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { useViewportHeight } from "./hooks/useViewportHeight";
 import { useAppState } from "./stores/useAppState";
 import { Sidebar } from "./components/Sidebar";
-import { EventStream } from "./components/EventStream";
+import { InstanceView } from "./components/InstanceView";
 import { Settings } from "./components/Settings";
 import { NewInstanceModal } from "./components/ui/NewInstanceModal";
 import { LoginPage } from "./components/LoginPage";
@@ -320,7 +320,7 @@ export default function App() {
         <Route
           path="/instance/:id"
           element={
-            <EventStream
+            <InstanceView
               entries={instanceEntries}
               instanceId={selectedInstanceId}
               isStreaming={isStreaming}
@@ -373,7 +373,7 @@ export default function App() {
               </div>
               {/* 桌面端：显示空状态 */}
               <div className="hidden md:flex flex-1 min-w-0">
-                <EventStream
+                <InstanceView
                   entries={[]}
                   instanceId={null}
                   isStreaming={false}
