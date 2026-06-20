@@ -1,22 +1,20 @@
 // 根组件
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useViewportHeight } from "./hooks/useViewportHeight";
+import { useAuth } from "./hooks/useAuth";
+import { useInstanceActions } from "./hooks/useInstanceActions";
+import { useSubscription } from "./hooks/useSubscription";
 import { useApp } from "./stores/useApp";
 import { Sidebar } from "./components/Sidebar";
 import { InstanceView } from "./components/InstanceView";
 import { Settings } from "./components/Settings";
 import { NewInstanceModal } from "./components/ui/NewInstanceModal";
 import { LoginPage } from "./components/LoginPage";
-import { getStoredToken, clearStoredToken } from "./utils/token";
 import { ToastContainer, showToast } from "./components/ui/Toast";
-import type {
-  InstanceId,
-  ImagePayload,
-  ThinkingLevel,
-} from "../../protocol/types";
+import type { InstanceId } from "../../protocol/types";
 import { EMPTY_DRAFT, type InputDraftUpdater } from "./stores/types";
 import { useTranslation } from "react-i18next";
 
@@ -30,22 +28,10 @@ function useSelectedInstanceId(): InstanceId | null {
 export default function App() {
   const { t } = useTranslation();
 
-  // ── 认证状态 ──
-  const [authToken, setAuthToken] = useState<string | null>(getStoredToken());
-  const [authError, setAuthError] = useState(false);
+  // ── 认证 ──
+  const { authToken, authError, handleLogin, handleAuthError } = useAuth();
 
-  const handleLogin = useCallback((token: string) => {
-    setAuthError(false);
-    setAuthToken(token);
-  }, []);
-
-  const handleAuthError = useCallback(() => {
-    // token 无效，清除并回到登录页
-    clearStoredToken();
-    setAuthToken(null);
-    setAuthError(true);
-  }, []);
-
+  // ── 全局状态 ──
   const {
     instances,
     instanceListReady,
@@ -68,93 +54,52 @@ export default function App() {
     clearSessionChanged,
   } = useApp();
 
+  // ── WebSocket ──
   const { connected, send } = useWebSocket({
     token: authToken,
     onMessage: handleMessage,
     onAuthError: handleAuthError,
   });
+
   const navigate = useNavigate();
   useViewportHeight();
   const selectedInstanceId = useSelectedInstanceId();
 
-  // 新建实例弹窗开关
-  const [showNewInstance, setShowNewInstance] = useState(false);
+  // ── 订阅管理 ──
+  useSubscription(
+    selectedInstanceId,
+    instances,
+    connected,
+    send,
+    startInstanceRefresh,
+    sessionChangedInstanceId,
+    clearSessionChanged,
+  );
 
-  // 订阅管理：监听 URL 派生的 selectedInstanceId 变化
-  const subscribedRef = useRef<InstanceId | null>(null);
+  // ── 实例操作 ──
+  const {
+    handleSendMessage,
+    handleAbort,
+    handleSetModel,
+    handleSetThinkingLevel,
+    handleListSessions,
+    handleNewSession,
+    handleSwitchSession,
+    handleCompact,
+    handleShutdown,
+  } = useInstanceActions(
+    selectedInstanceId,
+    send,
+    setDraft,
+    setSessionListLoading,
+  );
 
-  useEffect(() => {
-    // WS 未连接时重置订阅状态（服务端订阅已随旧连接丢失）
-    if (!connected) {
-      subscribedRef.current = null;
-      return;
-    }
-
-    // selectedInstanceId 为 null（去设置页/首页）时保持订阅不动
-    if (!selectedInstanceId) return;
-
-    if (selectedInstanceId === subscribedRef.current) return;
-
-    // 切换到了另一个实例，取消订阅旧的
-    if (subscribedRef.current) {
-      send({
-        type: "unsubscribe",
-        payload: { instanceId: subscribedRef.current },
-      });
-      subscribedRef.current = null;
-    }
-
-    // 订阅新实例，并把右侧对话区切入刷新态
-    const exists = instances.some((i) => i.id === selectedInstanceId);
-    if (exists) {
-      startInstanceRefresh(selectedInstanceId);
-      send({
-        type: "subscribe",
-        payload: { instanceId: selectedInstanceId },
-      });
-      subscribedRef.current = selectedInstanceId;
-      send({
-        type: "get_history",
-        payload: { instanceId: selectedInstanceId },
-      });
-    }
-    // exists 为 false 时不更新 ref，等 instances 加载后重试
-  }, [selectedInstanceId, instances, connected, send, startInstanceRefresh]);
-
-  // sessionId 变化时重新拉取 history（/new 、/reload 等场景）
-  useEffect(() => {
-    if (!sessionChangedInstanceId) return;
-    if (connected) {
-      send({
-        type: "get_history",
-        payload: { instanceId: sessionChangedInstanceId },
-      });
-    }
-    clearSessionChanged();
-  }, [sessionChangedInstanceId, connected, send, clearSessionChanged]);
-
-  // 点击侧边栏实例：只导航，订阅由 useEffect 自动响应
+  // ── 导航 ──
   const handleSelect = useCallback(
     (id: InstanceId) => {
       navigate(`/instance/${id}`);
     },
     [navigate],
-  );
-
-  const handleSendMessage = useCallback(
-    (message: string, images?: ImagePayload[]) => {
-      if (!selectedInstanceId) return;
-      send({
-        type: "prompt",
-        payload: {
-          instanceId: selectedInstanceId,
-          message,
-          images: images?.length ? images : undefined,
-        },
-      });
-      setDraft(selectedInstanceId, EMPTY_DRAFT);
-    },
-    [selectedInstanceId, send, setDraft],
   );
 
   const handleDraftChange = useCallback(
@@ -165,87 +110,9 @@ export default function App() {
     [selectedInstanceId, setDraft],
   );
 
-  const handleAbort = useCallback(() => {
-    if (!selectedInstanceId) return;
-    send({
-      type: "abort",
-      payload: { instanceId: selectedInstanceId },
-    });
-  }, [selectedInstanceId, send]);
+  // 新建实例弹窗开关
+  const [showNewInstance, setShowNewInstance] = useState(false);
 
-  const handleSetModel = useCallback(
-    (provider: string, id: string) => {
-      if (!selectedInstanceId) return;
-      send({
-        type: "set_model",
-        payload: { instanceId: selectedInstanceId, provider, id },
-      });
-    },
-    [selectedInstanceId, send],
-  );
-
-  const handleSetThinkingLevel = useCallback(
-    (level: ThinkingLevel) => {
-      if (!selectedInstanceId) return;
-      send({
-        type: "set_thinking_level",
-        payload: { instanceId: selectedInstanceId, level },
-      });
-    },
-    [selectedInstanceId, send],
-  );
-
-  const handleListSessions = useCallback(() => {
-    if (!selectedInstanceId) return;
-    setSessionListLoading(true);
-    send({
-      type: "list_sessions",
-      payload: { instanceId: selectedInstanceId },
-    });
-  }, [selectedInstanceId, send, setSessionListLoading]);
-
-  const handleNewSession = useCallback(() => {
-    if (!selectedInstanceId) return;
-    send({
-      type: "new_session",
-      payload: { instanceId: selectedInstanceId },
-    });
-  }, [selectedInstanceId, send]);
-
-  const handleSwitchSession = useCallback(
-    (path: string) => {
-      if (!selectedInstanceId) return;
-      send({
-        type: "switch_session",
-        payload: { instanceId: selectedInstanceId, path },
-      });
-    },
-    [selectedInstanceId, send],
-  );
-
-  const handleCompact = useCallback(
-    (customInstructions?: string) => {
-      if (!selectedInstanceId) return;
-      send({
-        type: "compact",
-        payload: { instanceId: selectedInstanceId, customInstructions },
-      });
-    },
-    [selectedInstanceId, send],
-  );
-
-  const handleShutdown = useCallback(
-    (id: InstanceId) => {
-      send({ type: "shutdown", payload: { instanceId: id } });
-      // 主动关闭当前查看的实例时直接跳转，避免触发“实例不存在”提示
-      if (id === selectedInstanceId) {
-        navigate("/");
-      }
-    },
-    [send, selectedInstanceId, navigate],
-  );
-
-  // 新建实例创建成功：关闭弹窗并跳转到新实例（订阅由 useEffect 自动响应）
   const handleInstanceCreated = useCallback(
     (id: InstanceId) => {
       setShowNewInstance(false);
@@ -264,25 +131,21 @@ export default function App() {
     }
   }, [instanceListReady, selectedInstanceId, instances, navigate]);
 
+  // ── 派生数据 ──
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
-
-  // 合并 history + streaming 供渲染
   const instanceEntries = streamingEntry
     ? [...entries, streamingEntry]
     : entries;
   const isStreaming = streamingEntry !== null;
 
-  // 加载更多历史（offset 只计算已完成 entries，不含 streaming）
+  // 加载更多历史
   const handleLoadMore = useCallback(() => {
     if (!selectedInstanceId || !hasMore || loadState !== "idle") return;
     const offset = entries.length;
     startLoadMore();
     send({
       type: "get_history",
-      payload: {
-        instanceId: selectedInstanceId,
-        offset,
-      },
+      payload: { instanceId: selectedInstanceId, offset },
     });
   }, [
     selectedInstanceId,
@@ -293,7 +156,7 @@ export default function App() {
     send,
   ]);
 
-  // 未认证时显示登录页
+  // ── 未认证 ──
   if (!authToken) {
     return (
       <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-stretch overflow-hidden">
@@ -302,6 +165,7 @@ export default function App() {
     );
   }
 
+  // ── 主界面 ──
   return (
     <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-stretch p-2 gap-2 md:p-3 md:gap-3 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       {/* 侧边栏：移动端隐藏 */}
