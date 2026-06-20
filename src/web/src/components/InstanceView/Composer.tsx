@@ -3,13 +3,13 @@
 import { useRef, useLayoutEffect, useCallback, useState } from "react";
 import { ArrowUp, Square, Minimize2, ImagePlus, X } from "lucide-react";
 import type {
-  ContextUsageInfo,
+  InstanceInfo,
   ImagePayload,
   InstanceStatus,
-  ModelInfo,
+  ContextUsageInfo,
   ThinkingLevel,
 } from "../../../../protocol/types";
-import type { InputDraft, InputDraftUpdater } from "../../stores/types";
+import type { InputDraft, InputDraftUpdater } from "../../stores/useDrafts";
 import { isBusy } from "../../utils/status";
 import { processImageFile, getImagesFromClipboard } from "../../utils/image";
 import { showToast } from "../ui/Toast";
@@ -19,41 +19,33 @@ import { CompactModal } from "../ui/CompactModal";
 import { useTranslation } from "react-i18next";
 
 interface ComposerProps {
+  instance: InstanceInfo | undefined;
   draft: InputDraft;
   onDraftChange: (value: InputDraftUpdater) => void;
   onSendMessage: (message: string, images?: ImagePayload[]) => void;
   onAbort: () => void;
-  instanceStatus?: InstanceStatus;
+  onSetModel: (provider: string, id: string) => void;
+  onSetThinkingLevel: (level: ThinkingLevel) => void;
+  onCompact: (customInstructions?: string) => void;
   buttonMode: "send" | "stop";
-  contextUsage?: ContextUsageInfo;
   showCompactButton: boolean;
   compactDisabled: boolean;
-  onCompact?: (customInstructions?: string) => void;
-  instanceModel?: ModelInfo;
-  availableModels?: ModelInfo[];
-  thinkingLevel?: ThinkingLevel;
-  onSetModel?: (provider: string, id: string) => void;
-  onSetThinkingLevel?: (level: ThinkingLevel) => void;
   onImageLightbox: (src: string) => void;
   startBottomFollow: () => void;
 }
 
 export function Composer({
+  instance,
   draft,
   onDraftChange,
   onSendMessage,
   onAbort,
-  instanceStatus,
-  buttonMode,
-  contextUsage,
-  showCompactButton,
-  compactDisabled,
-  onCompact,
-  instanceModel,
-  availableModels,
-  thinkingLevel,
   onSetModel,
   onSetThinkingLevel,
+  onCompact,
+  buttonMode,
+  showCompactButton,
+  compactDisabled,
   onImageLightbox,
   startBottomFollow,
 }: ComposerProps) {
@@ -63,6 +55,13 @@ export function Composer({
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const [showCompactModal, setShowCompactModal] = useState(false);
+
+  // 从 instance 对象中取需要的字段
+  const instanceStatus = instance?.status;
+  const contextUsage = instance?.contextUsage;
+  const instanceModel = instance?.model;
+  const availableModels = instance?.availableModels;
+  const thinkingLevel = instance?.thinkingLevel;
 
   const showContextInfo =
     !!contextUsage &&
@@ -117,7 +116,6 @@ export function Composer({
   }, [instanceStatus, onSendMessage, startBottomFollow]);
 
   // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
-  // keyCode 229 用于拦截 Safari 上 IME 确认拼音时的回车（此时 isComposing 已为 false）
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.nativeEvent.isComposing || e.keyCode === 229) return;
@@ -166,7 +164,6 @@ export function Composer({
           showToast(t("eventStream.imageProcessFailed"));
           console.error("Image process failed:", err);
         });
-      // 重置 input 以便再次选择相同文件
       e.target.value = "";
     },
     [onDraftChange, t],
@@ -195,8 +192,7 @@ export function Composer({
                 <span className="min-w-0 truncate">
                   <ContextIndicator contextUsage={contextUsage!} />
                 </span>
-                {/* 压缩按钮：最后一条是 compaction entry 时不显示（无内容可压缩） */}
-                {showCompactButton && onCompact && (
+                {showCompactButton && (
                   <button
                     onClick={() => setShowCompactModal(true)}
                     disabled={compactDisabled}
@@ -211,7 +207,7 @@ export function Composer({
           </div>
         )}
 
-        {/* 输入框区域：textarea + 图片预览 + 操作行在同一个 border 内 */}
+        {/* 输入框区域 */}
         <div className="flex flex-col overflow-hidden rounded-[14px] border border-[var(--separator)]">
           {/* 图片预览条 */}
           {draft.images.length > 0 && (
@@ -312,7 +308,7 @@ export function Composer({
       </div>
 
       {/* 压缩上下文 Modal */}
-      {showCompactModal && onCompact && (
+      {showCompactModal && (
         <CompactModal
           onClose={() => setShowCompactModal(false)}
           onConfirm={(customInstructions) => {
@@ -381,7 +377,6 @@ function ContextIndicator({
 
   const color = percent > 90 ? "#ff4245" : percent > 60 ? "#ff9230" : "#30d158";
 
-  // 格式化 token 数（对齐 footer 插件逻辑）
   const fmt = (n: number) => {
     if (n < 1000) return String(n);
     if (n < 10000) return `${(n / 1000).toFixed(1)}k`;

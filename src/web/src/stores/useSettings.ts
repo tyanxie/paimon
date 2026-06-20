@@ -1,65 +1,43 @@
-// 设置 store：localStorage 读写 + DOM 属性同步 + React reactive
+// 设置 store：Zustand + localStorage 持久化 + DOM 属性同步
 
-import { useSyncExternalStore } from "react";
+import { create } from "zustand";
 
-// ========================================
-// 类型
-// ========================================
+// ── 类型 ──
 
 export type Appearance = "light" | "dark" | "system";
 export type Background = "mist" | "aurora" | "ember";
 
-// ========================================
-// 常量
-// ========================================
+interface SettingsState {
+  appearance: Appearance;
+  background: Background;
+  /** 解析后的实际主题（考虑 system 偏好） */
+  resolvedTheme: "light" | "dark";
+  setAppearance: (value: Appearance) => void;
+  setBackground: (value: Background) => void;
+}
+
+// ── 常量 ──
 
 const KEYS = {
   appearance: "paimon:appearance",
   background: "paimon:background",
 } as const;
 
-const DEFAULTS = {
-  appearance: "system" as Appearance,
-  background: "mist" as Background,
-} as const;
+// ── localStorage 读取 ──
 
-// ========================================
-// 内部状态 + 订阅机制
-// ========================================
-
-let listeners: Set<() => void> = new Set();
-
-function emit() {
-  listeners.forEach((fn) => fn());
-}
-
-function subscribe(fn: () => void) {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-}
-
-// ========================================
-// localStorage 读写
-// ========================================
-
-function getAppearance(): Appearance {
+function readAppearance(): Appearance {
   const val = localStorage.getItem(KEYS.appearance);
   if (val === "light" || val === "dark" || val === "system") return val;
-  return DEFAULTS.appearance;
+  return "system";
 }
 
-function getBackground(): Background {
+function readBackground(): Background {
   const val = localStorage.getItem(KEYS.background);
   if (val === "mist" || val === "aurora" || val === "ember") return val;
-  return DEFAULTS.background;
+  return "mist";
 }
 
-// ========================================
-// DOM 属性同步
-// ========================================
-
-let mediaQuery: MediaQueryList | null = null;
-let mediaHandler: ((e: MediaQueryListEvent) => void) | null = null;
+// ── DOM 同步 ──
 
 function resolveTheme(appearance: Appearance): "light" | "dark" {
   if (appearance === "system") {
@@ -70,71 +48,62 @@ function resolveTheme(appearance: Appearance): "light" | "dark" {
   return appearance;
 }
 
-function syncDOM() {
-  const appearance = getAppearance();
-  const background = getBackground();
+function syncDOM(appearance: Appearance, background: Background) {
   const theme = resolveTheme(appearance);
-
   document.documentElement.setAttribute("data-theme", theme);
   document.documentElement.setAttribute("data-bg", background);
+  return theme;
+}
 
-  // matchMedia 监听管理
+// ── Store ──
+
+export const useSettings = create<SettingsState>((set) => ({
+  appearance: readAppearance(),
+  background: readBackground(),
+  resolvedTheme: resolveTheme(readAppearance()),
+
+  setAppearance: (value) => {
+    localStorage.setItem(KEYS.appearance, value);
+    const resolvedTheme = syncDOM(value, useSettings.getState().background);
+    set({ appearance: value, resolvedTheme });
+  },
+
+  setBackground: (value) => {
+    localStorage.setItem(KEYS.background, value);
+    syncDOM(useSettings.getState().appearance, value);
+    set({ background: value });
+  },
+}));
+
+// ── 系统主题变化监听 ──
+
+const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+mediaQuery.addEventListener("change", () => {
+  const { appearance, background } = useSettings.getState();
   if (appearance === "system") {
-    if (!mediaQuery) {
-      mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      mediaHandler = () => {
-        const newTheme = resolveTheme("system");
-        document.documentElement.setAttribute("data-theme", newTheme);
-        emit();
-      };
-      mediaQuery.addEventListener("change", mediaHandler);
-    }
-  } else {
-    if (mediaQuery && mediaHandler) {
-      mediaQuery.removeEventListener("change", mediaHandler);
-      mediaQuery = null;
-      mediaHandler = null;
-    }
+    const resolvedTheme = syncDOM(appearance, background);
+    useSettings.setState({ resolvedTheme });
   }
-}
+});
 
-// ========================================
-// 公开方法
-// ========================================
-
-export function setAppearance(value: Appearance) {
-  localStorage.setItem(KEYS.appearance, value);
-  syncDOM();
-  emit();
-}
-
-export function setBackground(value: Background) {
-  localStorage.setItem(KEYS.background, value);
-  syncDOM();
-  emit();
-}
-
-// ========================================
-// React Hooks
-// ========================================
+// ── 兼容 hooks（保持现有消费者 API 不变）──
 
 export function useAppearance(): [Appearance, (v: Appearance) => void] {
-  const value = useSyncExternalStore(subscribe, getAppearance);
-  return [value, setAppearance];
+  const appearance = useSettings((s) => s.appearance);
+  const setAppearance = useSettings((s) => s.setAppearance);
+  return [appearance, setAppearance];
 }
 
 export function useBackground(): [Background, (v: Background) => void] {
-  const value = useSyncExternalStore(subscribe, getBackground);
-  return [value, setBackground];
+  const background = useSettings((s) => s.background);
+  const setBackground = useSettings((s) => s.setBackground);
+  return [background, setBackground];
 }
 
-/** 获取当前解析后的实际主题（light/dark） */
 export function useResolvedTheme(): "light" | "dark" {
-  return useSyncExternalStore(subscribe, () => resolveTheme(getAppearance()));
+  return useSettings((s) => s.resolvedTheme);
 }
 
-// ========================================
-// 初始化（首次加载时同步 DOM）
-// ========================================
+// ── 初始化（模块加载时同步 DOM）──
 
-syncDOM();
+syncDOM(readAppearance(), readBackground());
