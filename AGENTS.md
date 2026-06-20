@@ -45,7 +45,7 @@ src/
     └── src/
         ├── i18n/              # 国际化（i18next 配置 + locale 文件）
         ├── stores/            # useApp, useConversation, useInstances, useSettings（全局状态）
-        ├── hooks/             # useWebSocket, useLogoSrc
+        ├── hooks/             # useWebSocket, useAuth, useInstanceActions, useSubscription, useLogoSrc
         ├── utils/             # 工具函数（status 状态判断、authFetch 等）
         └── components/
             ├── InstanceView/  # 实例详情页（对话列表、输入区、滚动管理）
