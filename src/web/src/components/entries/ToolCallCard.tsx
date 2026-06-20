@@ -13,7 +13,7 @@ import {
   Timer,
 } from "lucide-react";
 import { ModalShell } from "../ui/ModalShell";
-import type { SessionEntry } from "../../stores/useAppState";
+import type { SessionEntry } from "../../stores/types";
 import { MarkdownRenderer } from "./Markdown";
 import { useTranslation } from "react-i18next";
 

@@ -9,7 +9,7 @@ import type {
   ModelInfo,
   ThinkingLevel,
 } from "../../../../protocol/types";
-import type { InputDraft, InputDraftUpdater } from "../../stores/useAppState";
+import type { InputDraft, InputDraftUpdater } from "../../stores/types";
 import { isBusy } from "../../utils/status";
 import { processImageFile, getImagesFromClipboard } from "../../utils/image";
 import { showToast } from "../ui/Toast";

@@ -17,7 +17,7 @@ import {
   type SessionEntry,
   type InputDraft,
   type InputDraftUpdater,
-} from "../../stores/useAppState";
+} from "../../stores/types";
 import { useLogoSrc } from "../../hooks/useLogoSrc";
 import { isBusy } from "../../utils/status";
 import { EntryItem } from "../entries";

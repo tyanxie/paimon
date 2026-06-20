@@ -3,8 +3,8 @@
 import { useRef, useLayoutEffect, useState, useCallback } from "react";
 import type { RefObject } from "react";
 import type { InstanceId } from "../../../../protocol/types";
-import type { SessionEntry } from "../../stores/useAppState";
-import { getSessionEntryRenderKey } from "../../stores/useAppState";
+import type { SessionEntry } from "../../stores/types";
+import { getSessionEntryRenderKey } from "../../stores/types";
 import {
   getSafeScrollTop,
   pinScrollToBottomIfNeeded,
