@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { InstanceStatus } from "../../../protocol/types";
+import type { InstanceStatus } from "../../../../protocol/types";
 
 let ComposerStatusIndicator: (props: {
   status?: InstanceStatus;
@@ -33,10 +33,10 @@ beforeAll(async () => {
   });
 
   // 初始化 i18n（必须在 localStorage mock 之后）
-  await import("../i18n");
+  await import("../../i18n");
 
-  ({ ComposerStatusIndicator, getComposerButtonMode } =
-    await import("./EventStream"));
+  ({ ComposerStatusIndicator } = await import("./Composer"));
+  ({ getComposerButtonMode } = await import("./utils"));
 });
 
 describe("ComposerStatusIndicator", () => {

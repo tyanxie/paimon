@@ -48,6 +48,7 @@ src/
         ├── hooks/             # useWebSocket, useLogoSrc
         ├── utils/             # 工具函数（status 状态判断、authFetch 等）
         └── components/
+            ├── InstanceView/  # 实例详情页（对话列表、输入区、滚动管理）
             ├── ui/            # 通用组件（ModalShell, MobileNavBar 等）
             └── entries/       # 消息渲染器（Markdown, ThinkingBlock, ToolCallCard）
 scripts/

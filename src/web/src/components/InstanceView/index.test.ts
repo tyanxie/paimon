@@ -20,31 +20,34 @@ Object.assign(globalThis, {
 });
 
 const { getConversationScrollSpacing, pinScrollToBottomIfNeeded } =
-  await import("./EventStream");
-const css = await Bun.file(new URL("../index.css", import.meta.url)).text();
-const eventStreamSource = await Bun.file(
-  new URL("./EventStream.tsx", import.meta.url),
+  await import("./utils");
+const css = await Bun.file(new URL("../../index.css", import.meta.url)).text();
+const instanceViewSource = await Bun.file(
+  new URL("./index.tsx", import.meta.url),
+).text();
+const composerSource = await Bun.file(
+  new URL("./Composer.tsx", import.meta.url),
 ).text();
 const sidebarSource = await Bun.file(
-  new URL("./Sidebar.tsx", import.meta.url),
+  new URL("../Sidebar.tsx", import.meta.url),
 ).text();
 const mobileNavBarSource = await Bun.file(
-  new URL("./ui/MobileNavBar.tsx", import.meta.url),
+  new URL("../ui/MobileNavBar.tsx", import.meta.url),
 ).text();
 const instanceHeaderSource = await Bun.file(
-  new URL("./ui/InstanceHeader.tsx", import.meta.url),
+  new URL("../ui/InstanceHeader.tsx", import.meta.url),
 ).text();
 const modalShellSource = await Bun.file(
-  new URL("./ui/ModalShell.tsx", import.meta.url),
+  new URL("../ui/ModalShell.tsx", import.meta.url),
 ).text();
 const toolCallCardSource = await Bun.file(
-  new URL("./entries/ToolCallCard.tsx", import.meta.url),
+  new URL("../entries/ToolCallCard.tsx", import.meta.url),
 ).text();
 const modelSelectorSource = await Bun.file(
-  new URL("./ui/ModelSelector.tsx", import.meta.url),
+  new URL("../ui/ModelSelector.tsx", import.meta.url),
 ).text();
 
-describe("EventStream 底部 pin 滚动", () => {
+describe("InstanceView 底部 pin 滚动", () => {
   test("已在底部且真实几何偏离时滚到底部", () => {
     let scrollCount = 0;
 
@@ -102,7 +105,7 @@ describe("EventStream 底部 pin 滚动", () => {
   });
 });
 
-describe("EventStream 间距计算", () => {
+describe("InstanceView 间距计算", () => {
   test("滚动到底部按钮底边与对话内容底部留白对齐", () => {
     expect(
       getConversationScrollSpacing({
@@ -162,11 +165,11 @@ describe("文本选择边界", () => {
     expect(sidebarSource).toContain("glass-panel select-none");
     expect(mobileNavBarSource).toContain("select-none");
     expect(toolCallCardSource).toContain("text-left group select-none");
-    expect(eventStreamSource).toContain('className="select-none w-9 h-9');
-    expect(eventStreamSource).toContain(
+    expect(instanceViewSource).toContain('className="select-none w-9 h-9');
+    expect(composerSource).toContain(
       'className="select-none w-[28px] h-[28px]',
     );
-    expect(eventStreamSource).toContain(
+    expect(composerSource).toContain(
       "className={`select-none w-[28px] h-[28px]",
     );
   });
@@ -177,10 +180,10 @@ describe("文本选择边界", () => {
     );
     // CopyableInfo 点击即复制，无需允许拖选（显示的还可能是截断值）
     expect(instanceHeaderSource).not.toContain('select-text">{text}</span>');
-    expect(eventStreamSource).toContain(
+    expect(composerSource).toContain(
       '<span className="text-[11px] font-medium leading-none">{label}</span>',
     );
-    expect(eventStreamSource).toContain(
+    expect(composerSource).toContain(
       '<span className="select-text" style={{ color }}>',
     );
     expect(mobileNavBarSource).toContain("truncate select-text");
@@ -191,11 +194,11 @@ describe("文本选择边界", () => {
   });
 
   test("加载和空状态占位文案禁用选择", () => {
-    expect(eventStreamSource).toContain("Loading earlier messages...");
-    expect(eventStreamSource).toContain("text-[11px] py-2 select-none");
-    expect(eventStreamSource).toContain("No messages yet");
-    expect(eventStreamSource).toContain("text-[12px] pt-8 select-none");
-    expect(eventStreamSource).toContain(
+    expect(instanceViewSource).toContain("Loading earlier messages...");
+    expect(instanceViewSource).toContain("text-[11px] py-2 select-none");
+    expect(instanceViewSource).toContain("No messages yet");
+    expect(instanceViewSource).toContain("text-[12px] pt-8 select-none");
+    expect(instanceViewSource).toContain(
       'className="space-y-3 pt-3 select-none"',
     );
   });
