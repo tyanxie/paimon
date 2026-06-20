@@ -44,7 +44,7 @@ src/
 └── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
     └── src/
         ├── i18n/              # 国际化（i18next 配置 + locale 文件）
-        ├── stores/            # useAppState, useSettings（全局状态）
+        ├── stores/            # useApp, useConversation, useInstances, useSettings（全局状态）
         ├── hooks/             # useWebSocket, useLogoSrc
         ├── utils/             # 工具函数（status 状态判断、authFetch 等）
         └── components/
@@ -96,6 +96,7 @@ bin/
 - 功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
 - **localStorage key 格式** — 前端 localStorage 统一使用 `paimon:camelCase` 命名格式（如 `paimon:appearance`、`paimon:accessToken`、`paimon:language`）
 - **前端国际化（i18n）** — 使用 `i18next` + `react-i18next`，fallback 语言为简体中文。所有用户可见的 UI 文本必须通过 `t('namespace.key')` 获取，禁止硬编码。新增 UI 文本时需同时更新 `src/web/src/i18n/zh-CN.ts` 和 `en.ts`。key 按模块分组（如 `sidebar.xxx`、`settings.xxx`）。语言偏好存储在 `paimon:language`
+- **前端 Store 规范** — `stores/` 目录下每个独立状态域一个 `useXxx.ts` 文件（不加 Store/State 后缀）。共享类型放 `types.ts`。新增 store 如需响应 WS 消息，在 `useApp.ts` 加一行组合 + 对应 case 分发。纯转换函数内联在所属 hook 文件中，不对外导出
 
 ## 设计风格（摘要）
 

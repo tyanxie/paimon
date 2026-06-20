@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { AlertCircle, ChevronRight } from "lucide-react";
 import type { ImagePayload } from "../../../../protocol/types";
-import type { SessionEntry } from "../../stores/useAppState";
+import type { SessionEntry } from "../../stores/types";
 import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";

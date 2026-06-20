@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useViewportHeight } from "./hooks/useViewportHeight";
-import { useAppState } from "./stores/useAppState";
+import { useApp } from "./stores/useApp";
 import { Sidebar } from "./components/Sidebar";
 import { InstanceView } from "./components/InstanceView";
 import { Settings } from "./components/Settings";
@@ -17,7 +17,7 @@ import type {
   ImagePayload,
   ThinkingLevel,
 } from "../../protocol/types";
-import { EMPTY_DRAFT, type InputDraftUpdater } from "./stores/useAppState";
+import { EMPTY_DRAFT, type InputDraftUpdater } from "./stores/types";
 import { useTranslation } from "react-i18next";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -66,7 +66,7 @@ export default function App() {
     setSessionListLoading,
     clearScrollToBottom,
     clearSessionChanged,
-  } = useAppState();
+  } = useApp();
 
   const { connected, send } = useWebSocket({
     token: authToken,

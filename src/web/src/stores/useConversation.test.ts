@@ -1,6 +1,8 @@
+// 对话状态纯转换函数测试
+
 import { describe, expect, test } from "bun:test";
 import type { InstanceId } from "../../../protocol/types";
-import type { SessionEntry, InputDraft } from "./useAppState";
+import type { SessionEntry, InputDraft } from "./types";
 import {
   applyHistoryResponse,
   beginInstanceRefresh,
@@ -9,7 +11,7 @@ import {
   getInstanceDraft,
   setInstanceDraft,
   applyConversationError,
-} from "./useAppState";
+} from "./useConversation";
 
 function entry(id: string): SessionEntry {
   return {
