@@ -147,7 +147,10 @@ export function useConversation(
       resetConversation();
       send({ type: "get_history", payload: { instanceId } });
     }
-    prevSessionIdRef.current = currentSessionId;
+    // 只在 sessionId 有效时更新 ref，避免中间态 undefined 覆盖有效值
+    if (currentSessionId !== undefined) {
+      prevSessionIdRef.current = currentSessionId;
+    }
   }, [instance?.sessionId, instanceId, send, resetConversation]);
 
   // ── 监听 compacting → 非 compacting 转换 → 重新拉取 ──
