@@ -33,7 +33,6 @@ export default function App() {
   // ── WebSocket 连接管理 ──
   const connect = useWebSocket((s) => s.connect);
   const disconnect = useWebSocket((s) => s.disconnect);
-  const connected = useWebSocket((s) => s.connected);
   const subscribe = useWebSocket((s) => s.subscribe);
   const send = useWebSocket((s) => s.send);
 
@@ -124,7 +123,6 @@ export default function App() {
           onSelect={handleSelect}
           onShutdown={handleShutdown}
           onNewInstance={() => setShowNewInstance(true)}
-          connected={connected}
         />
       </div>
 
@@ -144,7 +142,6 @@ export default function App() {
                     onSelect={handleSelect}
                     onShutdown={handleShutdown}
                     onNewInstance={() => setShowNewInstance(true)}
-                    connected={connected}
                   />
                 </div>
                 {/* 桌面端：显示首页 */}

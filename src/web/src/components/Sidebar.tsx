@@ -5,6 +5,7 @@ import { Settings as SettingsIcon, LogOut, Plus } from "lucide-react";
 import { useNavigate } from "react-router";
 import type { InstanceInfo, InstanceId } from "../../../protocol/types";
 import { useLogoSrc } from "../hooks/useLogoSrc";
+import { ConnectionIndicator } from "./ui/ConnectionIndicator";
 import {
   ContextMenu,
   ContextMenuItem,
@@ -18,7 +19,6 @@ interface SidebarProps {
   onSelect: (id: InstanceId) => void;
   onShutdown: (id: InstanceId) => void;
   onNewInstance: () => void;
-  connected: boolean;
 }
 
 /** 长按触发阈值 (ms) */
@@ -30,7 +30,6 @@ export function Sidebar({
   onSelect,
   onShutdown,
   onNewInstance,
-  connected,
 }: SidebarProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -109,10 +108,7 @@ export function Sidebar({
               >
                 <Plus size={16} />
               </button>
-              <span
-                className={`w-2 h-2 rounded-full transition-colors ${connected ? "bg-green-500" : "bg-red-500"}`}
-                title={connected ? t("common.online") : t("common.offline")}
-              />
+              <ConnectionIndicator />
             </div>
           </div>
           <div className="text-[12px] leading-[15px] max-md:text-[13px] max-md:leading-[18px] text-[var(--label-tertiary)]">

@@ -59,7 +59,7 @@ export function useConversation(
 ): ConversationState {
   const send = useWebSocket((s) => s.send);
   const subscribe = useWebSocket((s) => s.subscribe);
-  const connected = useWebSocket((s) => s.connected);
+  const connected = useWebSocket((s) => s.connectionState === "connected");
 
   const [entries, setEntries] = useState<SessionEntry[]>([]);
   const [streamingEntry, setStreamingEntry] = useState<SessionEntry | null>(

@@ -9,11 +9,18 @@ import { DEFAULTS } from "../../../protocol/types";
 
 // ── 类型 ──
 
+export type ConnectionState =
+  | "idle"
+  | "connecting"
+  | "connected"
+  | "disconnected";
+
 type MessageHandler = (msg: HubToBrowserMessage) => void;
 type Unsubscribe = () => void;
 
 interface WebSocketState {
-  connected: boolean;
+  /** 连接状态（idle → connecting → connected / disconnected） */
+  connectionState: ConnectionState;
   /** 发送消息到 Hub */
   send: (msg: BrowserToHubMessage) => void;
   /** 订阅服务端推送消息，返回取消订阅函数 */
@@ -32,9 +39,15 @@ let disposed = false;
 let pingTimer: ReturnType<typeof setInterval> | null = null;
 let pongTimeout: ReturnType<typeof setTimeout> | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let connectingTimeout: ReturnType<typeof setTimeout> | null = null;
 let currentToken: string | null = null;
 let currentOnAuthError: (() => void) | undefined;
 let hasOpened = false;
+
+/** connecting 超时时间（ms） */
+const CONNECTING_TIMEOUT = 3000;
+/** 断连后重连延迟（ms） */
+const RECONNECT_DELAY = 3000;
 
 // ── 内部函数 ──
 
@@ -72,7 +85,14 @@ function stopHeartbeat() {
 
 function scheduleReconnect() {
   if (disposed) return;
-  reconnectTimer = setTimeout(doConnect, 3000);
+  reconnectTimer = setTimeout(doConnect, RECONNECT_DELAY);
+}
+
+function clearConnectingTimeout() {
+  if (connectingTimeout) {
+    clearTimeout(connectingTimeout);
+    connectingTimeout = null;
+  }
 }
 
 function doConnect() {
@@ -86,9 +106,20 @@ function doConnect() {
   const socket = new WebSocket(url);
   ws = socket;
 
+  useWebSocket.setState({ connectionState: "connecting" });
+
+  // connecting 超时：强制关闭，触发 onclose → disconnected
+  connectingTimeout = setTimeout(() => {
+    connectingTimeout = null;
+    if (socket.readyState === WebSocket.CONNECTING) {
+      socket.close();
+    }
+  }, CONNECTING_TIMEOUT);
+
   socket.onopen = () => {
+    clearConnectingTimeout();
     hasOpened = true;
-    useWebSocket.setState({ connected: true });
+    useWebSocket.setState({ connectionState: "connected" });
     // 请求实例列表
     socket.send(JSON.stringify({ type: "list" }));
     startHeartbeat(socket);
@@ -112,7 +143,8 @@ function doConnect() {
   };
 
   socket.onclose = (event) => {
-    useWebSocket.setState({ connected: false });
+    clearConnectingTimeout();
+    useWebSocket.setState({ connectionState: "disconnected" });
     ws = null;
     stopHeartbeat();
 
@@ -147,7 +179,7 @@ function doConnect() {
 // ── Store ──
 
 export const useWebSocket = create<WebSocketState>((set, get) => ({
-  connected: false,
+  connectionState: "idle",
 
   send: (msg) => {
     if (ws?.readyState === WebSocket.OPEN) {
@@ -177,6 +209,7 @@ export const useWebSocket = create<WebSocketState>((set, get) => ({
     currentToken = null;
     currentOnAuthError = undefined;
     stopHeartbeat();
+    clearConnectingTimeout();
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -185,6 +218,6 @@ export const useWebSocket = create<WebSocketState>((set, get) => ({
       ws.close();
       ws = null;
     }
-    set({ connected: false });
+    set({ connectionState: "idle" });
   },
 }));
