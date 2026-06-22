@@ -137,14 +137,25 @@ export function useConversation(
 
   // ── 监听 sessionId 变化 → 重新拉取 history ──
   const prevSessionIdRef = useRef(instance?.sessionId);
+  const prevInstanceIdRef = useRef(instanceId);
   useEffect(() => {
     const currentSessionId = instance?.sessionId;
+
+    // 切换实例时 instanceId 也变了，不是同实例内 session 切换，跳过
+    if (instanceId !== prevInstanceIdRef.current) {
+      prevInstanceIdRef.current = instanceId;
+      if (currentSessionId !== undefined) {
+        prevSessionIdRef.current = currentSessionId;
+      }
+      return;
+    }
+
     if (
       prevSessionIdRef.current !== undefined &&
       currentSessionId !== undefined &&
       currentSessionId !== prevSessionIdRef.current
     ) {
-      // session 变了，重置并重新拉取
+      // 同实例内 session 变了，重置并重新拉取
       resetConversation();
       send({ type: "get_history", payload: { instanceId } });
     }
