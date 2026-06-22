@@ -1,25 +1,5 @@
 import { describe, expect, test } from "bun:test";
-
-Object.assign(globalThis, {
-  localStorage: {
-    getItem: () => null,
-    setItem: () => undefined,
-  },
-  document: {
-    documentElement: {
-      setAttribute: () => undefined,
-    },
-  },
-  window: {
-    matchMedia: () => ({
-      matches: false,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    }),
-  },
-});
-
-const { getLogoSrc } = await import("./useLogoSrc");
+import { getLogoSrc } from "./useLogoSrc";
 
 describe("logo 资源路径", () => {
   test("根据背景预设和实际主题返回分层 logo 路径", () => {
