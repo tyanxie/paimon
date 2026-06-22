@@ -1,26 +1,8 @@
 import { describe, expect, test } from "bun:test";
-
-Object.assign(globalThis, {
-  localStorage: {
-    getItem: () => null,
-    setItem: () => undefined,
-  },
-  document: {
-    documentElement: {
-      setAttribute: () => undefined,
-    },
-  },
-  window: {
-    matchMedia: () => ({
-      matches: false,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    }),
-  },
-});
-
-const { getConversationScrollSpacing, pinScrollToBottomIfNeeded } =
-  await import("./utils");
+import {
+  getConversationScrollSpacing,
+  pinScrollToBottomIfNeeded,
+} from "./utils";
 const css = await Bun.file(new URL("../../index.css", import.meta.url)).text();
 const instanceViewSource = await Bun.file(
   new URL("./index.tsx", import.meta.url),

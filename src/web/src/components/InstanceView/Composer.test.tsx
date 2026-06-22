@@ -1,43 +1,10 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { InstanceStatus } from "../../../../protocol/types";
-
-let ComposerStatusIndicator: (props: {
-  status?: InstanceStatus;
-}) => React.ReactNode;
-let getComposerButtonMode: (instanceStatus?: InstanceStatus) => "send" | "stop";
-
-beforeAll(async () => {
-  const storage = new Map<string, string>();
-
-  Object.assign(globalThis, {
-    localStorage: {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => storage.set(key, value),
-      removeItem: (key: string) => storage.delete(key),
-      clear: () => storage.clear(),
-    },
-    window: {
-      matchMedia: () => ({
-        matches: false,
-        addEventListener: () => undefined,
-        removeEventListener: () => undefined,
-      }),
-    },
-    document: {
-      documentElement: {
-        setAttribute: () => undefined,
-      },
-    },
-  });
-
-  // 初始化 i18n（必须在 localStorage mock 之后）
-  await import("../../i18n");
-
-  ({ ComposerStatusIndicator } = await import("./Composer"));
-  ({ getComposerButtonMode } = await import("./utils"));
-});
+import "../../i18n";
+import { ComposerStatusIndicator } from "./Composer";
+import { getComposerButtonMode } from "./utils";
 
 describe("ComposerStatusIndicator", () => {
   test("renders online state without running animation", () => {

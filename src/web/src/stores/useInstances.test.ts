@@ -2,21 +2,7 @@
 
 import { describe, expect, test, beforeEach } from "bun:test";
 import type { InstanceId, InstanceInfo } from "../../../protocol/types";
-
-// persist 中间件通过 window.localStorage 访问存储，Bun 运行时无 window，需要 mock
-const storage = new Map<string, string>();
-const localStorageMock = {
-  getItem: (key: string) => storage.get(key) ?? null,
-  setItem: (key: string, value: string) => storage.set(key, value),
-  removeItem: (key: string) => storage.delete(key),
-  clear: () => storage.clear(),
-};
-Object.assign(globalThis, {
-  localStorage: localStorageMock,
-  window: { localStorage: localStorageMock },
-});
-
-const { useInstances } = await import("./useInstances");
+import { useInstances } from "./useInstances";
 
 function makeInstance(id: string): InstanceInfo {
   return {
