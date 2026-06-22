@@ -49,6 +49,13 @@
         }
         document.documentElement.setAttribute("data-theme", theme);
         document.documentElement.setAttribute("data-bg", bg);
+        // 预加载 logo 图片，避免 React 渲染后才开始下载导致闪烁
+        // 路径规则与 src/web/src/hooks/useLogoSrc.ts 中的 getLogoSrc() 一致
+        var link = document.createElement("link");
+        link.rel = "preload";
+        link.as = "image";
+        link.href = "/logos/" + bg + "/" + theme + "/paimon-logo.png";
+        document.head.appendChild(link);
       })();
     </script>
     <div id="root"></div>

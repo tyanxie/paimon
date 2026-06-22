@@ -4,6 +4,7 @@ import {
   type Background,
 } from "../stores/useSettings";
 
+// 路径规则与 src/web/index.html 中的 preload 内联脚本一致
 const FALLBACK_LOGO_SRC = "/logos/mist/light/paimon-logo.png";
 
 export function getLogoSrc(

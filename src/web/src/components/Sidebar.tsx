@@ -94,7 +94,7 @@ export function Sidebar({
             <img
               src={logoSrc}
               alt="Paimon"
-              className="h-[34px] w-auto object-contain"
+              className="h-[34px] aspect-square object-contain"
             />
           </div>
           <div className="flex items-center justify-between">
