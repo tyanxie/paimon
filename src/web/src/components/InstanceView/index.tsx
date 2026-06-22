@@ -46,7 +46,7 @@ export function InstanceView() {
     sessionList,
     sessionListLoading,
     loadMore,
-    setSessionListLoading,
+    requestSessionList,
   } = useConversation(instanceId, instance);
 
   // ── 草稿 ──
@@ -95,9 +95,8 @@ export function InstanceView() {
   );
 
   const handleListSessions = useCallback(() => {
-    setSessionListLoading(true);
-    send({ type: "list_sessions", payload: { instanceId } });
-  }, [instanceId, send, setSessionListLoading]);
+    requestSessionList();
+  }, [requestSessionList]);
 
   const handleNewSession = useCallback(() => {
     send({ type: "new_session", payload: { instanceId } });

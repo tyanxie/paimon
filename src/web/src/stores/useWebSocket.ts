@@ -146,7 +146,7 @@ function doConnect() {
 
 // ── Store ──
 
-export const useWebSocket = create<WebSocketState>(() => ({
+export const useWebSocket = create<WebSocketState>((set, get) => ({
   connected: false,
 
   send: (msg) => {
@@ -164,7 +164,7 @@ export const useWebSocket = create<WebSocketState>(() => ({
 
   connect: (token, onAuthError) => {
     // 先清理旧连接
-    useWebSocket.getState().disconnect();
+    get().disconnect();
 
     disposed = false;
     currentToken = token;
@@ -185,6 +185,6 @@ export const useWebSocket = create<WebSocketState>(() => ({
       ws.close();
       ws = null;
     }
-    useWebSocket.setState({ connected: false });
+    set({ connected: false });
   },
 }));

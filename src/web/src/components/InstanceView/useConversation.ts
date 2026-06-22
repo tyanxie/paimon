@@ -30,7 +30,8 @@ export interface ConversationState {
   sessionList: SessionListItem[];
   sessionListLoading: boolean;
   loadMore: () => void;
-  setSessionListLoading: (loading: boolean) => void;
+  /** 请求 session 列表（内部管理 loading 状态） */
+  requestSessionList: () => void;
 }
 
 // ── renderKey 生成 ──
@@ -246,6 +247,12 @@ export function useConversation(
     send({ type: "get_history", payload: { instanceId, offset } });
   }, [instanceId, send]);
 
+  // ── 请求 session 列表 ──
+  const requestSessionList = useCallback(() => {
+    setSessionListLoading(true);
+    send({ type: "list_sessions", payload: { instanceId } });
+  }, [instanceId, send]);
+
   return {
     entries: streamingEntry ? [...entries, streamingEntry] : entries,
     streamingEntry,
@@ -256,6 +263,6 @@ export function useConversation(
     sessionList,
     sessionListLoading,
     loadMore,
-    setSessionListLoading,
+    requestSessionList,
   };
 }
