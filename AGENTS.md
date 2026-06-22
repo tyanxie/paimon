@@ -29,7 +29,7 @@ bun run scripts/prepare-npm-packages.ts    # 从编译产物生成 npm 可发布
 | 构建     | Vite 6                                                                |
 | 进程管理 | Bun.spawn（detached）+ 状态文件（`~/.paimon/hub.json` / `edge.json`） |
 
-**关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, i18next, react-i18next
+**关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, i18next, react-i18next, zustand
 
 ## 项目结构（仅非标准部分）
 
@@ -44,11 +44,11 @@ src/
 └── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
     └── src/
         ├── i18n/              # 国际化（i18next 配置 + locale 文件）
-        ├── stores/            # useApp, useConversation, useInstances, useSettings（全局状态）
-        ├── hooks/             # useWebSocket, useAuth, useInstanceActions, useSubscription, useLogoSrc
+        ├── stores/            # Zustand stores（useWebSocket, useInstances, useDrafts, useSettings）
+        ├── hooks/             # useAuth, useLogoSrc, useViewportHeight
         ├── utils/             # 工具函数（status 状态判断、authFetch 等）
         └── components/
-            ├── InstanceView/  # 实例详情页（对话列表、输入区、滚动管理）
+            ├── InstanceView/  # 实例详情页（对话列表、输入区、滚动管理、useConversation）
             ├── ui/            # 通用组件（ModalShell, MobileNavBar 等）
             └── entries/       # 消息渲染器（Markdown, ThinkingBlock, ToolCallCard）
 scripts/
@@ -96,7 +96,8 @@ bin/
 - 功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
 - **localStorage key 格式** — 前端 localStorage 统一使用 `paimon:camelCase` 命名格式（如 `paimon:appearance`、`paimon:accessToken`、`paimon:language`）
 - **前端国际化（i18n）** — 使用 `i18next` + `react-i18next`，fallback 语言为简体中文。所有用户可见的 UI 文本必须通过 `t('namespace.key')` 获取，禁止硬编码。新增 UI 文本时需同时更新 `src/web/src/i18n/zh-CN.ts` 和 `en.ts`。key 按模块分组（如 `sidebar.xxx`、`settings.xxx`）。语言偏好存储在 `paimon:language`
-- **前端 Store 规范** — `stores/` 目录下每个独立状态域一个 `useXxx.ts` 文件（不加 Store/State 后缀）。共享类型放 `types.ts`。新增 store 如需响应 WS 消息，在 `useApp.ts` 加一行组合 + 对应 case 分发。纯转换函数内联在所属 hook 文件中，不对外导出
+- **前端 Store 规范** — `stores/` 目录下每个独立状态域一个 `useXxx.ts` 文件（不加 Store/State 后缀），使用 Zustand 管理。共享类型放 `types.ts`。`useWebSocket` store 提供 `subscribe(handler)` 发布订阅机制，各组件自行订阅感兴趣的 WS 消息。纯转换函数内联在所属 hook 文件中，不对外导出
+- **测试环境** — 使用 `@happy-dom/global-registrator` + `bunfig.toml` preload 注入浏览器环境（localStorage、DOM 等），测试文件中无需手动 mock
 
 ## 设计风格（摘要）
 
