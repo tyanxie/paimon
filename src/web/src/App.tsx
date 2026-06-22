@@ -1,21 +1,20 @@
-// 根组件
+// 根组件：auth + 路由 + 全局 WS 订阅
 
 import { useCallback, useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
-import { useWebSocket } from "./hooks/useWebSocket";
 import { useViewportHeight } from "./hooks/useViewportHeight";
 import { useAuth } from "./hooks/useAuth";
-import { useInstanceActions } from "./hooks/useInstanceActions";
-import { useSubscription } from "./hooks/useSubscription";
-import { useApp } from "./stores/useApp";
+import { useWebSocket } from "./stores/useWebSocket";
+import { useInstances } from "./stores/useInstances";
 import { Sidebar } from "./components/Sidebar";
 import { InstanceView } from "./components/InstanceView";
+import { Home } from "./components/Home";
+import { MainPanel } from "./components/MainPanel";
 import { Settings } from "./components/Settings";
 import { NewInstanceModal } from "./components/ui/NewInstanceModal";
 import { LoginPage } from "./components/LoginPage";
 import { ToastContainer, showToast } from "./components/ui/Toast";
 import type { InstanceId } from "../../protocol/types";
-import { EMPTY_DRAFT, type InputDraftUpdater } from "./stores/types";
 import { useTranslation } from "react-i18next";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -31,68 +30,40 @@ export default function App() {
   // ── 认证 ──
   const { authToken, authError, handleLogin, handleAuthError } = useAuth();
 
-  // ── 全局状态 ──
-  const {
-    instances,
-    instanceListReady,
-    entries,
-    streamingEntry,
-    hasMore,
-    loadState,
-    errorMessage,
-    draft,
-    shouldScrollToBottom,
-    sessionChangedInstanceId,
-    sessionList,
-    sessionListLoading,
-    handleMessage,
-    startInstanceRefresh,
-    startLoadMore,
-    setDraft,
-    setSessionListLoading,
-    clearScrollToBottom,
-    clearSessionChanged,
-  } = useApp();
+  // ── WebSocket 连接管理 ──
+  const connect = useWebSocket((s) => s.connect);
+  const disconnect = useWebSocket((s) => s.disconnect);
+  const connected = useWebSocket((s) => s.connected);
+  const subscribe = useWebSocket((s) => s.subscribe);
+  const send = useWebSocket((s) => s.send);
 
-  // ── WebSocket ──
-  const { connected, send } = useWebSocket({
-    token: authToken,
-    onMessage: handleMessage,
-    onAuthError: handleAuthError,
-  });
+  // ── Instances store ──
+  const instances = useInstances((s) => s.instances);
+  const instanceListReady = useInstances((s) => s.instanceListReady);
+  const handleInstanceMessage = useInstances((s) => s.handleMessage);
 
   const navigate = useNavigate();
   useViewportHeight();
   const selectedInstanceId = useSelectedInstanceId();
 
-  // ── 订阅管理 ──
-  useSubscription(
-    selectedInstanceId,
-    instances,
-    connected,
-    send,
-    startInstanceRefresh,
-    sessionChangedInstanceId,
-    clearSessionChanged,
-  );
+  // ── 建立/断开 WS 连接 ──
+  useEffect(() => {
+    if (authToken) {
+      connect(authToken, handleAuthError);
+    } else {
+      disconnect();
+    }
+    return () => disconnect();
+  }, [authToken, connect, disconnect, handleAuthError]);
 
-  // ── 实例操作 ──
-  const {
-    handleSendMessage,
-    handleAbort,
-    handleSetModel,
-    handleSetThinkingLevel,
-    handleListSessions,
-    handleNewSession,
-    handleSwitchSession,
-    handleCompact,
-    handleShutdown,
-  } = useInstanceActions(
-    selectedInstanceId,
-    send,
-    setDraft,
-    setSessionListLoading,
-  );
+  // ── 常驻 WS 订阅：instance_list / instance_update → useInstances ──
+  useEffect(() => {
+    return subscribe((msg) => {
+      if (msg.type === "instance_list" || msg.type === "instance_update") {
+        handleInstanceMessage(msg);
+      }
+    });
+  }, [subscribe, handleInstanceMessage]);
 
   // ── 导航 ──
   const handleSelect = useCallback(
@@ -102,17 +73,19 @@ export default function App() {
     [navigate],
   );
 
-  const handleDraftChange = useCallback(
-    (value: InputDraftUpdater) => {
-      if (!selectedInstanceId) return;
-      setDraft(selectedInstanceId, value);
+  // ── Shutdown ──
+  const handleShutdown = useCallback(
+    (id: InstanceId) => {
+      send({ type: "shutdown", payload: { instanceId: id } });
+      if (id === selectedInstanceId) {
+        navigate("/");
+      }
     },
-    [selectedInstanceId, setDraft],
+    [send, selectedInstanceId, navigate],
   );
 
-  // 新建实例弹窗开关
+  // 新建实例弹窗
   const [showNewInstance, setShowNewInstance] = useState(false);
-
   const handleInstanceCreated = useCallback(
     (id: InstanceId) => {
       setShowNewInstance(false);
@@ -129,32 +102,7 @@ export default function App() {
       showToast(t("eventStream.instanceNotFound"));
       navigate("/");
     }
-  }, [instanceListReady, selectedInstanceId, instances, navigate]);
-
-  // ── 派生数据 ──
-  const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
-  const instanceEntries = streamingEntry
-    ? [...entries, streamingEntry]
-    : entries;
-  const isStreaming = streamingEntry !== null;
-
-  // 加载更多历史
-  const handleLoadMore = useCallback(() => {
-    if (!selectedInstanceId || !hasMore || loadState !== "idle") return;
-    const offset = entries.length;
-    startLoadMore();
-    send({
-      type: "get_history",
-      payload: { instanceId: selectedInstanceId, offset },
-    });
-  }, [
-    selectedInstanceId,
-    hasMore,
-    loadState,
-    entries.length,
-    startLoadMore,
-    send,
-  ]);
+  }, [instanceListReady, selectedInstanceId, instances, navigate, t]);
 
   // ── 未认证 ──
   if (!authToken) {
@@ -179,81 +127,34 @@ export default function App() {
           connected={connected}
         />
       </div>
+
       <Routes>
-        <Route path="/settings" element={<Settings />} />
-        <Route
-          path="/instance/:id"
-          element={
-            <InstanceView
-              entries={instanceEntries}
-              instanceId={selectedInstanceId}
-              isStreaming={isStreaming}
-              loadState={loadState}
-              errorMessage={errorMessage}
-              shouldScrollToBottom={shouldScrollToBottom}
-              onScrollToBottomHandled={clearScrollToBottom}
-              draft={draft}
-              onDraftChange={handleDraftChange}
-              onSendMessage={handleSendMessage}
-              onAbort={handleAbort}
-              onSetModel={handleSetModel}
-              onSetThinkingLevel={handleSetThinkingLevel}
-              instanceStatus={selectedInstance?.status}
-              hasMore={hasMore}
-              onLoadMore={handleLoadMore}
-              contextUsage={selectedInstance?.contextUsage}
-              gitBranch={selectedInstance?.gitBranch}
-              instanceCwd={selectedInstance?.cwd}
-              instanceHomedir={selectedInstance?.homedir}
-              instanceName={
-                selectedInstance?.cwd.split("/").pop() || selectedInstance?.cwd
-              }
-              instanceModel={selectedInstance?.model}
-              availableModels={selectedInstance?.availableModels}
-              thinkingLevel={selectedInstance?.thinkingLevel}
-              sessionList={sessionList}
-              sessionListLoading={sessionListLoading}
-              onListSessions={handleListSessions}
-              onNewSession={handleNewSession}
-              onSwitchSession={handleSwitchSession}
-              onCompact={handleCompact}
-            />
-          }
-        />
-        <Route
-          path="*"
-          element={
-            <>
-              {/* 移动端：显示实例列表 */}
-              <div className="flex-1 md:hidden min-w-0 flex flex-col">
-                <Sidebar
-                  instances={instances}
-                  selectedId={selectedInstanceId}
-                  onSelect={handleSelect}
-                  onShutdown={handleShutdown}
-                  onNewInstance={() => setShowNewInstance(true)}
-                  connected={connected}
-                />
-              </div>
-              {/* 桌面端：显示空状态 */}
-              <div className="hidden md:flex flex-1 min-w-0">
-                <InstanceView
-                  entries={[]}
-                  instanceId={null}
-                  isStreaming={false}
-                  loadState="idle"
-                  errorMessage={null}
-                  shouldScrollToBottom={false}
-                  onScrollToBottomHandled={clearScrollToBottom}
-                  draft={EMPTY_DRAFT}
-                  onDraftChange={() => {}}
-                  onSendMessage={handleSendMessage}
-                  onAbort={handleAbort}
-                />
-              </div>
-            </>
-          }
-        />
+        <Route element={<MainPanel />}>
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/instance/:id" element={<InstanceView />} />
+          <Route
+            path="*"
+            element={
+              <>
+                {/* 移动端：显示实例列表 */}
+                <div className="flex-1 md:hidden min-w-0 flex flex-col">
+                  <Sidebar
+                    instances={instances}
+                    selectedId={selectedInstanceId}
+                    onSelect={handleSelect}
+                    onShutdown={handleShutdown}
+                    onNewInstance={() => setShowNewInstance(true)}
+                    connected={connected}
+                  />
+                </div>
+                {/* 桌面端：显示首页 */}
+                <div className="hidden md:flex flex-1 min-w-0">
+                  <Home />
+                </div>
+              </>
+            }
+          />
+        </Route>
       </Routes>
 
       {/* 新建实例弹窗 */}

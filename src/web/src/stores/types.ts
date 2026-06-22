@@ -1,7 +1,5 @@
 // 全局状态共享类型
 
-import type { AttachedImage } from "../utils/image";
-
 // ── SessionEntry：对话条目模型 ──
 
 /** 统一的 session entry（来自 getBranch 或实时事件构造） */
@@ -31,21 +29,6 @@ export function getSessionEntryRenderKey(entry: SessionEntry): string {
   }
   return key;
 }
-
-// ── InputDraft：输入框草稿 ──
-
-/** 输入框草稿（文本 + 图片），per-instance 存储 */
-export interface InputDraft {
-  text: string;
-  images: AttachedImage[];
-}
-
-export type InputDraftUpdater = InputDraft | ((prev: InputDraft) => InputDraft);
-
-export const EMPTY_DRAFT: InputDraft = Object.freeze({
-  text: "",
-  images: [],
-}) as InputDraft;
 
 // ── ConversationLoadState ──
 

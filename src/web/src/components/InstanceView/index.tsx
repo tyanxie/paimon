@@ -1,24 +1,18 @@
-// 实例详情页：顶栏 + 消息列表 + 输入区
+// 实例详情页：自治页面组件
+// 从 URL 获取 instanceId，内部管理所有状态和操作
 
-import { useRef, useLayoutEffect, useState } from "react";
+import { useRef, useLayoutEffect, useState, useCallback } from "react";
+import { useParams } from "react-router";
 import { ChevronsDown } from "lucide-react";
 import type {
   InstanceId,
-  ContextUsageInfo,
   ImagePayload,
-  ModelInfo,
   ThinkingLevel,
-  SessionListItem,
-  InstanceStatus,
 } from "../../../../protocol/types";
-import {
-  getSessionEntryRenderKey,
-  type ConversationLoadState,
-  type SessionEntry,
-  type InputDraft,
-  type InputDraftUpdater,
-} from "../../stores/types";
-import { useLogoSrc } from "../../hooks/useLogoSrc";
+import { getSessionEntryRenderKey } from "../../stores/types";
+import { useWebSocket } from "../../stores/useWebSocket";
+import { useInstances, selectInstance } from "../../stores/useInstances";
+import { useDrafts, EMPTY_DRAFT } from "../../stores/useDrafts";
 import { isBusy } from "../../utils/status";
 import { EntryItem } from "../entries";
 import { ImageLightbox } from "../ui/ImageLightbox";
@@ -27,90 +21,133 @@ import { InstanceHeader } from "../ui/InstanceHeader";
 import { SessionPopover } from "../ui/SessionPopover";
 import { useTranslation } from "react-i18next";
 import { Composer } from "./Composer";
+import { useConversation } from "./useConversation";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { getConversationScrollSpacing, getComposerButtonMode } from "./utils";
 
-export interface InstanceViewProps {
-  entries: SessionEntry[];
-  instanceId: InstanceId | null;
-  isStreaming: boolean;
-  loadState: ConversationLoadState;
-  errorMessage: string | null;
-  shouldScrollToBottom: boolean;
-  onScrollToBottomHandled: () => void;
-  draft: InputDraft;
-  onDraftChange: (value: InputDraftUpdater) => void;
-  onSendMessage: (message: string, images?: ImagePayload[]) => void;
-  onAbort: () => void;
-  onSetModel?: (provider: string, id: string) => void;
-  onSetThinkingLevel?: (level: ThinkingLevel) => void;
-  instanceStatus?: InstanceStatus;
-  hasMore?: boolean;
-  onLoadMore?: () => void;
-  contextUsage?: ContextUsageInfo;
-  gitBranch?: string | null;
-  instanceCwd?: string;
-  instanceHomedir?: string;
-  instanceName?: string;
-  instanceModel?: ModelInfo;
-  availableModels?: ModelInfo[];
-  thinkingLevel?: ThinkingLevel;
-  sessionList?: SessionListItem[];
-  sessionListLoading?: boolean;
-  onListSessions?: () => void;
-  onNewSession?: () => void;
-  onSwitchSession?: (path: string) => void;
-  onCompact?: (customInstructions?: string) => void;
-}
-
-export function InstanceView({
-  entries,
-  instanceId,
-  isStreaming,
-  loadState,
-  errorMessage,
-  shouldScrollToBottom,
-  onScrollToBottomHandled,
-  draft,
-  onDraftChange,
-  onSendMessage,
-  onAbort,
-  onSetModel,
-  onSetThinkingLevel,
-  instanceStatus,
-  hasMore = false,
-  onLoadMore,
-  contextUsage,
-  gitBranch,
-  instanceCwd,
-  instanceHomedir,
-  instanceName,
-  instanceModel,
-  availableModels,
-  thinkingLevel,
-  sessionList = [],
-  sessionListLoading = false,
-  onListSessions,
-  onNewSession,
-  onSwitchSession,
-  onCompact,
-}: InstanceViewProps) {
+export function InstanceView() {
   const { t } = useTranslation();
+  const { id } = useParams<{ id: string }>();
+  const instanceId = id as InstanceId;
+
+  // ── 全局 stores ──
+  const send = useWebSocket((s) => s.send);
+  const instance = useInstances(selectInstance(instanceId));
+  const draft = useDrafts((s) => s.drafts.get(instanceId) ?? EMPTY_DRAFT);
+  const setDraft = useDrafts((s) => s.setDraft);
+
+  // ── 对话状态（私有 hook） ──
+  const {
+    entries,
+    isStreaming,
+    loadState,
+    errorMessage,
+    hasMore,
+    sessionList,
+    sessionListLoading,
+    loadMore,
+    requestSessionList,
+  } = useConversation(instanceId, instance);
+
+  // ── 草稿 ──
+  const handleDraftChange = useCallback(
+    (value: Parameters<typeof setDraft>[1]) => {
+      setDraft(instanceId, value);
+    },
+    [instanceId, setDraft],
+  );
+
+  // ── 操作方法 ──
+  const handleSendMessage = useCallback(
+    (message: string, images?: ImagePayload[]) => {
+      send({
+        type: "prompt",
+        payload: {
+          instanceId,
+          message,
+          images: images?.length ? images : undefined,
+        },
+      });
+      setDraft(instanceId, { text: "", images: [] });
+    },
+    [instanceId, send, setDraft],
+  );
+
+  const handleAbort = useCallback(() => {
+    send({ type: "abort", payload: { instanceId } });
+  }, [instanceId, send]);
+
+  const handleSetModel = useCallback(
+    (provider: string, modelId: string) => {
+      send({
+        type: "set_model",
+        payload: { instanceId, provider, id: modelId },
+      });
+    },
+    [instanceId, send],
+  );
+
+  const handleSetThinkingLevel = useCallback(
+    (level: ThinkingLevel) => {
+      send({ type: "set_thinking_level", payload: { instanceId, level } });
+    },
+    [instanceId, send],
+  );
+
+  const handleListSessions = useCallback(() => {
+    requestSessionList();
+  }, [requestSessionList]);
+
+  const handleNewSession = useCallback(() => {
+    send({ type: "new_session", payload: { instanceId } });
+  }, [instanceId, send]);
+
+  const handleSwitchSession = useCallback(
+    (path: string) => {
+      send({ type: "switch_session", payload: { instanceId, path } });
+    },
+    [instanceId, send],
+  );
+
+  const handleCompact = useCallback(
+    (customInstructions?: string) => {
+      send({ type: "compact", payload: { instanceId, customInstructions } });
+    },
+    [instanceId, send],
+  );
+
+  // ── 滚动管理 ──
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const topChromeRef = useRef<HTMLDivElement>(null);
   const bottomChromeRef = useRef<HTMLDivElement>(null);
   const bottomSafeGapRef = useRef<HTMLDivElement>(null);
-  const logoSrc = useLogoSrc();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
+
   const isRefreshing = loadState === "refreshing";
-  const composerButtonMode = getComposerButtonMode(instanceStatus);
-  // 上下文信息 + 压缩按钮作为整体：tokens 有值时同时展示，最后一条是 compaction entry 时不显示压缩按钮（无内容可压缩）
+  const composerButtonMode = getComposerButtonMode(instance?.status);
   const lastEntryIsCompaction =
     entries.length > 0 && entries[entries.length - 1].type === "compaction";
-  const compactDisabled = isBusy(instanceStatus);
+  const compactDisabled = isBusy(instance?.status);
+
+  // shouldScrollToBottom 逻辑：首次加载 / session 切换后滚到底部
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
+  const clearScrollToBottom = useCallback(() => {
+    setShouldScrollToBottom(false);
+  }, []);
+
+  // loadState 从 refreshing → idle 时触发滚到底部
+  const prevLoadStateRef = useRef(loadState);
+  useLayoutEffect(() => {
+    if (prevLoadStateRef.current === "refreshing" && loadState === "idle") {
+      setShouldScrollToBottom(true);
+    }
+    prevLoadStateRef.current = loadState;
+  }, [loadState]);
+
+  // Chrome 高度测量
   const [topChromeHeight, setTopChromeHeight] = useState(64);
   const [bottomChromeHeight, setBottomChromeHeight] = useState(96);
   const [bottomSafeGap, setBottomSafeGap] = useState(12);
@@ -120,21 +157,17 @@ export function InstanceView({
     bottomSafeGap,
   });
 
-  // Chrome 高度测量
   useLayoutEffect(() => {
     const observeHeight = (
       element: HTMLElement | null,
       setHeight: (height: number) => void,
     ) => {
       if (!element) return () => undefined;
-
       const updateHeight = () => {
         setHeight(Math.ceil(element.getBoundingClientRect().height));
       };
       updateHeight();
-
       if (typeof ResizeObserver === "undefined") return () => undefined;
-
       const observer = new ResizeObserver(updateHeight);
       observer.observe(element);
       return () => observer.disconnect();
@@ -157,7 +190,7 @@ export function InstanceView({
     };
   }, [instanceId]);
 
-  // 滚动管理
+  // 滚动 hook
   const { handleScroll, scrollToBottom, showScrollBtn, startBottomFollow } =
     useScrollAnchor({
       scrollRef,
@@ -168,49 +201,30 @@ export function InstanceView({
       instanceId,
       hasMore,
       shouldScrollToBottom,
-      onScrollToBottomHandled,
-      onLoadMore,
+      onScrollToBottomHandled: clearScrollToBottom,
+      onLoadMore: loadMore,
       bottomChromeHeight,
       bottomSafeGap,
     });
 
-  // 空状态
-  if (!instanceId) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center select-none">
-          <img
-            src={logoSrc}
-            alt="Paimon"
-            className="w-16 h-16 mx-auto mb-4 opacity-80"
-          />
-          <div className="text-[14px] text-[var(--label-tertiary)] tracking-wide">
-            {t("eventStream.tagline")}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // ── 渲染 ──
+  const title = instance?.cwd.split("/").pop() || instance?.cwd || "";
 
-  const title = instanceName || "";
-
-  // 实例顶栏 props（PC 和移动端共用）
   const instanceHeaderProps = {
     title,
-    cwd: instanceCwd,
-    homedir: instanceHomedir,
-    gitBranch,
-    actions:
-      onListSessions && onNewSession && onSwitchSession ? (
-        <SessionPopover
-          sessions={sessionList}
-          loading={sessionListLoading}
-          disabled={isBusy(instanceStatus)}
-          onOpen={onListSessions}
-          onNewSession={onNewSession}
-          onSwitchSession={onSwitchSession}
-        />
-      ) : undefined,
+    cwd: instance?.cwd,
+    homedir: instance?.homedir,
+    gitBranch: instance?.gitBranch,
+    actions: (
+      <SessionPopover
+        sessions={sessionList}
+        loading={sessionListLoading}
+        disabled={isBusy(instance?.status)}
+        onOpen={handleListSessions}
+        onNewSession={handleNewSession}
+        onSwitchSession={handleSwitchSession}
+      />
+    ),
   };
 
   return (
@@ -224,11 +238,11 @@ export function InstanceView({
             role="region"
             aria-label="Instance info"
           >
-            {/* PC 端：直接展示 InstanceHeader */}
+            {/* PC 端 */}
             <div className="hidden md:flex">
               <InstanceHeader {...instanceHeaderProps} />
             </div>
-            {/* 移动端：MobileNavBar 壳 + InstanceHeader 内容 */}
+            {/* 移动端 */}
             <MobileNavBar>
               <InstanceHeader {...instanceHeaderProps} />
             </MobileNavBar>
@@ -314,21 +328,17 @@ export function InstanceView({
         >
           <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
             <Composer
+              instance={instance}
               draft={draft}
-              onDraftChange={onDraftChange}
-              onSendMessage={onSendMessage}
-              onAbort={onAbort}
-              instanceStatus={instanceStatus}
+              onDraftChange={handleDraftChange}
+              onSendMessage={handleSendMessage}
+              onAbort={handleAbort}
+              onSetModel={handleSetModel}
+              onSetThinkingLevel={handleSetThinkingLevel}
+              onCompact={handleCompact}
               buttonMode={composerButtonMode}
-              contextUsage={contextUsage}
-              showCompactButton={!lastEntryIsCompaction && !!onCompact}
+              showCompactButton={!lastEntryIsCompaction}
               compactDisabled={compactDisabled}
-              onCompact={onCompact}
-              instanceModel={instanceModel}
-              availableModels={availableModels}
-              thinkingLevel={thinkingLevel}
-              onSetModel={onSetModel}
-              onSetThinkingLevel={onSetThinkingLevel}
               onImageLightbox={setLightboxSrc}
               startBottomFollow={startBottomFollow}
             />
