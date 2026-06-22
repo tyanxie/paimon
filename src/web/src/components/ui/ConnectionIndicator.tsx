@@ -1,6 +1,6 @@
 // 连接状态指示点：乐观绿 + 断连即红
 
-import { useEffect, useState } from "react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useWebSocket } from "../../stores/useWebSocket";
 
@@ -12,14 +12,13 @@ import { useWebSocket } from "../../stores/useWebSocket";
 export function ConnectionIndicator() {
   const { t } = useTranslation();
   const connectionState = useWebSocket((s) => s.connectionState);
-  const [hasDisconnected, setHasDisconnected] = useState(false);
+  const hasDisconnectedRef = useRef(false);
 
-  useEffect(() => {
-    if (connectionState === "disconnected") setHasDisconnected(true);
-    if (connectionState === "connected") setHasDisconnected(false);
-  }, [connectionState]);
+  if (connectionState === "disconnected") hasDisconnectedRef.current = true;
+  if (connectionState === "connected") hasDisconnectedRef.current = false;
 
-  const isDisconnected = hasDisconnected && connectionState !== "connected";
+  const isDisconnected =
+    hasDisconnectedRef.current && connectionState !== "connected";
 
   return (
     <span

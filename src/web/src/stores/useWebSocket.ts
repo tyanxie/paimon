@@ -46,6 +46,8 @@ let hasOpened = false;
 
 /** connecting 超时时间（ms） */
 const CONNECTING_TIMEOUT = 3000;
+/** 断连后重连延迟（ms） */
+const RECONNECT_DELAY = 3000;
 
 // ── 内部函数 ──
 
@@ -83,7 +85,7 @@ function stopHeartbeat() {
 
 function scheduleReconnect() {
   if (disposed) return;
-  reconnectTimer = setTimeout(doConnect, 3000);
+  reconnectTimer = setTimeout(doConnect, RECONNECT_DELAY);
 }
 
 function clearConnectingTimeout() {
