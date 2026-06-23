@@ -118,6 +118,12 @@ const zhCN = {
     params: "参数",
   },
 
+  // ─── 重新编辑 ───
+  reEdit: {
+    button: "重新编辑",
+    draftNotEmpty: "输入框已有内容，请先清空",
+  },
+
   // ─── 错误卡片 ───
   error: {
     title: "错误详情",

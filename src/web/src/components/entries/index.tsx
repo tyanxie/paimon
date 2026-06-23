@@ -17,11 +17,13 @@ export function EntryItem({
   entries,
   isLast,
   isStreaming,
+  onReEdit,
 }: {
   entry: SessionEntry;
   entries: SessionEntry[];
   isLast: boolean;
   isStreaming: boolean;
+  onReEdit?: () => void;
 }) {
   const streaming = isLast && isStreaming;
 
@@ -32,6 +34,7 @@ export function EntryItem({
           entry={entry}
           entries={entries}
           streaming={streaming}
+          onReEdit={onReEdit}
         />
       );
     case "compaction":
@@ -47,10 +50,12 @@ function RichMessageItem({
   entry,
   entries,
   streaming,
+  onReEdit,
 }: {
   entry: SessionEntry;
   entries: SessionEntry[];
   streaming: boolean;
+  onReEdit?: () => void;
 }) {
   const message = entry.message;
   if (!message) return null;
@@ -66,6 +71,7 @@ function RichMessageItem({
           streaming={streaming}
           stopReason={(message as any).stopReason}
           errorMessage={(message as any).errorMessage}
+          onReEdit={onReEdit}
         />
       );
     case "toolResult":
@@ -147,12 +153,14 @@ function AssistantMessage({
   streaming,
   stopReason,
   errorMessage,
+  onReEdit,
 }: {
   content: unknown;
   entries: SessionEntry[];
   streaming: boolean;
   stopReason?: string;
   errorMessage?: string;
+  onReEdit?: () => void;
 }) {
   // API 报错且无内容
   if (
@@ -162,7 +170,10 @@ function AssistantMessage({
   ) {
     return (
       <div className="px-4">
-        <ErrorCard message={errorMessage} />
+        <ErrorCard
+          message={errorMessage}
+          onReEdit={stopReason === "aborted" ? onReEdit : undefined}
+        />
       </div>
     );
   }
@@ -200,7 +211,12 @@ function AssistantMessage({
       ))}
       {/* 部分输出 + 最终报错 */}
       {(stopReason === "error" || stopReason === "aborted") && errorMessage && (
-        <ErrorCard message={errorMessage} />
+        <ErrorCard
+          message={errorMessage}
+          onReEdit={
+            stopReason === "aborted" && !streaming ? onReEdit : undefined
+          }
+        />
       )}
       {streaming && lastBlock?.type !== "thinking" && (
         <span className="inline-block w-2 h-4 bg-[var(--label-tertiary)] rounded-sm animate-pulse" />
@@ -291,7 +307,13 @@ function MetaEntry({ type, summary }: { type: string; summary: string }) {
 }
 
 /** API 错误卡片 */
-function ErrorCard({ message }: { message: string }) {
+function ErrorCard({
+  message,
+  onReEdit,
+}: {
+  message: string;
+  onReEdit?: () => void;
+}) {
   const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
 
@@ -333,12 +355,25 @@ function ErrorCard({ message }: { message: string }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[12px] font-medium text-[#ff4245]">{brief}</p>
-              {isLong && (
-                <ChevronRight
-                  size={12}
-                  className="text-[var(--label-tertiary)] flex-shrink-0"
-                />
-              )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {onReEdit && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReEdit();
+                    }}
+                    className="text-[12px] leading-[15px] text-[var(--color-accent)] hover:opacity-70 active:opacity-50 transition-opacity select-none"
+                  >
+                    {t("reEdit.button")}
+                  </button>
+                )}
+                {isLong && (
+                  <ChevronRight
+                    size={12}
+                    className="text-[var(--label-tertiary)] flex-shrink-0"
+                  />
+                )}
+              </div>
             </div>
             {detail && !isLong && (
               <p className="text-[11px] text-[var(--label-secondary)] mt-1.5 break-all whitespace-pre-wrap">

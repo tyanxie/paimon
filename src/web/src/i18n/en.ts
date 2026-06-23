@@ -120,6 +120,12 @@ const en: LocaleResource = {
     params: "Parameters",
   },
 
+  // ─── Re-edit ───
+  reEdit: {
+    button: "Edit",
+    draftNotEmpty: "Input is not empty, please clear first",
+  },
+
   // ─── Error Card ───
   error: {
     title: "Error Details",

@@ -28,7 +28,7 @@ export interface AttachedImage {
 }
 
 /** 生成唯一 ID */
-function generateId(): string {
+export function generateImageId(): string {
   return `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -89,7 +89,7 @@ export async function processImageFile(file: File): Promise<AttachedImage> {
   const base64Data = dataUrl.split(",")[1];
 
   return {
-    id: generateId(),
+    id: generateImageId(),
     data: base64Data,
     mimeType: outputMime,
     previewUrl: dataUrl,
