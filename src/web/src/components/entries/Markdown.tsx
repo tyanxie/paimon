@@ -5,7 +5,7 @@ import remarkGfm from "remark-gfm";
 import remarkFrontmatter from "remark-frontmatter";
 import rehypeHighlight from "rehype-highlight";
 import yaml from "js-yaml";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { Components } from "react-markdown";
 import { Copy, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -275,9 +275,50 @@ const components: Components = {
   },
 };
 
+/**
+ * 预处理：检测开头的 --- 是否为真正的 YAML front matter。
+ * 如果不是合法的 YAML object，将开头的 --- 替换为 ***（同样渲染为 HR 但不触发 frontmatter 插件）。
+ *
+ * @internal 此函数为组件内部实现细节，export 仅为单元测试可引用，外部请勿依赖。
+ */
+export function preprocessFrontmatter(content: string): string {
+  // 必须以 --- 开头
+  if (!/^---\s*\n/.test(content)) return content;
+
+  // 查找配对的闭合 ---（必须独占一行）
+  const closeMatch = content.match(/\n---\s*(?:\n|$)/);
+  if (!closeMatch || closeMatch.index === undefined) return content;
+
+  // 提取两个 --- 之间的内容
+  const yamlContent = content.slice(4, closeMatch.index); // 跳过开头 "---\n"
+
+  // 尝试解析为 YAML
+  let isValidFrontmatter = false;
+  try {
+    const parsed = yaml.load(yamlContent);
+    isValidFrontmatter =
+      typeof parsed === "object" &&
+      parsed !== null &&
+      !Array.isArray(parsed) &&
+      Object.keys(parsed).length > 0;
+  } catch {
+    // 解析异常 → 不是合法 YAML
+  }
+
+  if (isValidFrontmatter) {
+    // 是真正的 front matter，保持原样让 remark-frontmatter 处理
+    return content;
+  }
+
+  // 不是合法 front matter → 把开头 --- 替换为 ***（HR 语法，不触发 frontmatter）
+  return "***" + content.slice(3);
+}
+
 /** Markdown 渲染入口 */
 export function MarkdownRenderer({ content }: { content: string }) {
   if (!content.trim()) return null;
+
+  const processed = useMemo(() => preprocessFrontmatter(content), [content]);
 
   return (
     <div className="markdown-body min-w-0 max-w-full break-words">
@@ -286,7 +327,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
         rehypePlugins={[rehypeHighlight]}
         components={components}
       >
-        {content}
+        {processed}
       </ReactMarkdown>
     </div>
   );
