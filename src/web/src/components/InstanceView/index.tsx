@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import { Composer } from "./Composer";
 import { useConversation } from "./useConversation";
 import { useScrollAnchor } from "./useScrollAnchor";
+import { useReEdit } from "./useReEdit";
 import { getConversationScrollSpacing, getComposerButtonMode } from "./utils";
 
 export function InstanceView() {
@@ -115,6 +116,9 @@ export function InstanceView() {
     },
     [instanceId, send],
   );
+
+  // ── 重新编辑 ──
+  const onReEdit = useReEdit(instanceId, entries, instance?.status);
 
   // ── 滚动管理 ──
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -290,13 +294,15 @@ export function InstanceView() {
             ) : (
               entries.map((entry, i) => {
                 const key = getSessionEntryRenderKey(entry);
+                const isLast = i === entries.length - 1;
                 return (
                   <div key={key} data-entry-key={key}>
                     <EntryItem
                       entry={entry}
                       entries={entries}
-                      isLast={i === entries.length - 1}
+                      isLast={isLast}
                       isStreaming={isStreaming}
+                      onReEdit={isLast ? onReEdit : undefined}
                     />
                   </div>
                 );
