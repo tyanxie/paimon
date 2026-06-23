@@ -12,7 +12,7 @@ import type {
 import type { SessionEntry } from "../../stores/types";
 import { useDrafts, EMPTY_DRAFT } from "../../stores/useDrafts";
 import type { InputDraft } from "../../stores/useDrafts";
-import type { AttachedImage } from "../../utils/image";
+import { generateImageId, type AttachedImage } from "../../utils/image";
 import { showToast } from "../ui/Toast";
 import { useTranslation } from "react-i18next";
 
@@ -89,7 +89,7 @@ function extractDraftFromContent(content: unknown): InputDraft {
         textParts.push(block.text);
       } else if (block.type === "image") {
         const img = block as ImagePayload;
-        const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const id = generateImageId();
         images.push({
           id,
           data: img.data,
