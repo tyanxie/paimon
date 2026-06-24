@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkCjkFriendly from "remark-cjk-friendly";
 import remarkFrontmatter from "remark-frontmatter";
 import rehypeHighlight from "rehype-highlight";
 import yaml from "js-yaml";
@@ -323,7 +324,12 @@ export function MarkdownRenderer({ content }: { content: string }) {
   return (
     <div className="markdown-body min-w-0 max-w-full break-words">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkFrontmatter, remarkFrontmatterToCode]}
+        remarkPlugins={[
+          remarkGfm,
+          remarkCjkFriendly,
+          remarkFrontmatter,
+          remarkFrontmatterToCode,
+        ]}
         rehypePlugins={[rehypeHighlight]}
         components={components}
       >
