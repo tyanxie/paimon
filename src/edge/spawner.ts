@@ -13,6 +13,7 @@ import {
   closeSync,
   statSync,
   unlinkSync,
+  writeFileSync,
   constants,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -130,8 +131,8 @@ export async function spawnInstance(
         PAIMON_SPAWN_TOKEN: spawnToken,
       },
       stdin: stdinFd,
-      stdout: logFd,
-      stderr: logFd,
+      stdout: "ignore", // 事件流通过 WS 传输，不需要落盘
+      stderr: logFd, // 仅保留错误输出用于启动失败诊断
       detached: true,
     });
   } finally {
@@ -143,6 +144,10 @@ export async function spawnInstance(
       // 忽略
     }
   }
+
+  // 写 pidfile，清理模块据此判断进程是否存活
+  const pidPath = join(INSTANCES_DIR, `${spawnToken}.pid`);
+  writeFileSync(pidPath, String(child.pid));
 
   child.unref();
 

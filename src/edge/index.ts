@@ -18,6 +18,7 @@ import { edgeId } from "./config";
 import { edgeRegistry, type EdgeWsData } from "./registry";
 import { UpstreamClient } from "./upstream";
 import { handleExtensionMessage, handleUpstreamMessage } from "./router";
+import { startLogCleanup, stopLogCleanup } from "./log-cleanup";
 import * as log from "./logger";
 
 const port = parseInt(
@@ -197,10 +198,14 @@ const server = Bun.serve<EdgeWsData>({
 
 log.info(`Edge server listening on http://${host}:${server.port}`);
 
+// 启动实例日志定期清理
+startLogCleanup();
+
 // 优雅退出
 async function shutdown(signal: string): Promise<never> {
   log.info(`Received ${signal}, shutting down...`);
   clearInterval(heartbeatInterval);
+  stopLogCleanup();
   upstream.disconnect();
   await server.stop(true);
   process.exit(0);
