@@ -912,4 +912,8 @@ export const DEFAULTS = {
   EDGE_STATE_FILE: "edge.json" as string,
   /** Edge 日志文件名 */
   EDGE_LOG_FILE: "edge.log" as string,
+  /** 实例日志清理扫描间隔 (ms) */
+  LOG_CLEANUP_INTERVAL: 3_600_000,
+  /** 无 pidfile 的历史遗留日志过期时间 (ms) */
+  LOG_LEGACY_MAX_AGE: 7 * 24 * 3_600_000,
 } as const;

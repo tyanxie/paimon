@@ -38,7 +38,7 @@ src/
 ├── protocol/types.ts          # 所有消息类型 + 常量（含 Edge 协议）
 ├── cli/                       # paimon CLI 入口（hub / edge / attach 子命令）
 ├── hub/                       # Hub 服务端（auth / edge-registry / router / pending / logger）
-├── edge/                      # Edge 服务端（registry / router / upstream / spawner / browser）
+├── edge/                      # Edge 服务端（registry / router / upstream / spawner / browser / log-cleanup）
 ├── utils/                     # 后端共享工具函数（host 判断与警告等）
 ├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化 + session 控制）
 └── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
@@ -70,7 +70,7 @@ bin/
 - **Hub 启动依赖构建产物** — Hub 启动前 `dist/web/` 必须存在，否则进程直接退出。开发时需先 `vite build` 或使用 `bun run dev`
 - **Daemon 进程模型** — Hub 和 Edge 均通过 `Bun.spawn` 以 `detached: true`（POSIX setsid）fork 子进程，父进程 `child.unref()` 后立即退出。stdout/stderr 通过文件 fd 直传日志文件；启动后轮询 `/api/health` 确认就绪。状态文件存储在 `~/.paimon/`。Daemon 通过 `PAIMON_ROLE=hub|edge` 环境变量区分角色——源码模式 spawn `[bun, cli/index.ts]`，编译模式 spawn `[process.execPath]`（二进制自身），CLI 入口顶部根据该变量路由到对应模块
 - **停止信号语义** — `paimon hub stop` / `paimon edge stop` 用 SIGTERM 仅杀对应 daemon 自身。Edge spawn 的 pi 子进程以 `detached: true`（setsid）脱离 Edge 进程组，不会被连带杀死
-- **页面创建实例通过 Edge** — Web 点 “+” 选择 Edge 节点 + 输入 cwd → `POST /api/instances` → Hub 向指定 Edge 发 spawn 指令 → Edge 在本机 spawn `pi --mode rpc`。关键细节：① RPC 模式从 stdin 读命令，stdin EOF 即退出；而 paimon 对话全程走 WS 不需 stdin，故用 **`O_RDWR` 打开的 FIFO** 作 stdin。② `detached: true` + `unref()` 让 pi 脱离 Edge，Edge 退出/重启不影响 pi。③ spawn 时注入 `PAIMON_SPAWN_TOKEN`，extension 注册时回传该 token，Edge 据此把 spawn 请求与注册成功的实例对应，然后上报 Hub。运行时文件在 `~/.paimon/instances/`
+- **页面创建实例通过 Edge** — Web 点 “+” 选择 Edge 节点 + 输入 cwd → `POST /api/instances` → Hub 向指定 Edge 发 spawn 指令 → Edge 在本机 spawn `pi --mode rpc`。关键细节：① RPC 模式从 stdin 读命令，stdin EOF 即退出；而 paimon 对话全程走 WS 不需 stdin，故用 **`O_RDWR` 打开的 FIFO** 作 stdin。② `detached: true` + `unref()` 让 pi 脱离 Edge，Edge 退出/重启不影响 pi。③ spawn 时注入 `PAIMON_SPAWN_TOKEN`，extension 注册时回传该 token，Edge 据此把 spawn 请求与注册成功的实例对应，然后上报 Hub。④ stdout 重定向到 `/dev/null`（事件流通过 WS 传输，不需落盘），stderr 写入 `<spawnToken>.log` 用于启动失败诊断，同时写入 `<spawnToken>.pid` 记录进程 ID。运行时文件在 `~/.paimon/instances/`
 - **页面创建实例由 Edge 执行** — Hub 将 spawn 指令转发给指定 Edge，Edge 在本机起进程。多机场景下前端选择目标 Edge 节点
 - **Hub→Edge request-response 通用模式** — `src/hub/pending.ts` 提供 `PendingRequests<T>` 泛型工具，基于 token 匹配 WS 异步请求与响应。spawn 和目录浏览（browse）均使用此模式
 - **目录浏览 API** — `GET /api/edges/:edgeId/browse?path=xxx`，Hub 转发给 Edge 执行 readdir。Edge 解析 parent/prefix（路径以 `/` 结尾列全部，否则以末段为前缀过滤），仅返回子目录，默认隐藏 dotfiles（前缀以 `.` 开头时显示），最多 200 条（截断时标记 `truncated`）。前端据此实现类 VS Code 的路径补全选择器
@@ -85,6 +85,7 @@ bin/
 - **编译模式 web 目录寻址** — 源码模式从 `resolve(import.meta.dir, "../../dist/web")` 读取；编译模式从 `resolve(dirname(process.execPath), "../web")` 读取（二进制在 `bin/paimon`，web 在同级 `web/`）。判断条件：`import.meta.path.startsWith("/$bunfs/")`
 - **版本号来源** — 根 `package.json` 的 `version` 字段为唯一来源，`prepare-npm-packages.ts` 读取并写入所有生成的包
 - **图片传输协议** — prompt 消息的 payload 支持可选的 `images?: ImagePayload[]` 字段（`{ data: base64, mimeType: string }`），从 Browser → Hub → Edge → Extension 透传。Extension 端收到后组装为 pi SDK 的 `(TextContent | ImageContent)[]` 调用 `sendUserMessage`。前端通过 Canvas API 压缩图片（max 2048px，JPEG quality 0.85，上限 5MB），不依赖外部库。Bun WS 默认 16MB payload 限制足够
+- **实例日志管理** — Edge spawn pi 时，stdout 重定向到 `/dev/null`（事件流通过 WS 传输，不落盘），stderr 写入 `<spawnToken>.log`，同时写入 `<spawnToken>.pid` 记录进程 ID。Edge 启动时及每小时定期扫描 instances 目录，通过 `kill(pid, 0)` 检测进程存活性，已死进程的 .log/.pid 文件自动删除；无 pidfile 的历史遗留文件超过 7 天后删除
 
 ## 代码规范
 
