@@ -5,8 +5,7 @@
 // - detached + unref 脱离 Edge 进程
 // - 注入 PAIMON_SPAWN_TOKEN + PAIMON_EDGE_PORT
 
-import { resolve, join, isAbsolute } from "node:path";
-import { homedir } from "node:os";
+import { join, isAbsolute } from "node:path";
 import {
   mkdirSync,
   openSync,
@@ -20,12 +19,8 @@ import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { DEFAULTS } from "../protocol/types";
 import type { InstanceId } from "../protocol/types";
+import { INSTANCES_DIR } from "./config";
 import * as log from "./logger";
-
-/** 状态目录 */
-const STATE_DIR = resolve(homedir(), ".paimon");
-/** spawn 实例的运行时文件目录 */
-const INSTANCES_DIR = join(STATE_DIR, DEFAULTS.INSTANCES_DIR);
 
 /** 一次等待注册的 pending 记录 */
 interface PendingSpawn {
@@ -146,8 +141,10 @@ export async function spawnInstance(
   }
 
   // 写 pidfile，清理模块据此判断进程是否存活
-  const pidPath = join(INSTANCES_DIR, `${spawnToken}.pid`);
-  writeFileSync(pidPath, String(child.pid));
+  if (child.pid != null) {
+    const pidPath = join(INSTANCES_DIR, `${spawnToken}.pid`);
+    writeFileSync(pidPath, String(child.pid));
+  }
 
   child.unref();
 

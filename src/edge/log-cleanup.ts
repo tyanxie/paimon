@@ -7,32 +7,30 @@
 //
 // stdout 已重定向到 "ignore"，日志文件仅含 stderr（通常为空）。
 
-import { resolve, join } from "node:path";
-import { homedir } from "node:os";
-import { readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
+import { readdir, readFile, stat, unlink } from "node:fs/promises";
+import { join } from "node:path";
 import { DEFAULTS } from "../protocol/types";
+import { INSTANCES_DIR } from "./config";
 import * as log from "./logger";
-
-const INSTANCES_DIR = resolve(homedir(), ".paimon", DEFAULTS.INSTANCES_DIR);
 
 /** 检测指定 pid 的进程是否存活 */
 function isProcessAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch (e: any) {
+  } catch (e) {
     // EPERM = 进程存在但无权限发送信号，视为存活
-    return e.code === "EPERM";
+    return (e as NodeJS.ErrnoException).code === "EPERM";
   }
 }
 
 const TAG = "[InstanceLogCleanup]";
 
 /** 执行一次清理扫描 */
-export function cleanupInstanceLogs(): void {
+export async function cleanupInstanceLogs(): Promise<void> {
   let files: string[];
   try {
-    files = readdirSync(INSTANCES_DIR);
+    files = await readdir(INSTANCES_DIR);
   } catch {
     log.info(`${TAG} Scan started, instances directory not found, skipped`);
     return;
@@ -55,7 +53,8 @@ export function cleanupInstanceLogs(): void {
     // 尝试读取对应的 pidfile
     let pid: number | null = null;
     try {
-      pid = parseInt(readFileSync(pidPath, "utf-8").trim(), 10);
+      const content = await readFile(pidPath, "utf-8");
+      pid = parseInt(content.trim(), 10);
     } catch {
       // 无 pidfile（历史遗留文件）
     }
@@ -69,8 +68,8 @@ export function cleanupInstanceLogs(): void {
     } else {
       // 无 pidfile → mtime 超过阈值才删除
       try {
-        const stat = statSync(logPath);
-        if (now - stat.mtimeMs > DEFAULTS.LOG_LEGACY_MAX_AGE) {
+        const st = await stat(logPath);
+        if (now - st.mtimeMs > DEFAULTS.LOG_LEGACY_MAX_AGE) {
           shouldDelete = true;
           reason = "no pidfile, mtime expired";
         }
@@ -82,11 +81,19 @@ export function cleanupInstanceLogs(): void {
     if (shouldDelete) {
       log.info(`${TAG} Removing ${token} (${reason})`);
       try {
-        unlinkSync(logPath);
-      } catch {}
+        await unlink(logPath);
+      } catch (e) {
+        log.error(
+          `${TAG} Failed to remove ${logPath}: ${(e as Error).message}`,
+        );
+      }
       try {
-        unlinkSync(pidPath);
-      } catch {}
+        await unlink(pidPath);
+      } catch (e) {
+        log.error(
+          `${TAG} Failed to remove ${pidPath}: ${(e as Error).message}`,
+        );
+      }
       cleaned++;
     }
   }
