@@ -87,12 +87,14 @@ export async function cleanupInstanceLogs(): Promise<void> {
           `${TAG} Failed to remove ${logPath}: ${(e as Error).message}`,
         );
       }
-      try {
-        await unlink(pidPath);
-      } catch (e) {
-        log.error(
-          `${TAG} Failed to remove ${pidPath}: ${(e as Error).message}`,
-        );
+      if (pid !== null && !isNaN(pid)) {
+        try {
+          await unlink(pidPath);
+        } catch (e) {
+          log.error(
+            `${TAG} Failed to remove ${pidPath}: ${(e as Error).message}`,
+          );
+        }
       }
       cleaned++;
     }
