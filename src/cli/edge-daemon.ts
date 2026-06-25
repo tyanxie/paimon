@@ -10,6 +10,7 @@ import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
 import { isCompiled } from "../utils/runtime";
 import { maskToken } from "../hub/auth";
 import { readHubState } from "./daemon";
+import { getStdLogPath, getMainLogPath } from "../utils/log-stream";
 
 /** 状态目录 */
 const STATE_DIR = resolve(homedir(), ".paimon");
@@ -119,12 +120,13 @@ export async function startEdgeDaemon(
   await cleanEdgeStateFile();
 
   await ensureStateDir();
-  const logPath = getEdgeStatePath(DEFAULTS.EDGE_LOG_FILE);
 
   // 解析 access token
   const tokenResult = await resolveEdgeToken(explicitToken);
 
-  const logFd = openSync(logPath, "a");
+  // stdout/stderr 兜底日志：仅捕获未处理异常和 Bun runtime crash
+  const stdLogPath = getStdLogPath(DEFAULTS.EDGE_LOG_NAME);
+  const stdLogFd = openSync(stdLogPath, "a");
 
   // Fork Edge 进程：通过 PAIMON_ROLE 环境变量让同一二进制以 edge 角色启动
   // 编译后二进制直接 spawn 自身；源码模式需要带上入口脚本
@@ -144,13 +146,14 @@ export async function startEdgeDaemon(
       ...(tokenResult ? { PAIMON_ACCESS_TOKEN: tokenResult.token } : {}),
     },
     stdin: "ignore",
-    stdout: logFd,
-    stderr: logFd,
+    // stdout/stderr 仅作为 crash 兜底，正常结构化日志走 rotating-file-stream
+    stdout: stdLogFd,
+    stderr: stdLogFd,
     detached: true,
   });
 
   child.unref();
-  closeSync(logFd);
+  closeSync(stdLogFd);
 
   // 轮询健康检查
   const healthHost =
@@ -173,7 +176,7 @@ export async function startEdgeDaemon(
   }
 
   if (!ok) {
-    const tail = await readLogTail(logPath);
+    const tail = await readLogTail(stdLogPath);
     console.error(`Failed to start Edge. Recent logs:\n${tail}`);
     process.exit(1);
   }
@@ -197,7 +200,7 @@ export async function startEdgeDaemon(
   } else {
     console.warn(`  Token: (none) — Hub may reject connection`);
   }
-  console.log(`  Logs:  ${logPath}`);
+  console.log(`  Logs:  ${getMainLogPath(DEFAULTS.EDGE_LOG_NAME)}`);
 
   if (!isLoopbackHost(host)) {
     console.warn(`\n${nonLoopbackWarning(host)}`);

@@ -208,6 +208,7 @@ async function shutdown(signal: string): Promise<never> {
   stopLogCleanup();
   upstream.disconnect();
   await server.stop(true);
+  await log.shutdown();
   process.exit(0);
 }
 

@@ -890,8 +890,8 @@ export const DEFAULTS = {
   STATE_DIR: "~/.paimon",
   /** Hub 状态文件名（JSON，包含 pid/port/host 等） */
   STATE_FILE: "hub.json",
-  /** 日志文件名 */
-  LOG_FILE: "hub.log",
+  /** Hub 日志基础名（目录名 & 文件名前缀） */
+  HUB_LOG_NAME: "hub",
   /** Hub spawn 的实例运行时文件子目录（日志、FIFO） */
   INSTANCES_DIR: "instances",
   /** 默认 bind 地址（loopback，仅本机可访问） */
@@ -910,8 +910,20 @@ export const DEFAULTS = {
   BROWSE_MAX_ENTRIES: 200,
   /** Edge 状态文件名 */
   EDGE_STATE_FILE: "edge.json" as string,
-  /** Edge 日志文件名 */
-  EDGE_LOG_FILE: "edge.log" as string,
+  /** Edge 日志基础名（目录名 & 文件名前缀） */
+  EDGE_LOG_NAME: "edge" as string,
+  /** Daemon 日志根子目录 */
+  LOGS_DIR: "logs",
+  /** 日志文件扩展名 */
+  LOG_EXT: ".log",
+  /** stdout/stderr 兜底日志后缀 */
+  LOG_STD_SUFFIX: ".std",
+  /** 单个日志文件最大大小（rotating-file-stream 格式） */
+  LOG_MAX_SIZE: "10M",
+  /** 保留历史日志文件最大数量 */
+  LOG_MAX_FILES: 5,
+  /** 是否 gzip 压缩历史日志 */
+  LOG_COMPRESS: true,
   /** 实例日志清理扫描间隔 (ms) */
   LOG_CLEANUP_INTERVAL: 3_600_000,
   /** 无 pidfile 的历史遗留日志过期时间 (ms) */

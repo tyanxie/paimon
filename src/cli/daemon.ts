@@ -9,6 +9,7 @@ import type { HubState } from "../protocol/types";
 import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
 import { isCompiled } from "../utils/runtime";
 import { generateAccessToken } from "../hub/auth";
+import { getStdLogPath, getMainLogPath } from "../utils/log-stream";
 
 /** 状态目录，展开 ~ */
 const STATE_DIR = resolve(homedir(), ".paimon");
@@ -113,12 +114,11 @@ export async function startDaemon(
   await cleanStateFile();
 
   await ensureStateDir();
-  const logPath = getStatePath(DEFAULTS.LOG_FILE);
 
-  // 以 append 模式打开日志文件，拿到原始 fd 直接交给子进程。
-  // 子进程的 stdout/stderr 由内核写入该 fd，父进程完全不参与转发，
-  // 因此父进程没有任何 pending IO，配合 detached + unref 可立即退出。
-  const logFd = openSync(logPath, "a");
+  // stdout/stderr 兜底日志：仅捕获未处理异常和 Bun runtime crash
+  // 结构化日志由 daemon 内部的 logger 模块通过 rotating-file-stream 管理
+  const stdLogPath = getStdLogPath(DEFAULTS.HUB_LOG_NAME);
+  const stdLogFd = openSync(stdLogPath, "a");
 
   // 确定 access token
   const { token: accessToken, source: tokenSource } =
@@ -140,9 +140,9 @@ export async function startDaemon(
       PAIMON_ACCESS_TOKEN: accessToken,
     },
     stdin: "ignore",
-    // 直接写日志文件 fd，捕获包括运行时崩溃在内的全部输出
-    stdout: logFd,
-    stderr: logFd,
+    // stdout/stderr 仅作为 crash 兜底，正常结构化日志走 rotating-file-stream
+    stdout: stdLogFd,
+    stderr: stdLogFd,
     // detached: POSIX 下调用 setsid()，子进程成为新 session leader，
     // 脱离父进程的终端/进程组，可独立存活并独立接收信号
     detached: true,
@@ -152,7 +152,7 @@ export async function startDaemon(
   child.unref();
 
   // 子进程已继承独立的 fd 副本，父进程侧的副本可立即关闭，避免 fd 泄漏
-  closeSync(logFd);
+  closeSync(stdLogFd);
 
   // 轮询健康检查确认启动成功（替代不可靠的固定 sleep）
   // 健康检查地址需依 host 推导：0.0.0.0 / loopback 走 127.0.0.1；
@@ -178,7 +178,7 @@ export async function startDaemon(
   }
 
   if (!ok) {
-    const tail = await readLogTail(logPath);
+    const tail = await readLogTail(stdLogPath);
     console.error(`Failed to start Hub. Recent logs:\n${tail}`);
     process.exit(1);
   }
@@ -196,7 +196,7 @@ export async function startDaemon(
   console.log(`  Web UI: http://${healthHost}:${port}`);
   // 有意打印完整 token：用户首次启动时需要复制 token 用于 Web 登录和 Edge 配置
   console.log(`  Token:  ${accessToken} (${tokenSource})`);
-  console.log(`  Logs:   ${logPath}`);
+  console.log(`  Logs:   ${getMainLogPath(DEFAULTS.HUB_LOG_NAME)}`);
 
   // 非 loopback bind 时警告（CLI 侧也提示一次）
   if (!isLoopbackHost(host)) {
