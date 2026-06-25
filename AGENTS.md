@@ -39,7 +39,7 @@ src/
 ├── cli/                       # paimon CLI 入口（hub / edge / attach 子命令）
 ├── hub/                       # Hub 服务端（auth / edge-registry / router / pending / logger）
 ├── edge/                      # Edge 服务端（registry / router / upstream / spawner / browser / log-cleanup）
-├── utils/                     # 后端共享工具函数（host 判断、时区初始化、日志流工厂等）
+├── utils/                     # 后端共享工具（env 环境常量、logger 日志工厂、timezone 时区初始化）
 ├── extensions/paimon/         # pi extension（WS 客户端 + 事件序列化 + session 控制）
 └── web/                       # React 前端（Vite 构建，入口 src/web/index.html）
     └── src/
@@ -78,7 +78,7 @@ bin/
 - **Access Token 认证** — Hub 启动时生成或接收 access token（优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 自动生成），写入 `hub.json`。Edge/Browser/HTTP API 连接 Hub 时必须携带 token（WS 通过 `?token=xxx`，HTTP 通过 `Authorization: Bearer xxx`）。`/api/health` 不需认证。`PAIMON_AUTH_DISABLED=1` 可关闭认证（仅开发调试）
 - **Token 生命周期** — token 存储于 `hub.json`，随 `paimon hub stop` 删除而失效。`paimon hub restart` 默认继承旧 token（显示来源为 `inherited`）。Pi Extension → Edge 不需认证（Edge 仅 bind loopback，天然同机信任）
 - **Edge token 来源** — 优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 同机 hub.json fallback
-- **CLI 独立于 npm scripts** — `paimon hub start/stop/status/logs`、`paimon edge start/stop/status/logs` 和 `paimon attach` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
+- **CLI 独立于 npm scripts** — `paimon hub start/stop/restart/status`、`paimon edge start/stop/restart/status` 和 `paimon attach` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
 - **attach = 迁移而非双向接管** — pi 不支持同一 session 文件被多进程同时写，所以 `paimon attach` 的语义是：先调 `POST /api/instance/:id/shutdown` 关闭目标实例 → 轮询其从列表消失（3s 超时）→ 本地 `pi --session <sessionId>`（cwd=实例 cwd，stdio inherit）。过滤条件为 hostname + cwd 双重匹配（均 realpath 规范化）。被 attach 的原实例会退出由用户负责
 - **CLI 全局安装走 `bun link`** — `package.json` 的 `bin` 指向 `src/cli/index.ts`（非编译产物），bun 直接执行带 shebang 的 ts 源码。`bun link` 在 `~/.bun/bin/` 建软链接回 clone 目录，`bun unlink` 解除。CLI 入口统一为 `src/cli/index.ts`，通过 `PAIMON_ROLE` 环境变量区分角色（见 Daemon 进程模型）
 - **npm 分发模式** — 主包 `@tyanxie/paimon`（含 `bin/paimon.cjs` 启动器 + extension 源码）+ 4 个平台包 `@tyanxie/paimon-{darwin-arm64,darwin-x64,linux-arm64,linux-x64}`（含编译二进制 + web 资产）。主包通过 `optionalDependencies` 引用平台包，npm install 时只下载匹配当前系统的那一个

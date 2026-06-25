@@ -1,19 +1,19 @@
 // Edge Daemon 进程管理：启动/停止/状态查询
 
-import { resolve, join } from "node:path";
-import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { mkdir, unlink, rename } from "node:fs/promises";
 import { openSync, closeSync } from "node:fs";
 import { DEFAULTS } from "../protocol/types";
 import type { EdgeState } from "../protocol/types";
-import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
-import { isCompiled } from "../utils/runtime";
+import {
+  isLoopbackHost,
+  nonLoopbackWarning,
+  isCompiled,
+  STATE_DIR,
+} from "../utils/env";
 import { maskToken } from "../hub/auth";
 import { readHubState } from "./daemon";
-import { getStdLogPath, getMainLogPath } from "../utils/log-stream";
-
-/** 状态目录 */
-const STATE_DIR = resolve(homedir(), ".paimon");
+import { getStdLogPath, getMainLogPath, readLogTail } from "../utils/logger";
 
 /** 获取状态文件路径 */
 export function getEdgeStatePath(filename: string): string {
@@ -64,16 +64,6 @@ function isProcessAlive(pid: number): boolean {
     return true;
   } catch {
     return false;
-  }
-}
-
-/** 读取日志尾部 */
-async function readLogTail(logPath: string, lines = 20): Promise<string> {
-  try {
-    const content = await Bun.file(logPath).text();
-    return content.split("\n").slice(-lines).join("\n").trim();
-  } catch {
-    return "(no log output)";
   }
 }
 
