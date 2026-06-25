@@ -8,8 +8,7 @@ import { resolve, dirname, sep } from "node:path";
 import type { ServerWebSocket, Server, BunRequest } from "bun";
 import { randomUUID } from "node:crypto";
 import { DEFAULTS } from "../protocol/types";
-import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
-import { isCompiled } from "../utils/runtime";
+import { isLoopbackHost, nonLoopbackWarning, isCompiled } from "../utils/env";
 import { extractToken, verifyAccessToken, isAuthDisabled } from "./auth";
 import {
   hubRegistry,

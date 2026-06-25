@@ -13,7 +13,7 @@ import {
   type InstanceId,
   type InstanceInfo,
 } from "../protocol/types";
-import { isLoopbackHost, nonLoopbackWarning } from "../utils/host";
+import { isLoopbackHost, nonLoopbackWarning } from "../utils/env";
 import { edgeId } from "./config";
 import { edgeRegistry, type EdgeWsData } from "./registry";
 import { UpstreamClient } from "./upstream";

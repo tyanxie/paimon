@@ -47,13 +47,4 @@ export function registerHubCommand(program: Command): void {
       const { handleStatus } = await import("./status");
       await handleStatus();
     });
-
-  hub
-    .command("logs")
-    .description("View Hub logs")
-    .option("-f, --follow", "follow log output")
-    .action(async (opts) => {
-      const { handleLogs } = await import("./logs");
-      await handleLogs(opts.follow ?? false);
-    });
 }

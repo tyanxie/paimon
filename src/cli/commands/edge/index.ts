@@ -60,13 +60,4 @@ export function registerEdgeCommand(program: Command): void {
       const { handleEdgeStatus } = await import("./status");
       await handleEdgeStatus();
     });
-
-  edge
-    .command("logs")
-    .description("View Edge logs")
-    .option("-f, --follow", "follow log output")
-    .action(async (opts) => {
-      const { handleEdgeLogs } = await import("./logs");
-      await handleEdgeLogs(opts.follow ?? false);
-    });
 }

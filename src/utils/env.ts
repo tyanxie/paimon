@@ -1,4 +1,13 @@
-// 网络 host 相关工具函数
+// 运行时环境与共享常量
+
+import { resolve } from "node:path";
+import { homedir } from "node:os";
+
+/** 当前是否运行在 bun --compile 编译的单文件二进制中 */
+export const isCompiled = import.meta.path.startsWith("/$bunfs/");
+
+/** 状态根目录 ~/.paimon */
+export const STATE_DIR = resolve(homedir(), ".paimon");
 
 /** host 是否为 loopback（127.0.0.1 / localhost / ::1） */
 export function isLoopbackHost(host: string): boolean {

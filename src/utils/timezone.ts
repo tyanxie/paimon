@@ -62,7 +62,7 @@ function detectSystemTimezone(): string | null {
  * 检测 Bun 是否认识指定的时区名。
  * 不被识别的时区会被 Intl 静默回退为 UTC。
  */
-function isValidTimezone(tz: string): boolean {
+export function isValidTimezone(tz: string): boolean {
   try {
     const resolved = new Intl.DateTimeFormat("en", {
       timeZone: tz,
