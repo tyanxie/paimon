@@ -8,6 +8,12 @@
 
 const role = process.env.PAIMON_ROLE;
 
+if (role === "hub" || role === "edge") {
+  // Daemon 模式：修正 Bun 不读系统时区的问题，确保日志使用本地时间
+  const { initTimezone } = await import("../utils/timezone");
+  initTimezone();
+}
+
 if (role === "hub") {
   await import("../hub/index");
 } else if (role === "edge") {

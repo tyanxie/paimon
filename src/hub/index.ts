@@ -302,6 +302,7 @@ async function shutdown(signal: string): Promise<never> {
   log.info(`Received ${signal}, shutting down...`);
   await server.stop(true);
   log.info(`server.stop(true) took ${Date.now() - t0}ms`);
+  await log.shutdown();
   process.exit(0);
 }
 
