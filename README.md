@@ -2,6 +2,8 @@
   <img src="docs/design/logos/mist/light/paimon-logo.png" width="80" />
   <br/>
   <em>守望 · 交互 · 掌控</em>
+  <br/><br/>
+  <a href="README.md">中文</a> | <a href="README.en.md">English</a>
 </p>
 
 Paimon，让你能在浏览器里跟所有 [Pi](https://pi.dev/) 实例对话。
