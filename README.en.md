@@ -10,7 +10,7 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 
 ## 📸 Screenshots
 
-![Main Interface](docs/screenshots/main.png)
+![Main Interface](docs/screenshots/main_en.png)
 
 ## ✨ Features
 
