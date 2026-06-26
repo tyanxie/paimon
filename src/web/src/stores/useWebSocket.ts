@@ -149,7 +149,7 @@ function doConnect() {
     stopHeartbeat();
 
     // HTTP 401 → WS 升级失败检测
-    if (!disposed && event.code === 1006 && !hasOpened) {
+    if (!disposed && !hasOpened) {
       const headers: HeadersInit = {};
       if (currentToken) headers["Authorization"] = `Bearer ${currentToken}`;
       fetch("/api/instances", { headers })

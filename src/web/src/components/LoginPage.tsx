@@ -17,17 +17,37 @@ interface LoginPageProps {
 export function LoginPage({ onLogin, error }: LoginPageProps) {
   const { t } = useTranslation();
   const [token, setToken] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState(false);
   const logoSrc = useLogoSrc();
 
   const handleSubmit = useCallback(
-    (e: FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
       const trimmed = token.trim();
-      if (!trimmed) return;
+      if (!trimmed || verifying) return;
+
+      setVerifying(true);
+      setVerifyError(false);
+
+      try {
+        const res = await fetch("/api/instances", {
+          headers: { Authorization: `Bearer ${trimmed}` },
+        });
+        if (res.status === 401) {
+          setVerifyError(true);
+          setVerifying(false);
+          return;
+        }
+      } catch {
+        // 网络错误时仍允许登录，让 WS 层处理重连
+      }
+
+      setVerifying(false);
       setStoredToken(trimmed);
       onLogin(trimmed);
     },
-    [token, onLogin],
+    [token, verifying, onLogin],
   );
 
   return (
@@ -63,12 +83,12 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
             placeholder={t("login.placeholder")}
             autoFocus
             className={`w-full h-9 px-3 rounded-[9px] text-[13px] bg-[var(--fill-primary)] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] border outline-none transition-colors ${
-              error
+              error || verifyError
                 ? "border-red-500 focus:border-red-500"
                 : "border-[var(--separator)] focus:border-[var(--color-accent)]"
             }`}
           />
-          {error && (
+          {(error || verifyError) && (
             <p className="mt-2 text-[11px] text-red-500">
               {t("login.invalidToken")}
             </p>
@@ -78,10 +98,10 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
         {/* 提交按钮 */}
         <button
           type="submit"
-          disabled={!token.trim()}
+          disabled={!token.trim() || verifying}
           className="w-full h-9 rounded-[1000px] bg-[var(--color-accent)] text-white text-[13px] font-medium transition-opacity disabled:opacity-40 hover:opacity-90 active:opacity-80"
         >
-          {t("login.connect")}
+          {verifying ? t("login.verifying") : t("login.connect")}
         </button>
 
         {/* 提示 */}
