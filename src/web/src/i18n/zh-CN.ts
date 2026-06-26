@@ -16,6 +16,7 @@ const zhCN = {
     placeholder: "Access Token",
     invalidToken: "Token 无效，请检查后重试。",
     connect: "连接",
+    verifying: "验证中…",
     tokenHint: "Token 可在 <1>~/.paimon/hub.json</1> 中找到",
   },
 

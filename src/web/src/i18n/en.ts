@@ -18,6 +18,7 @@ const en: LocaleResource = {
     placeholder: "Access Token",
     invalidToken: "Invalid token. Please check and try again.",
     connect: "Connect",
+    verifying: "Verifying…",
     tokenHint: "Find your token in <1>~/.paimon/hub.json</1>",
   },
 
