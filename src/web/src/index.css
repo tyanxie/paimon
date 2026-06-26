@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* 全屏覆盖层：跟随键盘弹出时的可见视口高度 */
+@utility fixed-viewport {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--app-viewport-height, 100dvh);
+}
+
 /* highlight.js 不使用第三方主题，用 CSS 变量自定义配色，跟随主题切换 */
 
 /* macOS 26 Design Tokens */

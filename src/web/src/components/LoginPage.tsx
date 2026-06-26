@@ -51,7 +51,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
   );
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4">
+    <div className="fixed-viewport flex items-center justify-center p-4 overflow-y-auto">
       <form
         onSubmit={handleSubmit}
         className="glass-panel w-full max-w-[380px] p-8 flex flex-col items-center gap-6"

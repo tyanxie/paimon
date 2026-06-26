@@ -36,7 +36,7 @@ export function ImageLightbox({ src, alt, onClose }: ImageLightboxProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[30px] animate-in fade-in duration-150"
+      className="fixed-viewport z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[30px] animate-in fade-in duration-150"
       onClick={onClose}
     >
       {/* 关闭按钮 */}
