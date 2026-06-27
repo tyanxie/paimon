@@ -149,10 +149,9 @@ export function Sidebar({
             </div>
           </div>
           <div className="text-[12px] leading-[15px] max-md:text-[13px] max-md:leading-[18px] text-[var(--label-tertiary)]">
-            {t("sidebar.summary", {
-              machines: edgeGroups.length,
-              instances: instances.length,
-            })}
+            {t("sidebar.machine", { count: edgeGroups.length })}
+            {" · "}
+            {t("sidebar.instance", { count: instances.length })}
           </div>
         </div>
       </div>

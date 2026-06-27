@@ -25,7 +25,10 @@ const en: LocaleResource = {
   // ─── Sidebar ───
   sidebar: {
     newInstance: "New instance",
-    summary: "{{machines}} machine(s) · {{instances}} instance(s)",
+    machine_one: "{{count}} machine",
+    machine_other: "{{count}} machines",
+    instance_one: "{{count}} instance",
+    instance_other: "{{count}} instances",
     noInstances: "No pi instances connected",
     settings: "Settings",
     shutdown: "Shutdown instance",
