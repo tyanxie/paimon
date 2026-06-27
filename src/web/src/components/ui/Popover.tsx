@@ -89,19 +89,13 @@ export function Popover({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  // resize / scroll 时关闭（popover 内部滚动除外）
+  // resize 时关闭（锚点在固定定位面板上，scroll 不影响其位置，无需关闭）
   useEffect(() => {
     if (!open) return;
     const closeOnResize = () => setOpen(false);
-    const closeOnScroll = (e: Event) => {
-      if (popoverRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
-    };
     window.addEventListener("resize", closeOnResize);
-    window.addEventListener("scroll", closeOnScroll, true);
     return () => {
       window.removeEventListener("resize", closeOnResize);
-      window.removeEventListener("scroll", closeOnScroll, true);
     };
   }, [open]);
 
