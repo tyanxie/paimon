@@ -1,7 +1,13 @@
-// 侧边栏：pi 实例列表（独立玻璃面板）
+// 侧边栏：pi 实例列表（按 Edge 分组，独立玻璃面板）
 
-import { useState, useRef, useCallback } from "react";
-import { Settings as SettingsIcon, LogOut, Plus } from "lucide-react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import {
+  Settings as SettingsIcon,
+  LogOut,
+  Plus,
+  Check,
+  Copy,
+} from "lucide-react";
 import { useNavigate } from "react-router";
 import type { InstanceInfo, InstanceId } from "../../../protocol/types";
 import { useLogoSrc } from "../hooks/useLogoSrc";
@@ -84,6 +90,37 @@ export function Sidebar({
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
+  // Edge 标题点击复制
+  const [copiedEdgeId, setCopiedEdgeId] = useState<string | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    },
+    [],
+  );
+  const handleCopyEdgeId = useCallback((edgeId: string) => {
+    navigator.clipboard.writeText(edgeId).then(
+      () => {
+        setCopiedEdgeId(edgeId);
+        if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = setTimeout(() => setCopiedEdgeId(null), 1500);
+      },
+      () => {},
+    );
+  }, []);
+
+  // 按 edgeId 分组并按字母序排序
+  const edgeGroups = useMemo(() => {
+    const map = new Map<string, InstanceInfo[]>();
+    for (const instance of instances) {
+      const group = map.get(instance.edgeId);
+      if (group) group.push(instance);
+      else map.set(instance.edgeId, [instance]);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [instances]);
+
   return (
     <aside className="glass-panel select-none w-[240px] md:w-[240px] flex-shrink-0 flex flex-col overflow-hidden max-md:w-full max-md:flex-1">
       {/* 标题区 */}
@@ -112,86 +149,114 @@ export function Sidebar({
             </div>
           </div>
           <div className="text-[12px] leading-[15px] max-md:text-[13px] max-md:leading-[18px] text-[var(--label-tertiary)]">
-            {t("sidebar.instanceCount", { count: instances.length })}
+            {t("sidebar.summary", {
+              machines: edgeGroups.length,
+              instances: instances.length,
+            })}
           </div>
         </div>
       </div>
 
-      {/* 实例列表 */}
+      {/* 实例列表（按 Edge 分组） */}
       <div className="flex-1 overflow-y-auto px-2 py-1 scrollbar-auto">
         {instances.length === 0 ? (
           <div className="px-3 py-8 text-center text-[var(--label-tertiary)] text-[12px] leading-[16px] max-md:text-[13px] max-md:leading-[18px]">
             {t("sidebar.noInstances")}
           </div>
         ) : (
-          <ul className="space-y-0.5 max-md:space-y-1">
-            {instances.map((instance) => (
-              <li key={instance.id}>
+          <div>
+            {edgeGroups.map(([edgeId, groupInstances], groupIdx) => (
+              <div key={edgeId}>
+                {/* Edge 分组标题（点击复制） */}
                 <button
-                  onClick={() => {
-                    // 长按触发后不响应 click
-                    if (longPressFiredRef.current) return;
-                    onSelect(instance.id);
-                  }}
-                  onContextMenu={(e) => handleContextMenu(e, instance.id)}
-                  onTouchStart={(e) => handleTouchStart(e, instance.id)}
-                  onTouchEnd={handleTouchEnd}
-                  onTouchMove={handleTouchMove}
-                  className={`w-full text-left px-2.5 py-1.5 max-md:px-3 max-md:py-2.5 rounded-[8px] transition-all duration-150 ${
-                    selectedId === instance.id
-                      ? "bg-[rgba(0,145,255,0.08)] dark:bg-[rgba(0,145,255,0.12)]"
-                      : "hover:bg-[var(--fill-tertiary)]"
+                  type="button"
+                  onClick={() => handleCopyEdgeId(edgeId)}
+                  title={edgeId}
+                  className={`flex items-center gap-1 px-2.5 pb-1 text-[11px] leading-[14px] font-semibold text-[var(--label-tertiary)] max-w-full max-md:px-3 rounded-[4px] hover:text-[var(--label-secondary)] transition-colors cursor-pointer ${
+                    groupIdx === 0 ? "pt-1" : "pt-3"
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    {/* 状态指示 */}
-                    <span
-                      className={`w-1.5 h-1.5 max-md:w-2 max-md:h-2 rounded-full flex-shrink-0 transition-colors ${
-                        instance.status === "streaming"
-                          ? "bg-[var(--color-accent)] animate-pulse"
-                          : instance.status === "compacting"
-                            ? "bg-amber-500 animate-pulse"
-                            : "bg-green-500"
-                      }`}
-                      title={
-                        instance.status === "streaming"
-                          ? t("sidebar.statusStreaming")
-                          : instance.status === "compacting"
-                            ? t("sidebar.statusCompacting")
-                            : t("sidebar.statusIdle")
-                      }
-                    />
-                    {/* 工作目录（取最后一段） */}
-                    <span className="text-[14px] leading-[18px] max-md:text-[15px] max-md:leading-[21px] text-[var(--label-primary)] truncate">
-                      {instance.cwd.split("/").pop() || instance.cwd}
-                    </span>
-                  </div>
-                  <div className="ml-3.5 text-[11px] leading-[14px] max-md:text-[12px] max-md:leading-[16px] text-[var(--label-secondary)] truncate mt-0.5">
-                    {instance.model.name ||
-                      `${instance.model.provider}/${instance.model.id}`}
-                  </div>
-                  {/* 上下文使用率进度条 */}
-                  {instance.contextUsage?.percent != null &&
-                    instance.contextUsage.percent > 0 && (
-                      <div className="ml-3.5 mt-1.5 h-[3px] rounded-full bg-[var(--fill-quaternary)] overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-300"
-                          style={{
-                            width: `${Math.max(2, Math.min(100, instance.contextUsage.percent))}%`,
-                            backgroundColor:
-                              instance.contextUsage.percent >= 90
-                                ? "#ff4245"
-                                : instance.contextUsage.percent >= 60
-                                  ? "#ff9230"
-                                  : "#30d158",
-                          }}
-                        />
-                      </div>
+                  <span className="truncate">{edgeId}</span>
+                  <span className="shrink-0 opacity-60">
+                    {copiedEdgeId === edgeId ? (
+                      <Check size={10} className="text-green-500" />
+                    ) : (
+                      <Copy size={10} />
                     )}
+                  </span>
                 </button>
-              </li>
+                {/* 该 Edge 下的实例列表 */}
+                <ul className="space-y-0.5 max-md:space-y-1">
+                  {groupInstances.map((instance) => (
+                    <li key={instance.id}>
+                      <button
+                        onClick={() => {
+                          // 长按触发后不响应 click
+                          if (longPressFiredRef.current) return;
+                          onSelect(instance.id);
+                        }}
+                        onContextMenu={(e) => handleContextMenu(e, instance.id)}
+                        onTouchStart={(e) => handleTouchStart(e, instance.id)}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchMove={handleTouchMove}
+                        className={`w-full text-left px-2.5 py-1.5 max-md:px-3 max-md:py-2.5 rounded-[8px] transition-all duration-150 ${
+                          selectedId === instance.id
+                            ? "bg-[rgba(0,145,255,0.08)] dark:bg-[rgba(0,145,255,0.12)]"
+                            : "hover:bg-[var(--fill-tertiary)]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {/* 状态指示 */}
+                          <span
+                            className={`w-1.5 h-1.5 max-md:w-2 max-md:h-2 rounded-full flex-shrink-0 transition-colors ${
+                              instance.status === "streaming"
+                                ? "bg-[var(--color-accent)] animate-pulse"
+                                : instance.status === "compacting"
+                                  ? "bg-amber-500 animate-pulse"
+                                  : "bg-green-500"
+                            }`}
+                            title={
+                              instance.status === "streaming"
+                                ? t("sidebar.statusStreaming")
+                                : instance.status === "compacting"
+                                  ? t("sidebar.statusCompacting")
+                                  : t("sidebar.statusIdle")
+                            }
+                          />
+                          {/* 工作目录（取最后一段） */}
+                          <span className="text-[14px] leading-[18px] max-md:text-[15px] max-md:leading-[21px] text-[var(--label-primary)] truncate">
+                            {instance.cwd.split("/").pop() || instance.cwd}
+                          </span>
+                        </div>
+                        <div className="ml-3.5 text-[11px] leading-[14px] max-md:text-[12px] max-md:leading-[16px] text-[var(--label-secondary)] truncate mt-0.5">
+                          {instance.model.name ||
+                            `${instance.model.provider}/${instance.model.id}`}
+                        </div>
+                        {/* 上下文使用率进度条 */}
+                        {instance.contextUsage?.percent != null &&
+                          instance.contextUsage.percent > 0 && (
+                            <div className="ml-3.5 mt-1.5 h-[3px] rounded-full bg-[var(--fill-quaternary)] overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.max(2, Math.min(100, instance.contextUsage.percent))}%`,
+                                  backgroundColor:
+                                    instance.contextUsage.percent >= 90
+                                      ? "#ff4245"
+                                      : instance.contextUsage.percent >= 60
+                                        ? "#ff9230"
+                                        : "#30d158",
+                                }}
+                              />
+                            </div>
+                          )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
 

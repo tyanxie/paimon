@@ -23,8 +23,7 @@ const zhCN = {
   // ─── 侧边栏 ───
   sidebar: {
     newInstance: "新建实例",
-    instanceCount_one: "{{count}} 个实例",
-    instanceCount_other: "{{count}} 个实例",
+    summary: "{{machines}} 台机器 · {{instances}} 个实例",
     noInstances: "暂无 pi 实例连接",
     settings: "设置",
     shutdown: "退出实例",
