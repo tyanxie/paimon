@@ -29,9 +29,15 @@ export interface ConversationState {
   hasMore: boolean;
   sessionList: SessionListItem[];
   sessionListLoading: boolean;
+  sessionHasMore: boolean;
+  sessionTotal: number;
   loadMore: () => void;
-  /** 请求 session 列表（内部管理 loading 状态） */
-  requestSessionList: () => void;
+  /** 请求 session 列表（支持分页和过滤） */
+  requestSessionList: (params?: {
+    offset?: number;
+    limit?: number;
+    filter?: string;
+  }) => void;
 }
 
 // ── renderKey 生成 ──
@@ -72,6 +78,10 @@ export function useConversation(
   const [hasMore, setHasMore] = useState(false);
   const [sessionList, setSessionList] = useState<SessionListItem[]>([]);
   const [sessionListLoading, setSessionListLoading] = useState(false);
+  const [sessionHasMore, setSessionHasMore] = useState(false);
+  const [sessionTotal, setSessionTotal] = useState(0);
+  // 记录上次请求的 offset，用于判断 append 还是 replace
+  const sessionOffsetRef = useRef(0);
 
   // 用于 loadMore 获取当前 entries 长度（避免闭包陈旧）
   const entriesRef = useRef(entries);
@@ -90,6 +100,8 @@ export function useConversation(
     setHasMore(false);
     setSessionList([]);
     setSessionListLoading(false);
+    setSessionHasMore(false);
+    setSessionTotal(0);
   }, []);
 
   // ── WS 订阅：接收对话相关消息 ──
@@ -110,7 +122,15 @@ export function useConversation(
         }
         case "session_list": {
           if (msg.payload.instanceId !== instanceId) return;
-          setSessionList(msg.payload.sessions);
+          if (sessionOffsetRef.current > 0) {
+            // 加载更多：append
+            setSessionList((prev) => [...prev, ...msg.payload.sessions]);
+          } else {
+            // 首次加载 / filter 变化：replace
+            setSessionList(msg.payload.sessions);
+          }
+          setSessionHasMore(msg.payload.hasMore ?? false);
+          setSessionTotal(msg.payload.total ?? msg.payload.sessions.length);
           setSessionListLoading(false);
           break;
         }
@@ -266,10 +286,24 @@ export function useConversation(
   }, [instanceId, send]);
 
   // ── 请求 session 列表 ──
-  const requestSessionList = useCallback(() => {
-    setSessionListLoading(true);
-    send({ type: "list_sessions", payload: { instanceId } });
-  }, [instanceId, send]);
+  const requestSessionList = useCallback(
+    (params?: { offset?: number; limit?: number; filter?: string }) => {
+      const offset = params?.offset ?? 0;
+      sessionOffsetRef.current = offset;
+      if (offset === 0) setSessionList([]);
+      setSessionListLoading(true);
+      send({
+        type: "list_sessions",
+        payload: {
+          instanceId,
+          offset,
+          limit: params?.limit,
+          filter: params?.filter,
+        },
+      });
+    },
+    [instanceId, send],
+  );
 
   return {
     entries: streamingEntry ? [...entries, streamingEntry] : entries,
@@ -280,6 +314,8 @@ export function useConversation(
     hasMore,
     sessionList,
     sessionListLoading,
+    sessionHasMore,
+    sessionTotal,
     loadMore,
     requestSessionList,
   };

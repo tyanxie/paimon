@@ -7,7 +7,6 @@ import type {
   ExtensionContext,
   SessionShutdownEvent,
 } from "@earendil-works/pi-coding-agent";
-import { SessionManager } from "@earendil-works/pi-coding-agent";
 import type { TextContent, ImageContent } from "@earendil-works/pi-ai";
 import { DEFAULTS } from "../../protocol/types";
 import type {
@@ -21,6 +20,7 @@ import type {
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
 import * as sessionControlPatch from "./session_control_patch";
+import { querySessionList, emptySessionListMessage } from "./session_list";
 
 // Hub spawn 实例时注入的一次性 token（仅页面创建的实例有）。
 // 注册时回传给 Hub，用于将 spawn 请求与注册成功的实例对应起来。
@@ -428,32 +428,23 @@ function handleHubMessage(
     case "list_sessions": {
       const ctx = getCurrentCtx();
       if (ctx?.cwd) {
-        SessionManager.list(ctx.cwd)
-          .then((sessions) => {
-            const currentFile = ctx.sessionManager.getSessionFile();
+        querySessionList(
+          ctx.cwd,
+          ctx.sessionManager.getSessionFile(),
+          msg.payload,
+        )
+          .then((result) => {
             const response: ExtSessionListMessage = {
               type: "session_list",
-              payload: {
-                sessions: sessions.map((s) => ({
-                  path: s.path,
-                  id: s.id,
-                  name: s.name,
-                  cwd: s.cwd,
-                  created: s.created.toISOString(),
-                  modified: s.modified.toISOString(),
-                  messageCount: s.messageCount,
-                  firstMessage: s.firstMessage.slice(0, 100),
-                  isCurrent: s.path === currentFile,
-                })),
-              },
+              payload: result,
             };
             client.send(response);
           })
           .catch(() => {
-            client.send({ type: "session_list", payload: { sessions: [] } });
+            client.send(emptySessionListMessage());
           });
       } else {
-        client.send({ type: "session_list", payload: { sessions: [] } });
+        client.send(emptySessionListMessage());
       }
       break;
     }

@@ -105,6 +105,8 @@ export function handleExtensionMessage(
         payload: {
           instanceId: id,
           sessions: msg.payload.sessions,
+          total: msg.payload.total,
+          hasMore: msg.payload.hasMore,
         },
       });
       break;
@@ -194,8 +196,10 @@ export function handleUpstreamMessage(
       break;
     }
     case "list_sessions": {
-      forwardToLocalInstance(msg.payload.instanceId, {
+      const { instanceId, ...payload } = msg.payload;
+      forwardToLocalInstance(instanceId, {
         type: "list_sessions",
+        payload,
       });
       break;
     }

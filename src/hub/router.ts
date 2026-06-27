@@ -116,6 +116,8 @@ export function handleEdgeMessage(
           payload: {
             instanceId: msg.payload.instanceId,
             sessions: msg.payload.sessions,
+            total: msg.payload.total,
+            hasMore: msg.payload.hasMore,
           },
         });
         for (const browser of subscribers) {

@@ -202,6 +202,10 @@ export interface ExtSessionListMessage {
   type: "session_list";
   payload: {
     sessions: SessionListItem[];
+    /** 过滤后的总数 */
+    total: number;
+    /** 是否还有更多 */
+    hasMore: boolean;
   };
 }
 
@@ -304,6 +308,14 @@ export interface HubGetHistoryMessage {
 /** 请求 session 列表 */
 export interface HubListSessionsMessage {
   type: "list_sessions";
+  payload?: {
+    /** 跳过的条目数（默认 0） */
+    offset?: number;
+    /** 单页大小（默认 20） */
+    limit?: number;
+    /** 搜索关键字（匹配 name/firstMessage） */
+    filter?: string;
+  };
 }
 
 /** 创建新 session */
@@ -442,6 +454,12 @@ export interface BrowserListSessionsMessage {
   type: "list_sessions";
   payload: {
     instanceId: InstanceId;
+    /** 跳过的条目数（默认 0） */
+    offset?: number;
+    /** 单页大小（默认 20） */
+    limit?: number;
+    /** 搜索关键字（匹配 name/firstMessage） */
+    filter?: string;
   };
 }
 
@@ -522,6 +540,10 @@ export interface HubSessionListMessage {
   payload: {
     instanceId: InstanceId;
     sessions: SessionListItem[];
+    /** 过滤后的总数 */
+    total: number;
+    /** 是否还有更多 */
+    hasMore: boolean;
   };
 }
 
@@ -633,6 +655,10 @@ export interface EdgeInstanceSessionListMessage {
   payload: {
     instanceId: InstanceId;
     sessions: SessionListItem[];
+    /** 过滤后的总数 */
+    total: number;
+    /** 是否还有更多 */
+    hasMore: boolean;
   };
 }
 
@@ -794,6 +820,12 @@ export interface HubEdgeListSessionsMessage {
   type: "list_sessions";
   payload: {
     instanceId: InstanceId;
+    /** 跳过的条目数（默认 0） */
+    offset?: number;
+    /** 单页大小（默认 20） */
+    limit?: number;
+    /** 搜索关键字（匹配 name/firstMessage） */
+    filter?: string;
   };
 }
 
