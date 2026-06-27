@@ -65,6 +65,8 @@ export function useConversation(
   const [streamingEntry, setStreamingEntry] = useState<SessionEntry | null>(
     null,
   );
+  // 追踪当前 streamingEntry 的 renderKey，避免闭包读取 state 过时
+  const streamingKeyRef = useRef<string | null>(null);
   const [loadState, setLoadState] = useState<ConversationLoadState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -187,13 +189,13 @@ export function useConversation(
       case "message_start": {
         const message = d.message as SessionEntry["message"];
         if (!message || message.role !== "assistant") break;
-        setStreamingEntry(
-          ensureRenderKey(
-            id,
-            { type: "message", timestamp: new Date().toISOString(), message },
-            "streaming",
-          ),
+        const entry = ensureRenderKey(
+          id,
+          { type: "message", timestamp: new Date().toISOString(), message },
+          "streaming",
         );
+        streamingKeyRef.current = entry.__renderKey ?? entry.id ?? null;
+        setStreamingEntry(entry);
         break;
       }
       case "message_update": {
@@ -215,13 +217,18 @@ export function useConversation(
       case "message_end": {
         const message = d.message as SessionEntry["message"];
         if (message) {
-          const entry = ensureRenderKey(
-            id,
-            { type: "message", timestamp: new Date().toISOString(), message },
-            "live",
-          );
+          // 复用 streamingEntry 的 key，避免 React 重建组件导致弹窗状态丢失
+          const stableKey =
+            streamingKeyRef.current ?? nextRenderKey(id, "live");
+          const entry: SessionEntry = {
+            type: "message",
+            timestamp: new Date().toISOString(),
+            message,
+            __renderKey: stableKey,
+          };
           setEntries((prev) => [...prev, entry]);
         }
+        streamingKeyRef.current = null;
         setStreamingEntry(null);
         break;
       }
