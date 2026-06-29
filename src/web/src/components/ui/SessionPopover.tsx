@@ -1,6 +1,6 @@
-// Session 切换 Popover：列出历史 session，支持新建和切换
+// Session 切换 Popover：列出历史 session，支持新建、切换、分页加载和服务端搜索
 
-import { useState, useMemo } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Plus, History, Loader2 } from "lucide-react";
 import type { TFunction } from "i18next";
 import type { SessionListItem } from "../../../../protocol/types";
@@ -10,10 +10,14 @@ import { useTranslation } from "react-i18next";
 interface SessionPopoverProps {
   sessions: SessionListItem[];
   loading: boolean;
+  hasMore: boolean;
+  total: number;
   disabled: boolean;
   onOpen: () => void;
   onNewSession: () => void;
   onSwitchSession: (path: string) => void;
+  onLoadMore: (offset: number, filter?: string) => void;
+  onFilterChange: (filter: string) => void;
 }
 
 /** 格式化相对时间 */
@@ -36,23 +40,43 @@ function formatRelativeTime(isoString: string, t: TFunction): string {
 export function SessionPopover({
   sessions,
   loading,
+  hasMore,
+  total,
   disabled,
   onOpen,
   onNewSession,
   onSwitchSession,
+  onLoadMore,
+  onFilterChange,
 }: SessionPopoverProps) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const filtered = useMemo(() => {
-    if (!filter.trim()) return sessions;
-    const q = filter.toLowerCase();
-    return sessions.filter(
-      (s) =>
-        (s.name?.toLowerCase().includes(q) ?? false) ||
-        s.firstMessage.toLowerCase().includes(q),
-    );
-  }, [sessions, filter]);
+  // 输入变化时 debounce 触发服务端搜索
+  const handleFilterChange = useCallback(
+    (value: string) => {
+      setFilter(value);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        onFilterChange(value);
+      }, 300);
+    },
+    [onFilterChange],
+  );
+
+  // 滚动触底加载更多
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      if (!hasMore || loading) return;
+      const el = e.currentTarget;
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < 40) {
+        onLoadMore(sessions.length, filter);
+      }
+    },
+    [hasMore, loading, sessions.length, filter, onLoadMore],
+  );
 
   return (
     <Popover
@@ -65,7 +89,10 @@ export function SessionPopover({
           } ${disabled ? "opacity-40 pointer-events-none" : ""}`}
           title={t("session.title")}
           onClick={() => {
-            if (!open) onOpen();
+            if (!open) {
+              setFilter("");
+              onOpen();
+            }
           }}
         >
           <History size={16} className="text-[var(--label-secondary)]" />
@@ -81,6 +108,11 @@ export function SessionPopover({
           <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
             <span className="text-[13px] font-medium text-[var(--label-primary)] select-none">
               {t("session.title")}
+              {total > 0 && (
+                <span className="ml-1.5 text-[11px] font-normal text-[var(--label-tertiary)]">
+                  ({total})
+                </span>
+              )}
             </span>
             <button
               onClick={() => {
@@ -96,78 +128,93 @@ export function SessionPopover({
           </div>
 
           {/* 搜索栏 */}
-          {sessions.length > 3 && (
-            <div className="px-3 pb-2">
-              <input
-                type="text"
-                placeholder={t("session.filter")}
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded-[6px] bg-[var(--fill-tertiary)] text-[12px] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none border border-transparent focus:border-[var(--separator)]"
-                autoFocus
-              />
-            </div>
-          )}
+          <div className="px-3 pb-2">
+            <input
+              type="text"
+              placeholder={t("session.filter")}
+              value={filter}
+              onChange={(e) => handleFilterChange(e.target.value)}
+              className="w-full px-2.5 py-1.5 rounded-[6px] bg-[var(--fill-tertiary)] text-[12px] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none border border-transparent focus:border-[var(--separator)]"
+              autoFocus
+            />
+          </div>
 
           {/* 分隔线 */}
           <div className="h-px bg-[var(--separator)] mx-2" />
 
           {/* 列表 */}
-          <div className="flex-1 overflow-y-auto scrollbar-auto py-1.5 px-1.5">
-            {loading ? (
+          <div
+            ref={listRef}
+            className="flex-1 overflow-y-auto scrollbar-auto py-1.5 px-1.5"
+            onScroll={handleScroll}
+          >
+            {loading && sessions.length === 0 ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2
                   size={16}
                   className="animate-spin text-[var(--label-tertiary)]"
                 />
               </div>
-            ) : filtered.length === 0 ? (
+            ) : sessions.length === 0 ? (
               <div className="py-4 text-center text-[12px] text-[var(--label-tertiary)] select-none">
                 {filter ? t("session.noMatch") : t("session.noPrevious")}
               </div>
             ) : (
-              filtered.map((session) => (
-                <button
-                  key={session.id}
-                  onClick={() => {
-                    if (!session.isCurrent) {
-                      onSwitchSession(session.path);
-                      close();
-                    }
-                  }}
-                  disabled={session.isCurrent}
-                  className={`w-full text-left px-2.5 py-2 rounded-[8px] transition-colors mb-0.5 ${
-                    session.isCurrent
-                      ? "bg-[var(--fill-secondary)] cursor-default"
-                      : "hover:bg-[var(--fill-tertiary)] cursor-pointer"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`text-[13px] leading-[18px] truncate ${
-                        session.isCurrent
-                          ? "font-medium text-[var(--color-accent)]"
-                          : "text-[var(--label-primary)]"
-                      }`}
-                    >
-                      {session.name ||
-                        session.firstMessage ||
-                        t("session.empty")}
-                    </span>
-                    <span className="text-[11px] text-[var(--label-tertiary)] whitespace-nowrap shrink-0">
-                      {formatRelativeTime(session.modified, t)}
-                    </span>
-                  </div>
-                  {session.name && session.firstMessage && (
-                    <div className="mt-0.5 text-[11px] leading-[15px] text-[var(--label-tertiary)] truncate">
-                      {session.firstMessage}
+              <>
+                {sessions.map((session) => (
+                  <button
+                    key={session.id}
+                    onClick={() => {
+                      if (!session.isCurrent) {
+                        onSwitchSession(session.path);
+                        close();
+                      }
+                    }}
+                    disabled={session.isCurrent}
+                    className={`w-full text-left px-2.5 py-2 rounded-[8px] transition-colors mb-0.5 ${
+                      session.isCurrent
+                        ? "bg-[var(--fill-secondary)] cursor-default"
+                        : "hover:bg-[var(--fill-tertiary)] cursor-pointer"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`text-[13px] leading-[18px] truncate ${
+                          session.isCurrent
+                            ? "font-medium text-[var(--color-accent)]"
+                            : "text-[var(--label-primary)]"
+                        }`}
+                      >
+                        {session.name ||
+                          session.firstMessage ||
+                          t("session.empty")}
+                      </span>
+                      <span className="text-[11px] text-[var(--label-tertiary)] whitespace-nowrap shrink-0">
+                        {formatRelativeTime(session.modified, t)}
+                      </span>
                     </div>
-                  )}
-                  <div className="mt-0.5 text-[10px] text-[var(--label-quaternary)]">
-                    {t("session.messageCount", { count: session.messageCount })}
+                    {session.name && session.firstMessage && (
+                      <div className="mt-0.5 text-[11px] leading-[15px] text-[var(--label-tertiary)] truncate">
+                        {session.firstMessage}
+                      </div>
+                    )}
+                    <div className="mt-0.5 text-[10px] text-[var(--label-quaternary)]">
+                      {t("session.messageCount", {
+                        count: session.messageCount,
+                      })}
+                    </div>
+                  </button>
+                ))}
+                {/* 加载更多指示器 */}
+                {loading && sessions.length > 0 && (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2
+                      size={14}
+                      className="animate-spin text-[var(--label-tertiary)]"
+                    />
                   </div>
-                </button>
-              ))
+                )}
+              </>
             )}
           </div>
         </div>

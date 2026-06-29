@@ -46,6 +46,8 @@ export function InstanceView() {
     hasMore,
     sessionList,
     sessionListLoading,
+    sessionHasMore,
+    sessionTotal,
     loadMore,
     requestSessionList,
   } = useConversation(instanceId, instance);
@@ -96,8 +98,22 @@ export function InstanceView() {
   );
 
   const handleListSessions = useCallback(() => {
-    requestSessionList();
+    requestSessionList({ offset: 0 });
   }, [requestSessionList]);
+
+  const handleSessionLoadMore = useCallback(
+    (offset: number, filter?: string) => {
+      requestSessionList({ offset, filter });
+    },
+    [requestSessionList],
+  );
+
+  const handleSessionFilterChange = useCallback(
+    (filter: string) => {
+      requestSessionList({ offset: 0, filter: filter || undefined });
+    },
+    [requestSessionList],
+  );
 
   const handleNewSession = useCallback(() => {
     send({ type: "new_session", payload: { instanceId } });
@@ -223,10 +239,14 @@ export function InstanceView() {
       <SessionPopover
         sessions={sessionList}
         loading={sessionListLoading}
+        hasMore={sessionHasMore}
+        total={sessionTotal}
         disabled={isBusy(instance?.status)}
         onOpen={handleListSessions}
         onNewSession={handleNewSession}
         onSwitchSession={handleSwitchSession}
+        onLoadMore={handleSessionLoadMore}
+        onFilterChange={handleSessionFilterChange}
       />
     ),
   };
