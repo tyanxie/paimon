@@ -1,6 +1,6 @@
 // 根组件：auth + 路由 + 全局 WS 订阅
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useViewportHeight } from "./hooks/useViewportHeight";
 import { useAuth } from "./hooks/useAuth";
@@ -15,6 +15,7 @@ import { NewInstanceModal } from "./components/ui/NewInstanceModal";
 import { LoginPage } from "./components/LoginPage";
 import { ToastContainer, showToast } from "./components/ui/Toast";
 import type { InstanceId } from "../../protocol/types";
+import { isBusy } from "./utils/status";
 import { useTranslation } from "react-i18next";
 
 /** 从 URL pathname 派生当前选中的实例 ID */
@@ -73,14 +74,23 @@ export default function App() {
   );
 
   // ── Shutdown ──
+  // 追踪主动 shutdown 的实例，区分主动退出与意外断连
+  const shuttingDownRef = useRef<Set<InstanceId>>(new Set());
+
   const handleShutdown = useCallback(
     (id: InstanceId) => {
-      send({ type: "shutdown", payload: { instanceId: id } });
-      if (id === selectedInstanceId) {
-        navigate("/");
+      // busy 时拒绝退出
+      const instance = useInstances
+        .getState()
+        .instances.find((i) => i.id === id);
+      if (instance && isBusy(instance.status)) {
+        showToast(t("sidebar.shutdownBusy"));
+        return;
       }
+      shuttingDownRef.current.add(id);
+      send({ type: "shutdown", payload: { instanceId: id } });
     },
-    [send, selectedInstanceId, navigate],
+    [send, t],
   );
 
   // 新建实例弹窗
@@ -98,7 +108,12 @@ export default function App() {
     if (!instanceListReady || !selectedInstanceId) return;
     const exists = instances.some((i) => i.id === selectedInstanceId);
     if (!exists) {
-      showToast(t("eventStream.instanceNotFound"));
+      // 主动 shutdown 引起的消失不弹 toast
+      if (shuttingDownRef.current.has(selectedInstanceId)) {
+        shuttingDownRef.current.delete(selectedInstanceId);
+      } else {
+        showToast(t("eventStream.instanceNotFound"));
+      }
       navigate("/");
     }
   }, [instanceListReady, selectedInstanceId, instances, navigate, t]);

@@ -67,19 +67,13 @@ export function ContextMenu({ position, onClose, children }: ContextMenuProps) {
         stableClose();
       }
     }
-    function handleScroll() {
-      stableClose();
-    }
-
     document.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("scroll", handleScroll, true);
     return () => {
       document.removeEventListener("mousedown", handleMouseDown);
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [stableClose]);
 

@@ -30,6 +30,7 @@ const zhCN = {
     noInstances: "暂无 pi 实例连接",
     settings: "设置",
     shutdown: "退出实例",
+    shutdownBusy: "实例正在执行中，请等待完成后再退出",
     statusStreaming: "生成中",
     statusCompacting: "压缩中",
     statusIdle: "空闲",
