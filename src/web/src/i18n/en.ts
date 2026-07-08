@@ -32,6 +32,7 @@ const en: LocaleResource = {
     noInstances: "No pi instances connected",
     settings: "Settings",
     shutdown: "Shutdown instance",
+    shutdownBusy: "Instance is running, please wait before shutting down",
     statusStreaming: "Streaming",
     statusCompacting: "Compacting",
     statusIdle: "Idle",
