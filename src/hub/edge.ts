@@ -444,7 +444,7 @@ class HubEdgeRegistry {
       this.browserHeartbeatTimers.delete(ws);
       ws.close(1001, "Heartbeat timeout");
       this.browserClients.delete(ws);
-    }, DEFAULTS.HEARTBEAT_INTERVAL + DEFAULTS.HEARTBEAT_TIMEOUT);
+    }, DEFAULTS.BROWSER_HEARTBEAT_TIMEOUT);
     this.browserHeartbeatTimers.set(ws, timer);
   }
 
