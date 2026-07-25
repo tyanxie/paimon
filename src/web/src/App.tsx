@@ -84,7 +84,7 @@ export default function App() {
         .getState()
         .instances.find((i) => i.id === id);
       if (instance && isBusy(instance.status)) {
-        showToast(t("sidebar.shutdownBusy"));
+        showToast(t("sidebar.shutdownBusy"), "warning");
         return;
       }
       shuttingDownRef.current.add(id);
@@ -112,7 +112,7 @@ export default function App() {
       if (shuttingDownRef.current.has(selectedInstanceId)) {
         shuttingDownRef.current.delete(selectedInstanceId);
       } else {
-        showToast(t("eventStream.instanceNotFound"));
+        showToast(t("eventStream.instanceNotFound"), "error");
       }
       navigate("/");
     }

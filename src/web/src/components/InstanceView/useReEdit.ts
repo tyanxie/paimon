@@ -63,7 +63,7 @@ export function useReEdit(
     const currentDraft =
       useDrafts.getState().drafts.get(instanceId) ?? EMPTY_DRAFT;
     if (currentDraft.text.trim() || currentDraft.images.length > 0) {
-      showToast(t("reEdit.draftNotEmpty"));
+      showToast(t("reEdit.draftNotEmpty"), "warning");
       return;
     }
 

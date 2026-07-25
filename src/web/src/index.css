@@ -126,6 +126,12 @@
   --badge-bg: rgba(0, 0, 0, 0.5);
   --badge-bg-hover: rgba(0, 0, 0, 0.7);
   --badge-text: #ffffff;
+
+  /* Toast 分级图标色（macOS 26 Accent Colors - Opaque） */
+  --toast-icon-info: #0091ff;
+  --toast-icon-success: #30d158;
+  --toast-icon-warning: #ff9230;
+  --toast-icon-error: #ff4245;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -161,6 +167,12 @@
       #1e2e1e 75%,
       #1a1a2e 100%
     );
+
+    /* Toast 分级图标色（macOS 26 Accent Colors - Vibrant，暗色下更鲜亮） */
+    --toast-icon-info: #0a99ff;
+    --toast-icon-success: #3bdb63;
+    --toast-icon-warning: #ff9e33;
+    --toast-icon-error: #ff4747;
   }
 }
 
@@ -188,6 +200,12 @@
   --diff-context-text: var(--label-secondary);
   --btn-solid: #282828;
   --btn-solid-hover: #3d3d3d;
+
+  /* Toast 分级图标色（macOS 26 Accent Colors - Vibrant） */
+  --toast-icon-info: #0a99ff;
+  --toast-icon-success: #3bdb63;
+  --toast-icon-warning: #ff9e33;
+  --toast-icon-error: #ff4747;
 }
 
 /* ========================================

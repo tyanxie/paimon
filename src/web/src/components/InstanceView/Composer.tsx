@@ -142,7 +142,7 @@ export function Composer({
           }));
         })
         .catch((err) => {
-          showToast(t("eventStream.imageProcessFailed"));
+          showToast(t("eventStream.imageProcessFailed"), "error");
           console.error("Image process failed:", err);
         });
     },
@@ -162,7 +162,7 @@ export function Composer({
           }));
         })
         .catch((err) => {
-          showToast(t("eventStream.imageProcessFailed"));
+          showToast(t("eventStream.imageProcessFailed"), "error");
           console.error("Image process failed:", err);
         });
       e.target.value = "";
