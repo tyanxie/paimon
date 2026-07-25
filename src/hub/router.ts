@@ -130,6 +130,23 @@ export function handleEdgeMessage(
       hubRegistry.unregisterInstance(msg.payload.instanceId);
       break;
     }
+    case "instance_error": {
+      const subscribers = hubRegistry.getSubscribers(msg.payload.instanceId);
+      if (subscribers.length > 0) {
+        const errorMsg = JSON.stringify({
+          type: "instance_error",
+          payload: {
+            instanceId: msg.payload.instanceId,
+            message: msg.payload.message,
+            action: msg.payload.action,
+          },
+        });
+        for (const browser of subscribers) {
+          browser.send(errorMsg);
+        }
+      }
+      break;
+    }
     case "spawn_result": {
       hubRegistry.resolveSpawn(
         msg.payload.token,

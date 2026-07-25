@@ -117,7 +117,18 @@ export type ExtensionToEdgeMessage =
   | ExtStateMessage
   | ExtHistoryMessage
   | ExtSessionListMessage
+  | ExtErrorMessage
   | ExtQuitMessage;
+
+/** 操作失败通知 */
+export interface ExtErrorMessage {
+  type: "error";
+  payload: {
+    message: string;
+    /** 触发错误的操作 */
+    action?: string;
+  };
+}
 
 /** 主动退出通知（跳过 grace period） */
 export interface ExtQuitMessage {
@@ -491,6 +502,7 @@ export type HubToBrowserMessage =
   | HubForwardedEventMessage
   | HubHistoryMessage
   | HubSessionListMessage
+  | HubInstanceErrorMessage
   | HubErrorMessage;
 
 /** 实例列表 */
@@ -547,7 +559,17 @@ export interface HubSessionListMessage {
   };
 }
 
-/** 错误 */
+/** 实例操作错误 */
+export interface HubInstanceErrorMessage {
+  type: "instance_error";
+  payload: {
+    instanceId: InstanceId;
+    message: string;
+    action?: string;
+  };
+}
+
+/** 系统级错误 */
 export interface HubErrorMessage {
   type: "error";
   payload: {
@@ -582,6 +604,7 @@ export type EdgeToHubMessage =
   | EdgeInstanceStateMessage
   | EdgeInstanceHistoryMessage
   | EdgeInstanceSessionListMessage
+  | EdgeInstanceErrorMessage
   | EdgeInstanceQuitMessage
   | EdgeSpawnResultMessage
   | EdgeBrowseResultMessage;
@@ -659,6 +682,16 @@ export interface EdgeInstanceSessionListMessage {
     total: number;
     /** 是否还有更多 */
     hasMore: boolean;
+  };
+}
+
+/** 转发：pi 操作失败 */
+export interface EdgeInstanceErrorMessage {
+  type: "instance_error";
+  payload: {
+    instanceId: InstanceId;
+    message: string;
+    action?: string;
   };
 }
 

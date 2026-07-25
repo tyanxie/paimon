@@ -9,6 +9,7 @@
 // 6. 暴露 loadMore() 加载更多历史
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   InstanceId,
   InstanceInfo,
@@ -17,6 +18,7 @@ import type {
 } from "../../../../protocol/types";
 import { useWebSocket } from "../../stores/useWebSocket";
 import type { SessionEntry, ConversationLoadState } from "../../stores/types";
+import { showToast } from "../ui/Toast";
 
 // ── 返回值类型 ──
 
@@ -63,6 +65,7 @@ export function useConversation(
   instanceId: InstanceId,
   instance: InstanceInfo | undefined,
 ): ConversationState {
+  const { t } = useTranslation();
   const send = useWebSocket((s) => s.send);
   const subscribe = useWebSocket((s) => s.subscribe);
   const connected = useWebSocket((s) => s.connectionState === "connected");
@@ -138,6 +141,20 @@ export function useConversation(
           console.error("[Paimon]", msg.payload.message);
           setLoadState("error");
           setErrorMessage(msg.payload.message);
+          break;
+        }
+        case "instance_error": {
+          if (msg.payload.instanceId !== instanceId) return;
+          const actionKey = msg.payload.action
+            ? `error.action.${msg.payload.action}`
+            : null;
+          const localizedMsg = actionKey
+            ? t(actionKey, {
+                message: msg.payload.message,
+                defaultValue: msg.payload.message,
+              })
+            : msg.payload.message;
+          showToast(localizedMsg);
           break;
         }
       }
