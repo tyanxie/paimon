@@ -936,17 +936,34 @@ export const DEFAULTS = {
   /** Hub 默认端口 */
   PORT: 8080 as number,
   /**
-   * 心跳发送间隔 (ms)，Extension 和 Browser 共用。
+   * 心跳发送间隔 (ms)，Edge 和 Extension 使用。
    * 客户端每隔此时间发送一次 ping。
    */
   HEARTBEAT_INTERVAL: 5_000,
   /**
-   * 心跳回复超时 (ms)。
+   * 心跳回复超时 (ms)，Edge 和 Extension 使用。
    * - 客户端：发 ping 后等待 pong 的最长时间，超时则主动断开触发重连。
-   * - Hub 侧：超时窗口 = INTERVAL + TIMEOUT，即允许丢失一次 ping
+   * - Hub/Edge 侧：超时窗口 = INTERVAL + TIMEOUT，即允许丢失一次 ping
    *   后仍不断开，仅在连续无心跳超过该窗口才判定断连。
    */
   HEARTBEAT_TIMEOUT: 5_000,
+  /**
+   * Browser 心跳发送间隔 (ms)。
+   * 浏览器后台标签页 timer 会被节流（最慢 ~60s），故 interval 设为 30s，
+   * 节流后仍能在 Hub 超时窗口内送达。
+   */
+  BROWSER_HEARTBEAT_INTERVAL: 30_000,
+  /**
+   * Browser 心跳 Hub 侧超时 (ms)。
+   * 超过此时间未收到 Browser ping 则判定断连。
+   * 需大于浏览器最严格节流间隔（~60s）以避免后台标签页误断。
+   */
+  BROWSER_HEARTBEAT_TIMEOUT: 90_000,
+  /**
+   * Browser 发 ping 后等待 pong 的超时 (ms)。
+   * onmessage 不受浏览器节流影响，pong 可快速到达，故保持较短。
+   */
+  BROWSER_PONG_TIMEOUT: 10_000,
   /** 实例断连后的保留时间 (ms)，超时才广播 disconnected */
   DISCONNECT_GRACE_PERIOD: 5_000,
   /** 重连退避序列 (ms) */

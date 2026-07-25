@@ -67,9 +67,9 @@ function startHeartbeat(socket: WebSocket) {
       socket.send(JSON.stringify({ type: "ping" }));
       pongTimeout = setTimeout(() => {
         socket.close();
-      }, DEFAULTS.HEARTBEAT_TIMEOUT);
+      }, DEFAULTS.BROWSER_PONG_TIMEOUT);
     }
-  }, DEFAULTS.HEARTBEAT_INTERVAL);
+  }, DEFAULTS.BROWSER_HEARTBEAT_INTERVAL);
 }
 
 function stopHeartbeat() {
