@@ -1,7 +1,6 @@
 // InstanceView 纯计算工具函数
 
 import type { InstanceStatus } from "../../../../protocol/types";
-import { isStreaming as isStatusStreaming } from "../../utils/status";
 
 const BOTTOM_FOLLOW_EPSILON = 0.5;
 
@@ -40,7 +39,10 @@ export function calculatePrependScrollTop({
 }
 
 export function getComposerButtonMode(instanceStatus?: InstanceStatus) {
-  return isStatusStreaming(instanceStatus) ? "stop" : "send";
+  // streaming 和 compacting 状态都显示 stop 按钮，允许用户终止
+  return instanceStatus === "streaming" || instanceStatus === "compacting"
+    ? "stop"
+    : "send";
 }
 
 export function getSafeScrollTop(rawScrollTop: number) {

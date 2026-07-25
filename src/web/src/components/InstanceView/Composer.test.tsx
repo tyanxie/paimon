@@ -51,7 +51,7 @@ describe("ComposerStatusIndicator", () => {
     expect(getComposerButtonMode("streaming")).toBe("stop");
   });
 
-  test("shows send button during compacting", () => {
-    expect(getComposerButtonMode("compacting")).toBe("send");
+  test("shows stop button during compacting to allow abort", () => {
+    expect(getComposerButtonMode("compacting")).toBe("stop");
   });
 });

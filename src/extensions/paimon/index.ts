@@ -20,11 +20,15 @@ import type {
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
 import * as sessionControlPatch from "./session_control_patch";
+import * as compactionAbortPatch from "./compact_abort_patch";
 import { querySessionList, emptySessionListMessage } from "./session_list";
 
 // Hub spawn 实例时注入的一次性 token（仅页面创建的实例有）。
 // 注册时回传给 Hub，用于将 spawn 请求与注册成功的实例对应起来。
 const SPAWN_TOKEN = process.env.PAIMON_SPAWN_TOKEN;
+
+// 跟踪 compaction 状态（兜底用）
+let compacting = false;
 
 export default function (pi: ExtensionAPI) {
   // pi extension 连接本机 Edge（不再直连 Hub）
@@ -36,11 +40,11 @@ export default function (pi: ExtensionAPI) {
   let registered = false;
   // 保存最新的 ctx 引用，用于响应 get_history
   let currentCtx: ExtensionContext | null = null;
-  // 跟踪 compaction 状态（兜底用）
-  let compacting = false;
 
   // 安装 session 控制 patch（截获 newSession/switchSession 函数引用）
   sessionControlPatch.install();
+  // 安装 compaction abort patch（截获 session 实例以支持取消压缩）
+  compactionAbortPatch.install();
 
   const currentHostname = hostname();
 
@@ -316,8 +320,13 @@ function handleHubMessage(
       pi.sendUserMessage(msg.payload.message, { deliverAs: "steer" });
       break;
     case "abort": {
-      const ctx = getCurrentCtx();
-      ctx?.abort();
+      if (compacting) {
+        // compacting 状态下取消压缩
+        compactionAbortPatch.abortCompaction();
+      } else {
+        const ctx = getCurrentCtx();
+        ctx?.abort();
+      }
       break;
     }
     case "set_model": {
