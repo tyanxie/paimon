@@ -111,6 +111,19 @@ export function handleExtensionMessage(
       });
       break;
     }
+    case "error": {
+      const id = edgeRegistry.findInstanceByWs(ws);
+      if (!id) return;
+      upstream.send({
+        type: "instance_error",
+        payload: {
+          instanceId: id,
+          message: msg.payload.message,
+          action: msg.payload.action,
+        },
+      });
+      break;
+    }
     case "quit": {
       const id = edgeRegistry.findInstanceByWs(ws);
       if (id) {

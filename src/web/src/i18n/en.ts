@@ -136,6 +136,9 @@ const en: LocaleResource = {
     message: "Error message",
     type: "Error type",
     requestId: "Request ID",
+    action: {
+      compact: "Compaction failed: {{message}}",
+    },
   },
 } as const;
 

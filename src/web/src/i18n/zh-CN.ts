@@ -134,6 +134,9 @@ const zhCN = {
     message: "错误信息",
     type: "错误类型",
     requestId: "请求 ID",
+    action: {
+      compact: "压缩失败：{{message}}",
+    },
   },
 } as const;
 

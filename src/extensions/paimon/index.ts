@@ -468,6 +468,14 @@ function handleHubMessage(
       if (ctx && ctx.isIdle()) {
         ctx.compact({
           customInstructions: msg.payload?.customInstructions,
+          onError: (error: Error) => {
+            if (client.connected) {
+              client.send({
+                type: "error",
+                payload: { message: error.message, action: "compact" },
+              });
+            }
+          },
         });
       }
       break;
