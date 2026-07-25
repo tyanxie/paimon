@@ -72,6 +72,7 @@ bin/
 - **停止信号语义** — `paimon hub stop` / `paimon edge stop` 用 SIGTERM 仅杀对应 daemon 自身。Edge spawn 的 pi 子进程以 `detached: true`（setsid）脱离 Edge 进程组，不会被连带杀死
 - **页面创建实例通过 Edge** — Web 点 “+” 选择 Edge 节点 + 输入 cwd → `POST /api/instances` → Hub 向指定 Edge 发 spawn 指令 → Edge 在本机 spawn `pi --mode rpc`。关键细节：① RPC 模式从 stdin 读命令，stdin EOF 即退出；而 paimon 对话全程走 WS 不需 stdin，故用 **`O_RDWR` 打开的 FIFO** 作 stdin。② `detached: true` + `unref()` 让 pi 脱离 Edge，Edge 退出/重启不影响 pi。③ spawn 时注入 `PAIMON_SPAWN_TOKEN`，extension 注册时回传该 token，Edge 据此把 spawn 请求与注册成功的实例对应，然后上报 Hub。④ stdout 重定向到 `/dev/null`（事件流通过 WS 传输，不需落盘），stderr 写入 `<spawnToken>.log` 用于启动失败诊断，同时写入 `<spawnToken>.pid` 记录进程 ID。运行时文件在 `~/.paimon/instances/`
 - **页面创建实例由 Edge 执行** — Hub 将 spawn 指令转发给指定 Edge，Edge 在本机起进程。多机场景下前端选择目标 Edge 节点
+- **错误分两级** — `HubErrorMessage`（type: `"error"`）为系统级错误（如认证失败），前端显示整页错误态；`HubInstanceErrorMessage`（type: `"instance_error"`）为实例操作失败（如 compact 出错），前端以 toast 形式提示。错误从 Extension → Edge → Hub → Browser 逐层转发，携带 `action` 字段标识触发操作
 - **Hub→Edge request-response 通用模式** — `src/hub/pending.ts` 提供 `PendingRequests<T>` 泛型工具，基于 token 匹配 WS 异步请求与响应。spawn 和目录浏览（browse）均使用此模式
 - **目录浏览 API** — `GET /api/edges/:edgeId/browse?path=xxx`，Hub 转发给 Edge 执行 readdir。Edge 解析 parent/prefix（路径以 `/` 结尾列全部，否则以末段为前缀过滤），仅返回子目录，默认隐藏 dotfiles（前缀以 `.` 开头时显示），最多 200 条（截断时标记 `truncated`）。前端据此实现类 VS Code 的路径补全选择器
 - **bind 地址与安全** — Hub 和 Edge 默认 bind `127.0.0.1`（仅本机）。`--host` 可指定；非 loopback 时 CLI 和日志都会警告
