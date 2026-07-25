@@ -154,7 +154,7 @@ export function useConversation(
                 defaultValue: msg.payload.message,
               })
             : msg.payload.message;
-          showToast(localizedMsg);
+          showToast(localizedMsg, "error");
           break;
         }
       }
