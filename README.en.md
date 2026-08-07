@@ -23,6 +23,7 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 - 🔒 **Access Control** — Access Token protects all API and WebSocket connections
 - 🎨 **Frosted Glass UI** — Clean macOS-style design
 - 🌐 **Multi-language** — Chinese/English interface, switchable in settings
+- 🔔 **Task Notifications** — Auto system notification when an instance completes its task in background
 - 📱 **Responsive Design** — Desktop/mobile adaptive, iOS Safe Area support
 
 ## 📋 Prerequisites

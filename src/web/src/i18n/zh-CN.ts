@@ -78,6 +78,16 @@ const zhCN = {
     langEn: "English",
   },
 
+  // ─── 通知 ───
+  notification: {
+    title: "通知",
+    label: "任务完成通知",
+    on: "开启",
+    off: "关闭",
+    denied: "通知权限已被浏览器拒绝，请在浏览器设置中允许",
+    taskComplete: "✅ {{name}} 任务完成",
+  },
+
   // ─── 新建实例弹窗 ───
   newInstance: {
     title: "新建实例",
