@@ -1,6 +1,12 @@
 // 消息输入区：textarea + 图片上传/粘贴/预览 + 工具栏 + 状态指示 + 发送/停止
 
-import { useRef, useLayoutEffect, useCallback, useState } from "react";
+import {
+  useRef,
+  useLayoutEffect,
+  useCallback,
+  useState,
+  useImperativeHandle,
+} from "react";
 import { ArrowUp, Square, Minimize2, ImagePlus, X } from "lucide-react";
 import type {
   InstanceInfo,
@@ -18,7 +24,13 @@ import { ThinkingSelector } from "../ui/ThinkingSelector";
 import { CompactModal } from "../ui/CompactModal";
 import { useTranslation } from "react-i18next";
 
+/** Composer 暴露给父组件的命令式 API */
+export interface ComposerHandle {
+  focus(): void;
+}
+
 interface ComposerProps {
+  ref?: React.Ref<ComposerHandle>;
   instance: InstanceInfo | undefined;
   draft: InputDraft;
   onDraftChange: (value: InputDraftUpdater) => void;
@@ -35,6 +47,7 @@ interface ComposerProps {
 }
 
 export function Composer({
+  ref,
   instance,
   draft,
   onDraftChange,
@@ -51,6 +64,19 @@ export function Composer({
 }: ComposerProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 暴露 focus 方法给父组件
+  useImperativeHandle(ref, () => ({
+    focus() {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      // 光标移到末尾 + 滚动到底部
+      const len = el.value.length;
+      el.selectionStart = el.selectionEnd = len;
+      el.scrollTop = el.scrollHeight;
+    },
+  }));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const draftRef = useRef(draft);
   draftRef.current = draft;

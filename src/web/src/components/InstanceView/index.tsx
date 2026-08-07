@@ -20,7 +20,7 @@ import { MobileNavBar } from "../ui/MobileNavBar";
 import { InstanceHeader } from "../ui/InstanceHeader";
 import { SessionPopover } from "../ui/SessionPopover";
 import { useTranslation } from "react-i18next";
-import { Composer } from "./Composer";
+import { Composer, type ComposerHandle } from "./Composer";
 import { useConversation } from "./useConversation";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { useReEdit } from "./useReEdit";
@@ -134,7 +134,10 @@ export function InstanceView() {
   );
 
   // ── 重新编辑 ──
-  const onReEdit = useReEdit(instanceId, entries, instance?.status);
+  const composerRef = useRef<ComposerHandle>(null);
+  const onReEdit = useReEdit(instanceId, entries, instance?.status, () => {
+    composerRef.current?.focus();
+  });
 
   // ── 滚动管理 ──
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -354,6 +357,7 @@ export function InstanceView() {
         >
           <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
             <Composer
+              ref={composerRef}
               instance={instance}
               draft={draft}
               onDraftChange={handleDraftChange}

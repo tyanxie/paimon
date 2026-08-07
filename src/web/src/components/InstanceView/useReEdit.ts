@@ -4,6 +4,7 @@
 // 行为：提取 text + images → 检查 draft 是否为空 → 设置 draft 或 toast 提示
 
 import { useCallback, useMemo } from "react";
+import { flushSync } from "react-dom";
 import type {
   InstanceId,
   InstanceStatus,
@@ -24,6 +25,7 @@ export function useReEdit(
   instanceId: InstanceId,
   entries: SessionEntry[],
   instanceStatus: InstanceStatus | undefined,
+  onComplete?: () => void,
 ): (() => void) | undefined {
   const { t } = useTranslation();
   const setDraft = useDrafts((s) => s.setDraft);
@@ -69,8 +71,11 @@ export function useReEdit(
 
     // 从 user message content 提取 text 和 images
     const newDraft = extractDraftFromContent(userContent);
-    setDraft(instanceId, newDraft);
-  }, [canReEdit, userContent, instanceId, setDraft, t]);
+    flushSync(() => {
+      setDraft(instanceId, newDraft);
+    });
+    onComplete?.();
+  }, [canReEdit, userContent, instanceId, setDraft, t, onComplete]);
 
   return canReEdit ? handleReEdit : undefined;
 }
