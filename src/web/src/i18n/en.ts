@@ -80,6 +80,16 @@ const en: LocaleResource = {
     langEn: "English",
   },
 
+  // ─── Notification ───
+  notification: {
+    title: "Notification",
+    label: "Task Completion Notification",
+    on: "On",
+    off: "Off",
+    denied: "Notification permission denied. Please allow in browser settings",
+    taskComplete: "✅ {{name}} task completed",
+  },
+
   // ─── New Instance Modal ───
   newInstance: {
     title: "New Instance",

@@ -12,8 +12,11 @@ interface SettingsState {
   background: Background;
   /** 解析后的实际主题（考虑 system 偏好） */
   resolvedTheme: "light" | "dark";
+  /** 是否启用任务完成系统通知 */
+  notification: boolean;
   setAppearance: (value: Appearance) => void;
   setBackground: (value: Background) => void;
+  setNotification: (value: boolean) => void;
 }
 
 // ── 常量 ──
@@ -21,6 +24,7 @@ interface SettingsState {
 const KEYS = {
   appearance: "paimon:appearance",
   background: "paimon:background",
+  notification: "paimon:notification",
 } as const;
 
 // ── localStorage 读取 ──
@@ -35,6 +39,10 @@ function readBackground(): Background {
   const val = localStorage.getItem(KEYS.background);
   if (val === "mist" || val === "aurora" || val === "ember") return val;
   return "mist";
+}
+
+function readNotification(): boolean {
+  return localStorage.getItem(KEYS.notification) === "true";
 }
 
 // ── DOM 同步 ──
@@ -61,6 +69,7 @@ export const useSettings = create<SettingsState>((set) => ({
   appearance: readAppearance(),
   background: readBackground(),
   resolvedTheme: resolveTheme(readAppearance()),
+  notification: readNotification(),
 
   setAppearance: (value) => {
     localStorage.setItem(KEYS.appearance, value);
@@ -72,6 +81,11 @@ export const useSettings = create<SettingsState>((set) => ({
     localStorage.setItem(KEYS.background, value);
     syncDOM(useSettings.getState().appearance, value);
     set({ background: value });
+  },
+
+  setNotification: (value) => {
+    localStorage.setItem(KEYS.notification, String(value));
+    set({ notification: value });
   },
 }));
 
@@ -102,6 +116,12 @@ export function useBackground(): [Background, (v: Background) => void] {
 
 export function useResolvedTheme(): "light" | "dark" {
   return useSettings((s) => s.resolvedTheme);
+}
+
+export function useNotification(): [boolean, (v: boolean) => void] {
+  const notification = useSettings((s) => s.notification);
+  const setNotification = useSettings((s) => s.setNotification);
+  return [notification, setNotification];
 }
 
 // ── 初始化（模块加载时同步 DOM）──

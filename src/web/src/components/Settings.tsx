@@ -1,14 +1,17 @@
-// 设置页面：外观（主题 + 背景）+ 语言
+// 设置页面：外观（主题 + 背景）+ 语言 + 通知
 
 import { useTranslation } from "react-i18next";
 import {
   useAppearance,
   useBackground,
+  useNotification,
   type Appearance,
   type Background,
 } from "../stores/useSettings";
+import { supportsNotification } from "../hooks/useTaskNotifier";
 import { type Language, setStoredLanguage } from "../i18n";
 import { MobileNavBar } from "./ui/MobileNavBar";
+import { showToast } from "./ui/Toast";
 
 // ========================================
 // 通用组件
@@ -119,6 +122,7 @@ export function Settings() {
   const { t, i18n } = useTranslation();
   const [appearance, setAppearance] = useAppearance();
   const [background, setBackground] = useBackground();
+  const [notification, setNotification] = useNotification();
 
   const appearanceOptions: { value: Appearance; label: string }[] = [
     { value: "light", label: t("settings.themeLight") },
@@ -151,6 +155,11 @@ export function Settings() {
   const languageOptions: { value: Language; label: string }[] = [
     { value: "zh-CN", label: t("settings.langZhCN") },
     { value: "en", label: t("settings.langEn") },
+  ];
+
+  const notificationOptions: { value: "on" | "off"; label: string }[] = [
+    { value: "on", label: t("notification.on") },
+    { value: "off", label: t("notification.off") },
   ];
 
   return (
@@ -195,6 +204,35 @@ export function Settings() {
             />
           </SettingRow>
         </section>
+        {/* 通知（仅在浏览器支持 Notification API 时显示） */}
+        {supportsNotification && (
+          <>
+            <div className="text-[14px] leading-[20px] font-semibold text-[var(--label-primary)] mb-2 mt-6 px-4 select-none">
+              {t("notification.title")}
+            </div>
+            <section className="glass-panel overflow-hidden">
+              <SettingRow label={t("notification.label")} showSeparator={false}>
+                <SegmentedControl
+                  options={notificationOptions}
+                  value={notification ? "on" : "off"}
+                  onChange={async (v) => {
+                    if (v === "on") {
+                      // 首次开启时请求权限
+                      const permission = await Notification.requestPermission();
+                      if (permission === "granted") {
+                        setNotification(true);
+                      } else {
+                        showToast(t("notification.denied"), "warning");
+                      }
+                    } else {
+                      setNotification(false);
+                    }
+                  }}
+                />
+              </SettingRow>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

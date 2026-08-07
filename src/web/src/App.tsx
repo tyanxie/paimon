@@ -6,6 +6,7 @@ import { useViewportHeight } from "./hooks/useViewportHeight";
 import { useAuth } from "./hooks/useAuth";
 import { useWebSocket } from "./stores/useWebSocket";
 import { useInstances } from "./stores/useInstances";
+import { useTaskNotifier } from "./hooks/useTaskNotifier";
 import { Sidebar } from "./components/Sidebar";
 import { InstanceView } from "./components/InstanceView";
 import { Home } from "./components/Home";
@@ -55,6 +56,9 @@ export default function App() {
     }
     return () => disconnect();
   }, [authToken, connect, disconnect, handleAuthError]);
+
+  // ── 任务完成通知 ──
+  useTaskNotifier();
 
   // ── 常驻 WS 订阅：instance_list / instance_update → useInstances ──
   useEffect(() => {
