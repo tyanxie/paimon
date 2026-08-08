@@ -9,6 +9,7 @@ import i18next from "i18next";
 import { useWebSocket } from "../stores/useWebSocket";
 import { useInstances } from "../stores/useInstances";
 import { useSettings } from "../stores/useSettings";
+import { getCurrentLogoSrc } from "./useLogoSrc";
 import type {
   InstanceId,
   InstanceStatus,
@@ -105,6 +106,7 @@ function showCompletionNotification(
   // 导致同一实例连续完成任务时后续通知不可见。
   const notification = new Notification("Paimon", {
     body: i18next.t("notification.taskComplete", { name: dirName }),
+    icon: getCurrentLogoSrc(),
   });
 
   // 点击通知：聚焦窗口并导航到对应实例

@@ -1,6 +1,7 @@
 import {
   useBackground,
   useResolvedTheme,
+  useSettings,
   type Background,
 } from "../stores/useSettings";
 
@@ -19,4 +20,10 @@ export function useLogoSrc() {
   const [background] = useBackground();
   const theme = useResolvedTheme();
   return getLogoSrc(background, theme);
+}
+
+/** 非 React 上下文中获取当前 logo 路径（快照式，无订阅） */
+export function getCurrentLogoSrc(): string {
+  const { background, resolvedTheme } = useSettings.getState();
+  return getLogoSrc(background, resolvedTheme);
 }
