@@ -5,6 +5,11 @@ import remarkGfm from "remark-gfm";
 import remarkCjkFriendly from "remark-cjk-friendly";
 import remarkFrontmatter from "remark-frontmatter";
 import rehypeHighlight from "rehype-highlight";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, {
+  defaultSchema,
+  type Options as SanitizeSchema,
+} from "rehype-sanitize";
 import yaml from "js-yaml";
 import { useState, useCallback, useMemo } from "react";
 import type { Components } from "react-markdown";
@@ -315,6 +320,21 @@ export function preprocessFrontmatter(content: string): string {
   return "***" + content.slice(3);
 }
 
+/**
+ * rehype-sanitize 白名单 schema：基于 GitHub 默认规则，
+ * 额外允许 code 元素上的 language-* 类名（供 rehype-highlight 识别语言）
+ */
+const sanitizeSchema: SanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    code: [
+      ...(defaultSchema.attributes?.code || []),
+      ["className", /^language-.+/],
+    ],
+  },
+};
+
 /** Markdown 渲染入口 */
 export function MarkdownRenderer({ content }: { content: string }) {
   if (!content.trim()) return null;
@@ -330,7 +350,11 @@ export function MarkdownRenderer({ content }: { content: string }) {
           remarkFrontmatter,
           remarkFrontmatterToCode,
         ]}
-        rehypePlugins={[rehypeHighlight]}
+        rehypePlugins={[
+          rehypeRaw,
+          [rehypeSanitize, sanitizeSchema],
+          rehypeHighlight,
+        ]}
         components={components}
       >
         {processed}
