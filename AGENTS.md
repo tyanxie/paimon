@@ -29,14 +29,14 @@ bun run scripts/prepare-npm-packages.ts    # 从编译产物生成 npm 可发布
 | 构建     | Vite 6                                                                |
 | 进程管理 | Bun.spawn（detached）+ 状态文件（`~/.paimon/hub.json` / `edge.json`） |
 
-**关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, i18next, react-i18next, zustand, rotating-file-stream
+**关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, i18next, react-i18next, zustand, rotating-file-stream, global-directory, package-manager-detector
 
 ## 项目结构（仅非标准部分）
 
 ```
 src/
 ├── protocol/types.ts          # 所有消息类型 + 常量（含 Edge 协议）
-├── cli/                       # paimon CLI 入口（hub / edge / attach 子命令）
+├── cli/                       # paimon CLI 入口（hub / edge / attach / update / version 子命令）
 ├── hub/                       # Hub 服务端（auth / edge-registry / router / pending / logger）
 ├── edge/                      # Edge 服务端（registry / router / upstream / spawner / browser / log-cleanup）
 ├── utils/                     # 后端共享工具（env 环境常量、logger 日志工厂、timezone 时区初始化）
@@ -79,7 +79,8 @@ bin/
 - **Access Token 认证** — Hub 启动时生成或接收 access token（优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 自动生成），写入 `hub.json`。Edge/Browser/HTTP API 连接 Hub 时必须携带 token（WS 通过 `?token=xxx`，HTTP 通过 `Authorization: Bearer xxx`）。`/api/health` 不需认证。`PAIMON_AUTH_DISABLED=1` 可关闭认证（仅开发调试）
 - **Token 生命周期** — token 存储于 `hub.json`，随 `paimon hub stop` 删除而失效。`paimon hub restart` 默认继承旧 token（显示来源为 `inherited`）。Pi Extension → Edge 不需认证（Edge 仅 bind loopback，天然同机信任）
 - **Edge token 来源** — 优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 同机 hub.json fallback
-- **CLI 独立于 npm scripts** — `paimon hub start/stop/restart/status`、`paimon edge start/stop/restart/status` 和 `paimon attach` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
+- **CLI 独立于 npm scripts** — `paimon hub start/stop/restart/status`、`paimon edge start/stop/restart/status`、`paimon attach`、`paimon update` 和 `paimon version` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts
+- **`paimon update` 自更新** — 按 `isCompiled` 分两种模式：源码模式（`bun link`）执行 `git pull` + `bun install` + `bun run build`，更新前校验工作区干净且能 fast-forward；全局安装模式从 `realpath(process.execPath)` 反查所在 `node_modules` 识别包管理器，并**显式传递安装 prefix**（npm/yarn 用 `--prefix`，pnpm 用 `PNPM_HOME`，bun 用 `BUN_INSTALL`），避免 PATH 上的包管理器与当初安装的 prefix 不一致（nvm 切版本、brew npm 等场景）而装到别处。关键细节：① pnpm 的实包位于与 `node_modules` **同级**的 `.pnpm` 虚拟目录（`<PNPM_HOME>/global/<N>/.pnpm/...`），无法靠 `node_modules` 反查，改为按全局根目录 `<PNPM_HOME>/global` 判定且不依赖目录版本号；② `global-directory` 的 `npm.prefix` 兜底逻辑依赖 node 的 execPath，编译模式下结果错误，**禁止使用**，该库仅用于 yarn/pnpm 目录识别；③ 更新命令 argv 由 `package-manager-detector` 的 `resolveCommand(agent, "global", ...)` 生成；④ 识别不出安装来源时明确报错并给出手动更新命令，不猜测包管理器；⑤ 安装失败时探测 prefix 可写性，不可写则提示改用 sudo。`--check` 只检查不安装。检测与命令构造为纯函数（`update/detect.ts`），有单元测试覆盖四种包管理器的真实路径形态
 - **attach = 迁移而非双向接管** — pi 不支持同一 session 文件被多进程同时写，所以 `paimon attach` 的语义是：先调 `POST /api/instance/:id/shutdown` 关闭目标实例 → 轮询其从列表消失（3s 超时）→ 本地 `pi --session <sessionId>`（cwd=实例 cwd，stdio inherit）。过滤条件为 hostname + cwd 双重匹配（均 realpath 规范化）。被 attach 的原实例会退出由用户负责
 - **CLI 全局安装走 `bun link`** — `package.json` 的 `bin` 指向 `src/cli/index.ts`（非编译产物），bun 直接执行带 shebang 的 ts 源码。`bun link` 在 `~/.bun/bin/` 建软链接回 clone 目录，`bun unlink` 解除。CLI 入口统一为 `src/cli/index.ts`，通过 `PAIMON_ROLE` 环境变量区分角色（见 Daemon 进程模型）
 - **npm 分发模式** — 主包 `@tyanxie/paimon`（含 `bin/paimon.cjs` 启动器 + extension 源码）+ 4 个平台包 `@tyanxie/paimon-{darwin-arm64,darwin-x64,linux-arm64,linux-x64}`（含编译二进制 + web 资产）。主包通过 `optionalDependencies` 引用平台包，npm install 时只下载匹配当前系统的那一个
