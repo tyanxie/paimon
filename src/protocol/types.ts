@@ -18,18 +18,15 @@ export interface ImagePayload {
 
 /** 思考等级（与 pi 内部 ModelThinkingLevel 一致） */
 export type ThinkingLevel =
-  | "off"
-  | "minimal"
-  | "low"
-  | "medium"
-  | "high"
-  | "xhigh";
+  "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 /** 模型信息 */
 export interface ModelInfo {
   provider: string;
   id: string;
   name?: string;
+  /** 该模型支持的思考等级列表（由 thinkingLevelMap 计算，仅 availableModels 中携带） */
+  availableThinkingLevels?: ThinkingLevel[];
 }
 
 /** 上下文使用信息 */

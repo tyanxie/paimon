@@ -8,6 +8,7 @@ import type {
   SessionShutdownEvent,
 } from "@earendil-works/pi-coding-agent";
 import type { TextContent, ImageContent } from "@earendil-works/pi-ai";
+import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
 import { DEFAULTS } from "../../protocol/types";
 import type {
   EdgeToExtensionMessage,
@@ -516,6 +517,9 @@ function getAvailableModels(ctx: any): ModelInfo[] {
       provider: m.provider,
       id: m.id,
       name: m.name,
+      availableThinkingLevels: m.reasoning
+        ? (getSupportedThinkingLevels(m) as ThinkingLevel[])
+        : undefined,
     }));
   } catch {
     return [];
