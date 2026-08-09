@@ -88,6 +88,10 @@ export function Composer({
   const instanceModel = instance?.model;
   const availableModels = instance?.availableModels;
   const thinkingLevel = instance?.thinkingLevel;
+  // 从 availableModels 中查找当前模型的可选思考等级
+  const availableThinkingLevels = availableModels?.find(
+    (m) => m.provider === instanceModel?.provider && m.id === instanceModel?.id,
+  )?.availableThinkingLevels;
 
   const showContextInfo =
     !!contextUsage &&
@@ -286,6 +290,7 @@ export function Composer({
               {thinkingLevel && (
                 <ThinkingSelector
                   currentLevel={thinkingLevel}
+                  availableLevels={availableThinkingLevels ?? []}
                   onSelect={onSetThinkingLevel}
                 />
               )}

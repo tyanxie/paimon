@@ -4,7 +4,8 @@ import { ChevronDown, Check } from "lucide-react";
 import { Popover } from "./Popover";
 import type { ThinkingLevel } from "../../../../protocol/types";
 
-const THINKING_LEVELS: ThinkingLevel[] = [
+/** 老版本 Extension 不传 availableThinkingLevels 时的 fallback */
+const DEFAULT_THINKING_LEVELS: ThinkingLevel[] = [
   "off",
   "minimal",
   "low",
@@ -14,14 +15,18 @@ const THINKING_LEVELS: ThinkingLevel[] = [
 
 interface ThinkingSelectorProps {
   currentLevel: ThinkingLevel;
+  availableLevels: ThinkingLevel[];
   onSelect?: (level: ThinkingLevel) => void;
 }
 
 export function ThinkingSelector({
   currentLevel,
+  availableLevels,
   onSelect,
 }: ThinkingSelectorProps) {
   const canSelect = !!onSelect;
+  const levels =
+    availableLevels.length > 0 ? availableLevels : DEFAULT_THINKING_LEVELS;
 
   return (
     <Popover
@@ -48,7 +53,7 @@ export function ThinkingSelector({
     >
       {(close) => (
         <div className="py-1.5 px-1.5">
-          {THINKING_LEVELS.map((level) => {
+          {levels.map((level) => {
             const active = level === currentLevel;
             return (
               <button

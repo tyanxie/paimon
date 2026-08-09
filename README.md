@@ -28,7 +28,7 @@ Paimon，让你能在浏览器里跟所有 [Pi](https://pi.dev/) 实例对话。
 
 ## 📋 前置要求
 
-- [Pi](https://pi.dev/) >= 0.78.1
+- [Pi](https://pi.dev/) >= 0.80.6
 - Node.js >= 18（npm 安装方式）或 [Bun](https://bun.sh/)（从源码安装）
 
 ## 🚀 快速开始
