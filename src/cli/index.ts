@@ -25,6 +25,7 @@ if (role === "hub") {
   const { registerAttachCommand } = await import("./commands/attach");
   const { registerVersionCommand, version } =
     await import("./commands/version");
+  const { registerUpdateCommand } = await import("./commands/update");
 
   program
     .name("paimon")
@@ -35,6 +36,7 @@ if (role === "hub") {
   registerEdgeCommand(program);
   registerAttachCommand(program);
   registerVersionCommand(program);
+  registerUpdateCommand(program);
 
   program.parse();
 }
