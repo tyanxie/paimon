@@ -23,16 +23,18 @@ if (role === "hub") {
   const { registerHubCommand } = await import("./commands/hub");
   const { registerEdgeCommand } = await import("./commands/edge");
   const { registerAttachCommand } = await import("./commands/attach");
-  const pkg = (await import("../../package.json")).default;
+  const { registerVersionCommand, version } =
+    await import("./commands/version");
 
   program
     .name("paimon")
     .description("Remote observation and control panel for pi coding agent")
-    .version(pkg.version);
+    .version(version());
 
   registerHubCommand(program);
   registerEdgeCommand(program);
   registerAttachCommand(program);
+  registerVersionCommand(program);
 
   program.parse();
 }
