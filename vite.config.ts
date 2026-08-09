@@ -15,15 +15,28 @@ export default defineConfig({
   build: {
     outDir: "../../dist/web",
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          markdown: [
-            "react-markdown",
-            "remark-gfm",
-            "rehype-highlight",
-            "highlight.js",
-          ],
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+
+          // React 核心：极少更新，长期缓存
+          if (/[\/](?:react-dom|react|scheduler)[\/]/.test(id)) {
+            return "framework";
+          }
+
+          // Markdown 渲染生态：体积大、独立功能
+          if (
+            /[\/](?:react-markdown|remark-[\w-]+|rehype-[\w-]+|highlight\.js|lowlight|parse5|unified|micromark[\w-]*|mdast[\w-]*|hast[\w-]*|vfile[\w-]*|unist[\w-]*|js-yaml|property-information|get-east-asian-width|markdown-table|comma-separated-tokens|space-separated-tokens|longest-streak|ccount|escape-string-regexp|trim-lines|decode-named-character-reference|html-void-elements|html-url-attributes|web-namespaces|inline-style-parser|style-to-object|style-to-js|is-plain-obj|bail|trough|zwitch|fault|extend|format)[\/]/.test(
+              id,
+            )
+          ) {
+            return "markdown";
+          }
+
+          // 其余第三方依赖：偶尔更新
+          return "vendor";
         },
       },
     },
