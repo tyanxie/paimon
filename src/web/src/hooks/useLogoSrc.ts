@@ -4,16 +4,17 @@ import {
   useSettings,
   type Background,
 } from "../stores/useSettings";
+import { withBasePath } from "../utils/basePath";
 
 // 路径规则与 src/web/index.html 中的 preload 内联脚本一致
-const FALLBACK_LOGO_SRC = "/logos/mist/light/paimon-logo.png";
+const FALLBACK_LOGO_SRC = withBasePath("/logos/mist/light/paimon-logo.png");
 
 export function getLogoSrc(
   background: Background | undefined,
   theme: "light" | "dark" | undefined,
 ) {
   if (!background || !theme) return FALLBACK_LOGO_SRC;
-  return `/logos/${background}/${theme}/paimon-logo.png`;
+  return withBasePath(`/logos/${background}/${theme}/paimon-logo.png`);
 }
 
 export function useLogoSrc() {

@@ -4,16 +4,22 @@
 // 响应 401 时自动清除 token 并刷新页面，触发重新登录。
 
 import { getStoredToken, clearStoredToken } from "./token";
+import { withBasePath } from "./basePath";
 
 /**
  * 带认证的 fetch：自动附加 Bearer token。
  * 用于前端调用 Hub HTTP API。
  * 响应 401 时清除本地 token 并刷新页面（回到登录页）。
+ * 自动为以 / 开头的路径添加 basePath 前缀。
  */
 export async function authFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
+  // 为以 / 开头的路径添加 basePath 前缀
+  if (typeof input === "string" && input.startsWith("/")) {
+    input = withBasePath(input);
+  }
   const token = getStoredToken();
   const headers = new Headers(init?.headers);
   if (token) {

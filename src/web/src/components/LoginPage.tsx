@@ -6,6 +6,7 @@ import { useState, useCallback, type FormEvent } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { setStoredToken } from "../utils/token";
+import { withBasePath } from "../utils/basePath";
 
 interface LoginPageProps {
   /** 提交 token 后的回调 */
@@ -31,7 +32,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
       setVerifyError(false);
 
       try {
-        const res = await fetch("/api/instances", {
+        const res = await fetch(withBasePath("/api/instances"), {
           headers: { Authorization: `Bearer ${trimmed}` },
         });
         if (res.status === 401) {

@@ -12,9 +12,18 @@ export function registerHubCommand(program: Command): void {
     .option("--port <port>", "port number", String(DEFAULTS.PORT))
     .option("--host <host>", "bind address", DEFAULTS.HOST)
     .option("--token <token>", "access token (default: auto-generate)")
+    .option(
+      "--base-path <path>",
+      "base path for sub-path deployment (e.g. /paimon)",
+    )
     .action(async (opts) => {
       const { handleStart } = await import("./start");
-      await handleStart(parseInt(opts.port), opts.host, opts.token);
+      await handleStart(
+        parseInt(opts.port),
+        opts.host,
+        opts.token,
+        opts.basePath,
+      );
     });
 
   hub
@@ -31,12 +40,17 @@ export function registerHubCommand(program: Command): void {
     .option("--port <port>", "port number")
     .option("--host <host>", "bind address")
     .option("--token <token>", "access token (default: auto-generate)")
+    .option(
+      "--base-path <path>",
+      "base path for sub-path deployment (e.g. /paimon)",
+    )
     .action(async (opts) => {
       const { handleRestart } = await import("./restart");
       await handleRestart(
         opts.port ? parseInt(opts.port) : undefined,
         opts.host,
         opts.token,
+        opts.basePath,
       );
     });
 

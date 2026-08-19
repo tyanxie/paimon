@@ -6,6 +6,7 @@ import type {
   HubToBrowserMessage,
 } from "../../../protocol/types";
 import { DEFAULTS } from "../../../protocol/types";
+import { withBasePath } from "../utils/basePath";
 
 // ── 类型 ──
 
@@ -99,7 +100,7 @@ function doConnect() {
   if (disposed || !currentToken) return;
 
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const base = `${protocol}//${window.location.host}/ws/browser`;
+  const base = `${protocol}//${window.location.host}${withBasePath("/ws/browser")}`;
   const url = `${base}?token=${encodeURIComponent(currentToken)}`;
 
   hasOpened = false;
@@ -152,7 +153,7 @@ function doConnect() {
     if (!disposed && !hasOpened) {
       const headers: HeadersInit = {};
       if (currentToken) headers["Authorization"] = `Bearer ${currentToken}`;
-      fetch("/api/instances", { headers })
+      fetch(withBasePath("/api/instances"), { headers })
         .then((r) => {
           if (r.status === 401) {
             currentOnAuthError?.();

@@ -12,6 +12,7 @@ export async function handleRestart(
   port: number | undefined,
   host: string | undefined,
   token?: string,
+  basePath?: string,
 ): Promise<void> {
   // 先读取当前状态（stop 会清理状态文件，必须先读）
   const prevState = await readHubState();
@@ -19,6 +20,7 @@ export async function handleRestart(
   // 未指定则继承之前的值，兜底用默认值
   const finalPort = port ?? prevState?.port ?? DEFAULTS.PORT;
   const finalHost = host ?? prevState?.host ?? DEFAULTS.HOST;
+  const finalBasePath = basePath ?? prevState?.basePath;
 
   if (isNaN(finalPort) || finalPort < 1 || finalPort > 65535) {
     console.error("Invalid port number");
@@ -35,5 +37,5 @@ export async function handleRestart(
   } else if (prevState?.accessToken) {
     tokenOption = { token: prevState.accessToken, source: "inherited" };
   }
-  await startDaemon(finalPort, finalHost, tokenOption);
+  await startDaemon(finalPort, finalHost, tokenOption, finalBasePath);
 }
