@@ -5,6 +5,7 @@ import path from "path";
 
 export default defineConfig({
   root: "src/web",
+  base: "./", // 相对路径：产物不含绝对路径前缀，Hub 运行时通过注入 <base href> 实现子路径部署
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

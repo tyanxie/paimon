@@ -587,6 +587,8 @@ export interface HubState {
   startedAt: string; // ISO 8601
   /** Hub 访问令牌（Edge / Browser / API 连接时校验） */
   accessToken: string;
+  /** 子路径部署前缀（如 /paimon），无子路径时不存储 */
+  basePath?: string;
 }
 
 // ============================================================

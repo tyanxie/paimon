@@ -6,6 +6,7 @@ export async function handleStart(
   port: number,
   host: string,
   token?: string,
+  basePath?: string,
 ): Promise<void> {
   if (isNaN(port) || port < 1 || port > 65535) {
     console.error("Invalid port number");
@@ -14,5 +15,5 @@ export async function handleStart(
   const tokenOption: TokenOption | undefined = token
     ? { token, source: "--token" }
     : undefined;
-  await startDaemon(port, host, tokenOption);
+  await startDaemon(port, host, tokenOption, basePath);
 }

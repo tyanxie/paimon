@@ -3,6 +3,7 @@
 import { join, resolve } from "node:path";
 import { mkdir, unlink, rename } from "node:fs/promises";
 import { openSync, closeSync } from "node:fs";
+import { normalizeBasePath } from "../utils/basePath";
 import { DEFAULTS } from "../protocol/types";
 import type { HubState } from "../protocol/types";
 import {
@@ -90,7 +91,15 @@ export async function startDaemon(
   port: number,
   host: string,
   tokenOption?: TokenOption,
+  rawBasePath?: string,
 ): Promise<void> {
+  let basePath: string | undefined;
+  try {
+    basePath = normalizeBasePath(rawBasePath);
+  } catch (err) {
+    console.error((err as Error).message);
+    process.exit(1);
+  }
   // 检查是否已在运行
   const existing = await readHubState();
   if (existing && isProcessAlive(existing.pid)) {
@@ -128,6 +137,7 @@ export async function startDaemon(
       PAIMON_PORT: String(port),
       PAIMON_HOST: host,
       PAIMON_ACCESS_TOKEN: accessToken,
+      ...(basePath ? { PAIMON_BASE_PATH: basePath } : {}),
     },
     stdin: "ignore",
     // stdout/stderr 仅作为 crash 兜底，正常结构化日志走 rotating-file-stream
@@ -180,10 +190,11 @@ export async function startDaemon(
     host,
     startedAt: new Date().toISOString(),
     accessToken,
+    ...(basePath ? { basePath } : {}),
   });
 
   console.log(`Hub started (PID: ${child.pid}, port: ${port}, host: ${host})`);
-  console.log(`  Web UI: http://${healthHost}:${port}`);
+  console.log(`  Web UI: http://${healthHost}:${port}${basePath ?? ""}`);
   // 有意打印完整 token：用户首次启动时需要复制 token 用于 Web 登录和 Edge 配置
   console.log(`  Token:  ${accessToken} (${tokenSource})`);
   console.log(`  Logs:   ${getMainLogPath(DEFAULTS.HUB_LOG_NAME)}`);

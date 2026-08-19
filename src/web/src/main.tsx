@@ -3,12 +3,13 @@
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App";
+import { BASE_PATH } from "./utils/basePath";
 import "./i18n"; // 初始化 i18n（必须在 App 渲染前）
 import "./stores/useSettings"; // 初始化设置（DOM 同步）
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
-  <BrowserRouter>
+  <BrowserRouter basename={BASE_PATH || "/"}>
     <App />
   </BrowserRouter>,
 );

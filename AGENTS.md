@@ -76,6 +76,7 @@ bin/
 - **Hub→Edge request-response 通用模式** — `src/hub/pending.ts` 提供 `PendingRequests<T>` 泛型工具，基于 token 匹配 WS 异步请求与响应。spawn 和目录浏览（browse）均使用此模式
 - **目录浏览 API** — `GET /api/edges/:edgeId/browse?path=xxx`，Hub 转发给 Edge 执行 readdir。Edge 解析 parent/prefix（路径以 `/` 结尾列全部，否则以末段为前缀过滤），仅返回子目录，默认隐藏 dotfiles（前缀以 `.` 开头时显示），最多 200 条（截断时标记 `truncated`）。前端据此实现类 VS Code 的路径补全选择器
 - **bind 地址与安全** — Hub 和 Edge 默认 bind `127.0.0.1`（仅本机）。`--host` 可指定；非 loopback 时 CLI 和日志都会警告
+- **子路径部署（Base Path）** — Hub 支持通过 `--base-path /paimon` 部署到反向代理子路径下。优先级：`PAIMON_BASE_PATH` 环境变量 > `--base-path` 参数 > hub.json 继承 > 默认 `/`。Vite 构建使用 `base: './'`（相对路径），产物路径无关；Hub 运行时在返回 index.html 时动态注入 `<base href>` 和 `window.__BASE_PATH__`，前端通过 `src/web/src/utils/basePath.ts` 读取并用于 React Router basename、API/WS 路径前缀。Hub 自身会 strip basePath 前缀（路径以 basePath 开头则移除，否则保持原样），因此无需依赖反向代理 strip，直接访问和经 nginx 转发均可工作
 - **Access Token 认证** — Hub 启动时生成或接收 access token（优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 自动生成），写入 `hub.json`。Edge/Browser/HTTP API 连接 Hub 时必须携带 token（WS 通过 `?token=xxx`，HTTP 通过 `Authorization: Bearer xxx`）。`/api/health` 不需认证。`PAIMON_AUTH_DISABLED=1` 可关闭认证（仅开发调试）
 - **Token 生命周期** — token 存储于 `hub.json`，随 `paimon hub stop` 删除而失效。`paimon hub restart` 默认继承旧 token（显示来源为 `inherited`）。Pi Extension → Edge 不需认证（Edge 仅 bind loopback，天然同机信任）
 - **Edge token 来源** — 优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 同机 hub.json fallback

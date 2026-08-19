@@ -13,7 +13,9 @@ export async function handleStatus(): Promise<void> {
     console.log(`Hub is running`);
     console.log(`  PID:   ${state.pid}`);
     console.log(`  Bind:  ${state.host}:${state.port}`);
-    console.log(`  URL:   http://${displayHost}:${state.port}`);
+    console.log(
+      `  URL:   http://${displayHost}:${state.port}${state.basePath ?? ""}`,
+    );
     console.log(`  Token: ${maskToken(state.accessToken)}`);
   } else {
     console.log("Hub is not running");
