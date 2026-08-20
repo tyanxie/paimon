@@ -30,7 +30,8 @@ export default function App() {
   const { t } = useTranslation();
 
   // ── 认证 ──
-  const { authToken, authError, handleLogin, handleAuthError } = useAuth();
+  const { authToken, authError, probing, handleLogin, handleAuthError } =
+    useAuth();
 
   // ── WebSocket 连接管理 ──
   const connect = useWebSocket((s) => s.connect);
@@ -121,6 +122,17 @@ export default function App() {
       navigate("/");
     }
   }, [instanceListReady, selectedInstanceId, instances, navigate, t]);
+
+  // ── 探测中（等待 /api/token 响应）──
+  if (probing) {
+    return (
+      <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-center justify-center">
+        <div className="glass-panel p-8 flex flex-col items-center gap-4">
+          <div className="w-6 h-6 border-2 border-[var(--label-tertiary)] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   // ── 未认证 ──
   if (!authToken) {

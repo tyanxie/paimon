@@ -78,6 +78,7 @@ bin/
 - **bind 地址与安全** — Hub 和 Edge 默认 bind `127.0.0.1`（仅本机）。`--host` 可指定；非 loopback 时 CLI 和日志都会警告
 - **子路径部署（Base Path）** — Hub 支持通过 `--base-path /paimon` 部署到反向代理子路径下。优先级：`PAIMON_BASE_PATH` 环境变量 > `--base-path` 参数 > hub.json 继承 > 默认 `/`。Vite 构建使用 `base: './'`（相对路径），产物路径无关；Hub 运行时在返回 index.html 时动态注入 `<base href>` 和 `window.__BASE_PATH__`，前端通过 `src/web/src/utils/basePath.ts` 读取并用于 React Router basename、API/WS 路径前缀。Hub 自身会 strip basePath 前缀（路径以 basePath 开头则移除，否则保持原样），因此无需依赖反向代理 strip，直接访问和经 nginx 转发均可工作
 - **Access Token 认证** — Hub 启动时生成或接收 access token（优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 自动生成），写入 `hub.json`。Edge/Browser/HTTP API 连接 Hub 时必须携带 token（WS 通过 `?token=xxx`，HTTP 通过 `Authorization: Bearer xxx`）。`/api/health` 不需认证。`PAIMON_AUTH_DISABLED=1` 可关闭认证（仅开发调试）
+- **GET /api/token** — 认证通过后返回 `{ token }` 供前端自动获取。支持反向代理注入 Authorization header 的场景：前端加载时若 localStorage 无 token，先调此接口尝试自动登录，失败再弹登录页
 - **Token 生命周期** — token 存储于 `hub.json`，随 `paimon hub stop` 删除而失效。`paimon hub restart` 默认继承旧 token（显示来源为 `inherited`）。Pi Extension → Edge 不需认证（Edge 仅 bind loopback，天然同机信任）
 - **Edge token 来源** — 优先级：`PAIMON_ACCESS_TOKEN` 环境变量 > `--token` 参数 > 同机 hub.json fallback
 - **CLI 独立于 npm scripts** — `paimon hub start/stop/restart/status`、`paimon edge start/stop/restart/status`、`paimon attach`、`paimon update` 和 `paimon version` 是独立的 CLI 工具，入口在 `src/cli/`，不走 `package.json` scripts

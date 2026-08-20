@@ -87,6 +87,37 @@ paimon edge start --hub ws://<hub-ip>:8080 --token <access-token>
 
 > 🔒 `--host 0.0.0.0` exposes the service publicly. TLS is not currently supported — tokens are transmitted in plaintext and can be sniffed. Use only on trusted networks or behind a reverse proxy (nginx/caddy) with TLS.
 
+### Reverse Proxy Deployment
+
+It's recommended to use nginx or another reverse proxy for TLS and domain access. Hub supports sub-path deployment:
+
+```bash
+paimon hub start --base-path /paimon
+```
+
+nginx configuration example:
+
+```nginx
+location /paimon/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+}
+```
+
+Hub handles path prefix stripping automatically — no need to strip on the nginx side.
+
+If the reverse proxy already provides unified authentication (e.g. SSO), you can have it inject the `Authorization` header. The frontend will automatically obtain the token via `/api/token`, so users don't need to enter it manually:
+
+```nginx
+location /paimon/ {
+    # ... same proxy config as above ...
+    proxy_set_header Authorization "Bearer <access-token>";
+}
+```
+
 ## 📄 License
 
 MIT
