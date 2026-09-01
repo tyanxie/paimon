@@ -87,6 +87,37 @@ paimon edge start --hub ws://<hub-ip>:8080 --token <access-token>
 
 > 🔒 `--host 0.0.0.0` 会暴露服务到公网。当前不支持 TLS，token 明文传输可被网络嗅探，建议仅在可信网络使用或通过反向代理（nginx/caddy）提供 TLS。
 
+### 反向代理部署
+
+推荐通过 nginx 等反向代理提供 TLS 和域名访问。Hub 支持子路径部署：
+
+```bash
+paimon hub start --base-path /paimon
+```
+
+nginx 配置示例：
+
+```nginx
+location /paimon/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+}
+```
+
+Hub 会自动处理路径前缀，无需在 nginx 侧 strip。
+
+如果反向代理已经提供了统一认证（如 SSO），可以让代理注入 `Authorization` header，前端会自动通过 `/api/token` 获取 token，用户无需手动输入：
+
+```nginx
+location /paimon/ {
+    # ... 同上 proxy 配置 ...
+    proxy_set_header Authorization "Bearer <access-token>";
+}
+```
+
 ## 📄 License
 
 MIT

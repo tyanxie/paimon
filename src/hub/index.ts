@@ -156,6 +156,12 @@ const server = Bun.serve<WsData>({
       return Response.json({ status: "ok", uptime: process.uptime() });
     }
 
+    if (pathname === "/api/token" && method === "GET") {
+      const denied = authenticate(req);
+      if (denied) return denied;
+      return Response.json({ token: accessToken });
+    }
+
     if (pathname === "/api/instances" && method === "GET") {
       const denied = authenticate(req);
       if (denied) return denied;
