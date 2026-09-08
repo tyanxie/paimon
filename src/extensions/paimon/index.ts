@@ -232,14 +232,19 @@ export default function (pi: ExtensionAPI) {
   });
 
   // 压缩完成后更新上下文使用情况（tokens 会变为 null）
-  pi.on("session_compact", async (_event, ctx) => {
+  // 注意：pi 0.85+ 中 isIdle() = !agentRunning && !isCompacting，
+  // 而 session_compact 事件触发时 compaction controller 尚未清除，
+  // 导致 isCompacting 为 true、isIdle() 恒为 false，不能用于判断状态。
+  // 改用 event.reason 判断：手动压缩只能在 idle 时发起，完成后必然回到 idle；
+  // 自动压缩（threshold/overflow）发生在 agent 运行中，由 agent_end 负责置回 idle。
+  pi.on("session_compact", async (event, ctx) => {
     currentCtx = ctx;
     compacting = false;
     if (!client.connected) return;
     client.send({
       type: "state",
       payload: {
-        status: ctx.isIdle() ? "idle" : "streaming",
+        status: event.reason === "manual" ? "idle" : "streaming",
         contextUsage: getContextUsageInfo(ctx),
       },
     });
