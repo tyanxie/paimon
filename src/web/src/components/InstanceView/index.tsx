@@ -40,6 +40,7 @@ export function InstanceView() {
   // ── 对话状态（私有 hook） ──
   const {
     entries,
+    toolExecutions,
     isStreaming,
     loadState,
     errorMessage,
@@ -323,6 +324,7 @@ export function InstanceView() {
                     <EntryItem
                       entry={entry}
                       entries={entries}
+                      toolExecutions={toolExecutions}
                       isLast={isLast}
                       isStreaming={isStreaming}
                       onReEdit={isLast ? onReEdit : undefined}

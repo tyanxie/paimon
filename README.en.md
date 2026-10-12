@@ -15,6 +15,7 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 ## ✨ Features
 
 - 💬 **Real-time Streaming** — Streaming output, thinking process, and tool calls fully displayed
+- 🛠️ **Tool Execution Details** — Live top-level tool status, tool-provided partial output, errors, and execution duration, with history support
 - 🖼️ **Image Support** — Paste or upload images to send to LLM, view full-size in history
 - 🔄 **Multi-instance Switching** — Manage all pi sessions in one page
 - 🌐 **Multi-machine Support** — Centralized Hub + distributed Edge, manage pi instances across servers
@@ -25,6 +26,8 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 - 🌐 **Multi-language** — Chinese/English interface, switchable in settings
 - 🔔 **Task Notifications** — Sends a system notification after retries, compaction recovery, and queued messages have all finished
 - 📱 **Responsive Design** — Desktop/mobile adaptive, iOS Safe Area support
+
+After a refresh or reconnection during tool execution, subsequent update or end events resume the live display. Final results are also available through history. Running tools show call elapsed time measured with a monotonic clock; completed tools show the execution duration reported by Pi. The card's right side and detail header share one elapsed-time value and the same duration display, using `s` and `ms` with a non-breaking space between the number and unit. Bash details show the supplied timeout in the command area.
 
 ## 📋 Prerequisites
 

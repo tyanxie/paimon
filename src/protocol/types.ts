@@ -174,6 +174,33 @@ export interface PingMessage {
   type: "ping";
 }
 
+/** 工具生命周期事件的公共数据 */
+interface ToolExecutionEventBase {
+  toolCallId: string;
+  toolName: string;
+  parentToolCallId?: string;
+}
+
+/** 工具生命周期事件数据 */
+export type ToolExecutionEventData = ToolExecutionEventBase &
+  (
+    | {
+        type: "tool_execution_start";
+        args: Record<string, unknown>;
+      }
+    | {
+        type: "tool_execution_update";
+        args: Record<string, unknown>;
+        partialResult: unknown;
+      }
+    | {
+        type: "tool_execution_end";
+        result: unknown;
+        isError: boolean;
+        durationMs?: number;
+      }
+  );
+
 /** 转发 pi 事件 */
 export interface ExtEventMessage {
   type: "event";

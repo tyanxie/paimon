@@ -129,6 +129,10 @@ const zhCN = {
     copied: "已复制",
     copy: "复制",
     result: "结果",
+    output: "输出",
+    executionDuration: "执行耗时",
+    waitingDuration: "调用等待时间",
+    timeout: "超时时间",
     params: "参数",
   },
 

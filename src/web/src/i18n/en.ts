@@ -131,6 +131,10 @@ const en: LocaleResource = {
     copied: "Copied",
     copy: "Copy",
     result: "Result",
+    output: "Output",
+    executionDuration: "Execution duration",
+    waitingDuration: "Call elapsed time",
+    timeout: "Timeout",
     params: "Parameters",
   },
 

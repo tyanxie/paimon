@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { AlertCircle, ChevronRight } from "lucide-react";
 import type { ImagePayload } from "../../../../protocol/types";
-import type { SessionEntry } from "../../stores/types";
+import type { SessionEntry, ToolExecutionState } from "../../stores/types";
 import { MarkdownRenderer } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
@@ -17,12 +17,14 @@ export function EntryItem({
   entries,
   isLast,
   isStreaming,
+  toolExecutions,
   onReEdit,
 }: {
   entry: SessionEntry;
   entries: SessionEntry[];
   isLast: boolean;
   isStreaming: boolean;
+  toolExecutions?: ReadonlyMap<string, ToolExecutionState>;
   onReEdit?: () => void;
 }) {
   const streaming = isLast && isStreaming;
@@ -34,6 +36,7 @@ export function EntryItem({
           entry={entry}
           entries={entries}
           streaming={streaming}
+          toolExecutions={toolExecutions}
           onReEdit={onReEdit}
         />
       );
@@ -50,11 +53,13 @@ function RichMessageItem({
   entry,
   entries,
   streaming,
+  toolExecutions,
   onReEdit,
 }: {
   entry: SessionEntry;
   entries: SessionEntry[];
   streaming: boolean;
+  toolExecutions?: ReadonlyMap<string, ToolExecutionState>;
   onReEdit?: () => void;
 }) {
   const message = entry.message;
@@ -70,6 +75,7 @@ function RichMessageItem({
           entries={entries}
           streaming={streaming}
           stopReason={(message as any).stopReason}
+          toolExecutions={toolExecutions}
           errorMessage={(message as any).errorMessage}
           onReEdit={onReEdit}
         />
@@ -153,12 +159,14 @@ function AssistantMessage({
   streaming,
   stopReason,
   errorMessage,
+  toolExecutions,
   onReEdit,
 }: {
   content: unknown;
   entries: SessionEntry[];
   streaming: boolean;
   stopReason?: string;
+  toolExecutions?: ReadonlyMap<string, ToolExecutionState>;
   errorMessage?: string;
   onReEdit?: () => void;
 }) {
@@ -207,6 +215,7 @@ function AssistantMessage({
           streaming={streaming && i === content.length - 1}
           autoCollapse={block.type === "thinking" && hasOutput && !isThinking}
           isAborted={isAborted}
+          toolExecutions={toolExecutions}
         />
       ))}
       {/* 部分输出 + 最终报错 */}
@@ -232,12 +241,14 @@ function AssistantBlock({
   streaming,
   autoCollapse,
   isAborted,
+  toolExecutions,
 }: {
   block: any;
   entries: SessionEntry[];
   streaming: boolean;
   autoCollapse: boolean;
   isAborted: boolean;
+  toolExecutions?: ReadonlyMap<string, ToolExecutionState>;
 }) {
   switch (block.type) {
     case "text":
@@ -258,6 +269,7 @@ function AssistantBlock({
           name={block.name}
           args={block.arguments}
           toolCallId={block.id}
+          execution={toolExecutions?.get(block.id)}
           entries={entries}
           isAborted={isAborted}
         />
