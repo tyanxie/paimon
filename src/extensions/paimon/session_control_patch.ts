@@ -88,7 +88,7 @@ export function scheduleSwitch(path: string): boolean {
   return true;
 }
 
-/** 尝试执行 pending action。可在 agent_end 中作为安全网调用。 */
+/** 尝试执行 pending action。可在 agent_settled 中作为安全网调用。 */
 export function flush(): void {
   if (!_ops || !_pending) return;
   const action = _pending;

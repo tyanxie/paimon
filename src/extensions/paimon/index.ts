@@ -14,22 +14,21 @@ import type {
   EdgeToExtensionMessage,
   ExtHistoryMessage,
   ExtSessionListMessage,
+  ExtStateMessage,
   ContextUsageInfo,
+  InstanceStatus,
   ModelInfo,
+  SettledOutcome,
   ThinkingLevel,
 } from "../../protocol/types";
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
 import * as sessionControlPatch from "./session_control_patch";
-import * as compactionAbortPatch from "./compact_abort_patch";
 import { querySessionList, emptySessionListMessage } from "./session_list";
 
 // Hub spawn 实例时注入的一次性 token（仅页面创建的实例有）。
 // 注册时回传给 Hub，用于将 spawn 请求与注册成功的实例对应起来。
 const SPAWN_TOKEN = process.env.PAIMON_SPAWN_TOKEN;
-
-// 跟踪 compaction 状态（兜底用）
-let compacting = false;
 
 export default function (pi: ExtensionAPI) {
   // pi extension 连接本机 Edge（不再直连 Hub）
@@ -39,13 +38,14 @@ export default function (pi: ExtensionAPI) {
   );
 
   let registered = false;
+  // 保存最新状态，断线重连后恢复 Hub 中的实例状态
+  let currentStatus: InstanceStatus = "idle";
+  let latestRunOutcome: SettledOutcome = "completed";
   // 保存最新的 ctx 引用，用于响应 get_history
   let currentCtx: ExtensionContext | null = null;
 
   // 安装 session 控制 patch（截获 newSession/switchSession 函数引用）
   sessionControlPatch.install();
-  // 安装 compaction abort patch（截获 session 实例以支持取消压缩）
-  compactionAbortPatch.install();
 
   const currentHostname = hostname();
 
@@ -81,6 +81,8 @@ export default function (pi: ExtensionAPI) {
           spawnToken: SPAWN_TOKEN,
         },
       });
+      // settlement 事件不重放，仅恢复实例当前状态
+      client.send({ type: "state", payload: { status: currentStatus } });
     },
     onDisconnected() {
       registered = false;
@@ -92,6 +94,11 @@ export default function (pi: ExtensionAPI) {
       handleHubMessage(pi, msg, client, () => currentCtx);
     },
   });
+
+  const sendState = (payload: ExtStateMessage["payload"]): void => {
+    if (payload.status) currentStatus = payload.status;
+    if (client.connected) client.send({ type: "state", payload });
+  };
 
   // 启动连接
   client.connect();
@@ -123,8 +130,7 @@ export default function (pi: ExtensionAPI) {
   // 转发状态变更 + 更新注册信息（确保 model 正确）
   pi.on("agent_start", async (_event, ctx) => {
     currentCtx = ctx;
-    // 兜底：如果之前卡在 compacting 状态，agent_start 时强制恢复
-    compacting = false;
+    latestRunOutcome = "completed";
     if (ctx.model) {
       client.send({
         type: "register",
@@ -146,7 +152,7 @@ export default function (pi: ExtensionAPI) {
         },
       });
     }
-    client.send({ type: "state", payload: { status: "streaming" } });
+    sendState({ status: "streaming" });
   });
 
   // 模型切换时同步给 Hub
@@ -179,74 +185,66 @@ export default function (pi: ExtensionAPI) {
     });
   });
 
-  // 每次 message 结束时更新上下文使用情况 + git 分支
-  pi.on("message_end", async (_event, ctx) => {
+  // 每次 message 结束时更新最终结果、上下文使用情况和 git 分支
+  pi.on("message_end", async (event, ctx) => {
     currentCtx = ctx;
-    if (!client.connected) return;
-    client.send({
-      type: "state",
-      payload: {
-        status: "streaming",
-        contextUsage: getContextUsageInfo(ctx),
-        gitBranch: getGitBranch(ctx.cwd),
-      },
+    if (event.message.role === "assistant") {
+      latestRunOutcome =
+        event.message.stopReason === "error" ? "error" : "completed";
+    }
+    sendState({
+      status: "streaming",
+      contextUsage: getContextUsageInfo(ctx),
+      gitBranch: getGitBranch(ctx.cwd),
     });
   });
 
-  pi.on("agent_end", async () => {
-    const ctx = currentCtx;
-    // 兜底：如果之前卡在 compacting 状态，agent_end 时强制恢复
-    compacting = false;
-    client.send({
-      type: "state",
-      payload: {
-        status: "idle",
-        contextUsage: ctx ? getContextUsageInfo(ctx) : undefined,
-        gitBranch: ctx ? getGitBranch(ctx.cwd) : undefined,
-      },
+  // 仅有 agent_settled 能保证自动重试、压缩恢复和排队消息均已完成
+  pi.on("agent_settled", async (event, ctx) => {
+    currentCtx = ctx;
+    sendState({
+      status: "idle",
+      settledOutcome: event.aborted ? "aborted" : latestRunOutcome,
+      contextUsage: getContextUsageInfo(ctx),
+      gitBranch: getGitBranch(ctx.cwd),
     });
-    // 安全网：agent 结束后尝试执行 pending session 操作
+    // 完全空闲后执行 pending session 操作
     setTimeout(() => sessionControlPatch.flush(), 0);
   });
 
-  // 压缩开始前：标记 compacting 状态
+  // 压缩开始前更新实例状态
   pi.on("session_before_compact", async (event, ctx) => {
     currentCtx = ctx;
-    compacting = true;
-    if (!client.connected) return;
-    client.send({
-      type: "state",
-      payload: { status: "compacting" },
-    });
-    // 监听取消信号（ESC），即时回退状态
-    event.signal.addEventListener(
-      "abort",
-      () => {
-        compacting = false;
-        if (client.connected) {
-          client.send({ type: "state", payload: { status: "idle" } });
-        }
-      },
-      { once: true },
-    );
+    sendState({ status: "compacting" });
+    // 手动压缩取消后不会触发 agent_settled，需要在此恢复状态
+    if (event.reason === "manual") {
+      event.signal.addEventListener(
+        "abort",
+        () => sendState({ status: "idle" }),
+        { once: true },
+      );
+    }
   });
 
   // 压缩完成后更新上下文使用情况（tokens 会变为 null）
-  // 注意：pi 0.85+ 中 isIdle() = !agentRunning && !isCompacting，
-  // 而 session_compact 事件触发时 compaction controller 尚未清除，
-  // 导致 isCompacting 为 true、isIdle() 恒为 false，不能用于判断状态。
-  // 改用 event.reason 判断：手动压缩只能在 idle 时发起，完成后必然回到 idle；
-  // 自动压缩（threshold/overflow）发生在 agent 运行中，由 agent_end 负责置回 idle。
+  // 手动压缩完成后恢复空闲；自动压缩仍属于当前 agent 运行。
   pi.on("session_compact", async (event, ctx) => {
     currentCtx = ctx;
-    compacting = false;
-    if (!client.connected) return;
-    client.send({
-      type: "state",
-      payload: {
-        status: event.reason === "manual" ? "idle" : "streaming",
-        contextUsage: getContextUsageInfo(ctx),
-      },
+    sendState({
+      status: event.reason === "manual" ? "idle" : "streaming",
+      contextUsage: getContextUsageInfo(ctx),
+    });
+  });
+
+  // 压缩失败后也需要离开 compacting 状态
+  pi.on("session_compact_failed", async (event, ctx) => {
+    currentCtx = ctx;
+    if (event.reason !== "manual" && !event.aborted) {
+      latestRunOutcome = "error";
+    }
+    sendState({
+      status: event.reason === "manual" ? "idle" : "streaming",
+      contextUsage: getContextUsageInfo(ctx),
     });
   });
 
@@ -326,13 +324,9 @@ function handleHubMessage(
       pi.sendUserMessage(msg.payload.message, { deliverAs: "steer" });
       break;
     case "abort": {
-      if (compacting) {
-        // compacting 状态下取消压缩
-        compactionAbortPatch.abortCompaction();
-      } else {
-        const ctx = getCurrentCtx();
-        ctx?.abort();
-      }
+      // Pi 1.1 的 ctx.abort() 会统一终止 agent、重试和 compaction
+      const ctx = getCurrentCtx();
+      ctx?.abort();
       break;
     }
     case "set_model": {

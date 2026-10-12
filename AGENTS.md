@@ -61,6 +61,7 @@ bin/
 ## 关键约定
 
 - **pi SDK 行为依赖** — `ctx.sessionManager.getBranch()` 只返回已完成的消息（`appendMessage` 在 `message_end` 触发），streaming 中的消息不在列表中。这是 pi SDK 的行为，非 paimon 控制
+- **任务完成边界** — Pi 1.1.0 的 `agent_settled` 表示自动重试、压缩恢复和排队消息均已结束。Extension 仅在此事件中将运行状态更新为 `idle`，并通过 `settledOutcome` 区分 `completed`、`aborted` 和 `error`。Web 端仅为 `completed` 发送任务完成通知
 - **四层架构：Web → Hub → Edge → Pi** — Hub 不再直接连接 pi extension，所有 pi 通信通过 Edge 中转。Hub 只与 Edge 和 Browser 交互，Edge 只与本机 pi 和 Hub 交互
 - **Edge 是本机 pi 的聚合代理** — 每台服务器跑一个 Edge daemon，管理本机所有 pi 实例，通过单条 WS 多路复用上报 Hub
 - **Edge 端口与 Hub 端口独立** — Hub 默认 :8080（`PAIMON_PORT`），Edge 默认 :8033（`PAIMON_EDGE_PORT`）。Pi extension 连接本机 Edge 端口
