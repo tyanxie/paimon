@@ -28,7 +28,7 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 
 ## 📋 Prerequisites
 
-- [Pi](https://pi.dev/) >= 0.78.1
+- [Pi](https://pi.dev/) >= 0.80.6
 - Node.js >= 18 (for npm install) or [Bun](https://bun.sh/) (for source install)
 
 ## 🚀 Quick Start
@@ -85,17 +85,17 @@ paimon edge start --hub ws://localhost:8080
 paimon edge start --hub ws://<hub-ip>:8080 --token <access-token>
 ```
 
-> 🔒 `--host 0.0.0.0` exposes the service publicly. TLS is not currently supported — tokens are transmitted in plaintext and can be sniffed. Use only on trusted networks or behind a reverse proxy (nginx/caddy) with TLS.
+> 🔒 For external access, use a trusted network or a reverse proxy with TLS.
 
 ### Reverse Proxy Deployment
 
-It's recommended to use nginx or another reverse proxy for TLS and domain access. Hub supports sub-path deployment:
+Example sub-path deployment with nginx:
 
 ```bash
 paimon hub start --base-path /paimon
 ```
 
-nginx configuration example:
+nginx configuration:
 
 ```nginx
 location /paimon/ {
@@ -107,16 +107,21 @@ location /paimon/ {
 }
 ```
 
-Hub handles path prefix stripping automatically — no need to strip on the nginx side.
+Access the Web UI at `https://<domain>/paimon/`.
 
-If the reverse proxy already provides unified authentication (e.g. SSO), you can have it inject the `Authorization` header. The frontend will automatically obtain the token via `/api/token`, so users don't need to enter it manually:
+If the proxy already provides authentication such as SSO, configure the same token in Hub and nginx for automatic login:
+
+```bash
+paimon hub start --base-path /paimon --token <access-token>
+```
+
+Add this header inside the nginx `location` block above:
 
 ```nginx
-location /paimon/ {
-    # ... same proxy config as above ...
-    proxy_set_header Authorization "Bearer <access-token>";
-}
+proxy_set_header Authorization "Bearer <access-token>";
 ```
+
+> 🔒 Proxy authentication should protect the entire `/paimon/` path and allow access only to trusted users.
 
 ## 📄 License
 
