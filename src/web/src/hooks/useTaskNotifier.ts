@@ -1,36 +1,30 @@
-// 任务完成系统通知：检测实例 streaming/compacting → idle 转换，弹系统通知
+// 任务完成系统通知：收到 agent_settled 的 completed 结果后弹出系统通知
 //
-// 内部维护 prevStatusMap 记录各实例上一次状态，不依赖 subscribe 注册顺序。
-// 仅在页面失焦（document.hasFocus() === false）时弹系统通知。
+// 仅在页面失焦（document.hasFocus() === false）时弹出系统通知。
 
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import i18next from "i18next";
 import { useWebSocket } from "../stores/useWebSocket";
-import { useInstances } from "../stores/useInstances";
 import { useSettings } from "../stores/useSettings";
 import { getCurrentLogoSrc } from "./useLogoSrc";
 import type {
   InstanceId,
-  InstanceStatus,
+  HubInstanceUpdateMessage,
   HubToBrowserMessage,
 } from "../../../protocol/types";
 
 /** 是否支持 Notification API */
 export const supportsNotification = "Notification" in window;
 
-/** 是否属于"忙碌 → 空闲"的完成转换 */
-function isCompletionTransition(
-  prev: InstanceStatus | undefined,
-  next: InstanceStatus,
+/** 是否为需要发送完成通知的状态更新 */
+export function isCompletedSettlement(
+  payload: HubInstanceUpdateMessage["payload"],
 ): boolean {
-  return (prev === "streaming" || prev === "compacting") && next === "idle";
+  return payload.action === "updated" && payload.settledOutcome === "completed";
 }
 
-/**
- * 挂载任务完成通知。内部维护 prevStatusMap 跟踪状态变化，
- * 不依赖外部 subscribe 顺序。
- */
+/** 挂载任务完成通知。 */
 export function useTaskNotifier() {
   const subscribe = useWebSocket((s) => s.subscribe);
   const navigate = useNavigate();
@@ -47,45 +41,15 @@ export function useTaskNotifier() {
     });
   }, []);
 
-  // 维护各实例的上一次状态
-  const prevStatusMap = useRef<Map<InstanceId, InstanceStatus>>(new Map());
-
-  // 初始化 prevStatusMap（从当前 store 快照）
-  useEffect(() => {
-    const instances = useInstances.getState().instances;
-    for (const inst of instances) {
-      prevStatusMap.current.set(inst.id, inst.status);
-    }
-  }, []);
-
   useEffect(() => {
     return subscribe((msg: HubToBrowserMessage) => {
-      // 同步 instance_list 到 prevStatusMap
-      if (msg.type === "instance_list") {
-        prevStatusMap.current.clear();
-        for (const inst of msg.payload.instances) {
-          prevStatusMap.current.set(inst.id, inst.status);
-        }
-        return;
-      }
-
-      if (msg.type === "instance_update") {
-        const { action, instance } = msg.payload;
-
-        if (action === "disconnected") {
-          prevStatusMap.current.delete(instance.id);
-          return;
-        }
-
-        const prevStatus = prevStatusMap.current.get(instance.id);
-        // 更新 map（无论是否需要通知）
-        prevStatusMap.current.set(instance.id, instance.status);
-
-        if (action === "updated" && notificationRef.current) {
-          if (isCompletionTransition(prevStatus, instance.status)) {
-            showCompletionNotification(instance.id, instance.cwd, navigateRef);
-          }
-        }
+      if (
+        msg.type === "instance_update" &&
+        notificationRef.current &&
+        isCompletedSettlement(msg.payload)
+      ) {
+        const { instance } = msg.payload;
+        showCompletionNotification(instance.id, instance.cwd, navigateRef);
       }
     });
   }, [subscribe]);

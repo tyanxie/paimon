@@ -23,12 +23,12 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 - 🔒 **Access Control** — Access Token protects all API and WebSocket connections
 - 🎨 **Frosted Glass UI** — Clean macOS-style design
 - 🌐 **Multi-language** — Chinese/English interface, switchable in settings
-- 🔔 **Task Notifications** — Auto system notification when an instance completes its task in background
+- 🔔 **Task Notifications** — Sends a system notification after retries, compaction recovery, and queued messages have all finished
 - 📱 **Responsive Design** — Desktop/mobile adaptive, iOS Safe Area support
 
 ## 📋 Prerequisites
 
-- [Pi](https://pi.dev/) >= 0.80.6
+- [Pi](https://pi.dev/) >= 1.1.0
 - Node.js >= 18 (for npm install) or [Bun](https://bun.sh/) (for source install)
 
 ## 🚀 Quick Start

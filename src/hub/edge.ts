@@ -9,6 +9,7 @@ import type {
   InstanceId,
   InstanceInfo,
   InstanceStatus,
+  SettledOutcome,
   ModelInfo,
   ContextUsageInfo,
   ThinkingLevel,
@@ -287,6 +288,7 @@ class HubEdgeRegistry {
     instanceId: InstanceId,
     state: {
       status?: InstanceStatus;
+      settledOutcome?: SettledOutcome;
       contextUsage?: ContextUsageInfo;
       gitBranch?: string | null;
       model?: ModelInfo;
@@ -308,7 +310,11 @@ class HubEdgeRegistry {
 
     this.broadcastToBrowsers({
       type: "instance_update",
-      payload: { instance: record.info, action: "updated" },
+      payload: {
+        instance: record.info,
+        action: "updated",
+        settledOutcome: state.settledOutcome,
+      },
     });
   }
 

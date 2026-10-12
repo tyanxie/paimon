@@ -18,7 +18,13 @@ export interface ImagePayload {
 
 /** 思考等级（与 pi 内部 ModelThinkingLevel 一致） */
 export type ThinkingLevel =
-  "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+  | "off"
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh"
+  | "max";
 
 /** 模型信息 */
 export interface ModelInfo {
@@ -41,6 +47,9 @@ export interface ContextUsageInfo {
 
 /** 实例状态 */
 export type InstanceStatus = "idle" | "streaming" | "compacting";
+
+/** 一次 agent 运行完全结束后的结果 */
+export type SettledOutcome = "completed" | "aborted" | "error";
 
 /** pi 实例信息 */
 export interface InstanceInfo {
@@ -183,6 +192,8 @@ export interface ExtStateMessage {
   type: "state";
   payload: {
     status?: InstanceStatus;
+    /** agent 完全结束时携带的本次结果，仅随状态更新传递 */
+    settledOutcome?: SettledOutcome;
     /** 上下文使用情况 */
     contextUsage?: ContextUsageInfo;
     /** Git 分支名 */
@@ -517,6 +528,8 @@ export interface HubInstanceUpdateMessage {
     instance: InstanceInfo;
     /** 更新类型 */
     action: "connected" | "disconnected" | "updated";
+    /** agent 完全结束时携带的本次结果，不属于实例持久状态 */
+    settledOutcome?: SettledOutcome;
   };
 }
 
@@ -654,6 +667,8 @@ export interface EdgeInstanceStateMessage {
   payload: {
     instanceId: InstanceId;
     status?: InstanceStatus;
+    /** agent 完全结束时携带的本次结果，仅随状态更新传递 */
+    settledOutcome?: SettledOutcome;
     contextUsage?: ContextUsageInfo;
     gitBranch?: string | null;
     model?: ModelInfo;
