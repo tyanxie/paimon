@@ -7,6 +7,9 @@ export const FORWARDED_EVENTS = [
   "message_start",
   "message_update",
   "message_end",
+  "tool_execution_start",
+  "tool_execution_update",
+  "tool_execution_end",
 ] as const;
 
 /** 将 pi 事件包装为协议消息 */

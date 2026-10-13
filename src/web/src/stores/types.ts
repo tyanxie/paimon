@@ -30,6 +30,23 @@ export function getSessionEntryRenderKey(entry: SessionEntry): string {
   return key;
 }
 
+/** 当前页面接收到的工具执行状态 */
+export type ToolExecutionState = {
+  /** 接收到开始事件时的 performance.now()，用于运行期间计时 */
+  startedAt?: number;
+} & (
+  | {
+      status: "running";
+      partialResult?: unknown;
+    }
+  | {
+      status: "completed";
+      result: unknown;
+      isError: boolean;
+      durationMs?: number;
+    }
+);
+
 // ── ConversationLoadState ──
 
 export type ConversationLoadState =

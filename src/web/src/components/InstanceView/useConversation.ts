@@ -15,15 +15,21 @@ import type {
   InstanceInfo,
   HubToBrowserMessage,
   SessionListItem,
+  ToolExecutionEventData,
 } from "../../../../protocol/types";
 import { useWebSocket } from "../../stores/useWebSocket";
-import type { SessionEntry, ConversationLoadState } from "../../stores/types";
+import type {
+  SessionEntry,
+  ConversationLoadState,
+  ToolExecutionState,
+} from "../../stores/types";
 import { showToast } from "../ui/Toast";
 
 // ── 返回值类型 ──
 
 export interface ConversationState {
   entries: SessionEntry[];
+  toolExecutions: ReadonlyMap<string, ToolExecutionState>;
   streamingEntry: SessionEntry | null;
   isStreaming: boolean;
   loadState: ConversationLoadState;
@@ -71,6 +77,9 @@ export function useConversation(
   const connected = useWebSocket((s) => s.connectionState === "connected");
 
   const [entries, setEntries] = useState<SessionEntry[]>([]);
+  const [toolExecutions, setToolExecutions] = useState<
+    Map<string, ToolExecutionState>
+  >(new Map());
   const [streamingEntry, setStreamingEntry] = useState<SessionEntry | null>(
     null,
   );
@@ -97,6 +106,8 @@ export function useConversation(
   // ── 重置对话状态 ──
   const resetConversation = useCallback(() => {
     setEntries([]);
+    setToolExecutions(new Map());
+    streamingKeyRef.current = null;
     setStreamingEntry(null);
     setLoadState("refreshing");
     setErrorMessage(null);
@@ -223,6 +234,50 @@ export function useConversation(
     const d = data as Record<string, unknown>;
 
     switch (event) {
+      case "tool_execution_start":
+      case "tool_execution_update":
+      case "tool_execution_end": {
+        const tool = { ...d, type: event } as ToolExecutionEventData;
+        if (tool.parentToolCallId || !tool.toolCallId) break;
+        const startedAt =
+          tool.type === "tool_execution_start" ? performance.now() : undefined;
+        setToolExecutions((prev) => {
+          const current = prev.get(tool.toolCallId);
+          // 结束后的状态保持稳定，迟到的更新不会重新显示执行中。
+          if (
+            current?.status === "completed" &&
+            tool.type !== "tool_execution_end"
+          )
+            return prev;
+          const next = new Map(prev);
+          next.set(
+            tool.toolCallId,
+            tool.type === "tool_execution_end"
+              ? {
+                  status: "completed",
+                  startedAt: current?.startedAt,
+                  result: tool.result,
+                  isError: tool.isError,
+                  durationMs: tool.durationMs,
+                }
+              : {
+                  status: "running",
+                  startedAt:
+                    tool.type === "tool_execution_start"
+                      ? startedAt
+                      : current?.startedAt,
+                  partialResult:
+                    tool.type === "tool_execution_update"
+                      ? tool.partialResult
+                      : current?.status === "running"
+                        ? current.partialResult
+                        : undefined,
+                },
+          );
+          return next;
+        });
+        break;
+      }
       case "message_start": {
         const message = d.message as SessionEntry["message"];
         if (!message || message.role !== "assistant") break;
@@ -264,6 +319,18 @@ export function useConversation(
             __renderKey: stableKey,
           };
           setEntries((prev) => [...prev, entry]);
+          if (
+            message.role === "toolResult" &&
+            typeof message.toolCallId === "string"
+          ) {
+            const toolCallId = message.toolCallId;
+            setToolExecutions((prev) => {
+              if (!prev.has(toolCallId)) return prev;
+              const next = new Map(prev);
+              next.delete(toolCallId);
+              return next;
+            });
+          }
         }
         streamingKeyRef.current = null;
         setStreamingEntry(null);
@@ -289,6 +356,18 @@ export function useConversation(
       // 首次加载 / 刷新
       setEntries(normalized);
     }
+    setToolExecutions((prev) => {
+      const next = new Map(prev);
+      for (const entry of messages) {
+        if (
+          entry.message?.role === "toolResult" &&
+          typeof entry.message.toolCallId === "string"
+        ) {
+          next.delete(entry.message.toolCallId);
+        }
+      }
+      return next;
+    });
     setHasMore(newHasMore);
     setLoadState("idle");
     setErrorMessage(null);
@@ -324,6 +403,7 @@ export function useConversation(
 
   return {
     entries: streamingEntry ? [...entries, streamingEntry] : entries,
+    toolExecutions,
     streamingEntry,
     isStreaming: streamingEntry !== null,
     loadState,

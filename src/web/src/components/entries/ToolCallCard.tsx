@@ -1,7 +1,7 @@
 // Tool Call 卡片：折叠摘要 + 点击展开弹窗查看详情
 // 通过 entries 查找配对的 toolResult
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   FileText,
   Terminal,
@@ -13,7 +13,7 @@ import {
   Timer,
 } from "lucide-react";
 import { ModalShell } from "../ui/ModalShell";
-import type { SessionEntry } from "../../stores/types";
+import type { SessionEntry, ToolExecutionState } from "../../stores/types";
 import { MarkdownRenderer } from "./Markdown";
 import { useTranslation } from "react-i18next";
 
@@ -133,8 +133,33 @@ interface ToolResult {
   /** 纯文本内容（已从 content blocks 提取） */
   content: string;
   isError: boolean;
+  durationMs?: number;
   /** 工具特定元数据（如 edit 的 diff） */
   details?: Record<string, any>;
+}
+
+/** 提取工具结果中的文本和元数据 */
+function normalizeToolResult(
+  value: unknown,
+  isError = false,
+  durationMs?: number,
+): ToolResult {
+  const result = value as {
+    content?: unknown;
+    details?: Record<string, any>;
+  } | null;
+  const content = result?.content;
+  return {
+    content: Array.isArray(content)
+      ? content
+          .filter((block) => block?.type === "text")
+          .map((block) => block.text)
+          .join("\n")
+      : String(content ?? ""),
+    details: result?.details,
+    isError,
+    durationMs,
+  };
 }
 
 /** 从 entries 中查找匹配的 toolResult */
@@ -145,17 +170,7 @@ function findToolResult(
   for (const entry of entries) {
     const msg = entry.message as any;
     if (msg?.role === "toolResult" && msg.toolCallId === toolCallId) {
-      const text = Array.isArray(msg.content)
-        ? msg.content
-            .filter((b: any) => b.type === "text")
-            .map((b: any) => b.text)
-            .join("\n")
-        : String(msg.content ?? "");
-      return {
-        content: text,
-        isError: msg.isError ?? false,
-        details: msg.details ?? undefined,
-      };
+      return normalizeToolResult(msg, msg.isError ?? false, msg.durationMs);
     }
   }
   return null;
@@ -166,27 +181,50 @@ export function ToolCallCard({
   args,
   toolCallId,
   entries,
+  execution,
   isAborted = false,
 }: {
   name: string;
   args: Record<string, any>;
   toolCallId?: string;
   entries: SessionEntry[];
+  execution?: ToolExecutionState;
   isAborted?: boolean;
 }) {
   const [showModal, setShowModal] = useState(false);
   const summary = getToolSummary(name, args);
 
   // 查找配对的 toolResult
-  const result = useMemo(
+  const historyResult = useMemo(
     () => (toolCallId ? findToolResult(entries, toolCallId) : null),
     [entries, toolCallId],
   );
-
-  const isCompleted = result !== null;
-  const isError = result?.isError ?? false;
+  const finalResult =
+    historyResult ??
+    (execution?.status === "completed"
+      ? normalizeToolResult(
+          execution.result,
+          execution.isError,
+          execution.durationMs,
+        )
+      : null);
+  const result =
+    finalResult ??
+    (execution?.status === "running" && execution.partialResult != null
+      ? normalizeToolResult(execution.partialResult)
+      : null);
+  const isCompleted = finalResult !== null;
+  const isRunning = !isCompleted && !isAborted;
+  const isError = finalResult?.isError ?? false;
   // 工具未完成且消息已终止（abort / error）→ 视为失败
   const isFailed = isError || (!isCompleted && isAborted);
+  const elapsed = useToolElapsed(isRunning ? execution?.startedAt : undefined);
+  const durationDisplay = (
+    <ToolDuration
+      elapsed={finalResult?.durationMs ?? elapsed}
+      isFinal={isCompleted}
+    />
+  );
 
   // 按工具名选择弹窗组件
   const DetailModal =
@@ -218,21 +256,24 @@ export function ToolCallCard({
             {summary}
           </span>
         )}
-        {/* 右侧状态 icon：执行中 / 失败 / 完成 */}
-        <span className="flex-shrink-0 ml-auto">
-          {!isCompleted && !isAborted ? (
-            <Loader2
-              size={14}
-              className="text-[var(--label-tertiary)] animate-spin"
-            />
-          ) : isFailed ? (
-            <CircleX size={14} className="text-red-400" />
-          ) : (
-            <ChevronRight
-              size={14}
-              className="text-[var(--label-tertiary)] group-hover:text-[var(--label-secondary)] transition-colors"
-            />
-          )}
+        <span className="ml-auto flex items-center gap-2.5 flex-shrink-0">
+          {durationDisplay}
+          {/* 右侧状态 icon：执行中 / 失败 / 完成 */}
+          <span className="flex-shrink-0">
+            {!isCompleted && !isAborted ? (
+              <Loader2
+                size={14}
+                className="text-[var(--label-tertiary)] animate-spin"
+              />
+            ) : isFailed ? (
+              <CircleX size={14} className="text-red-400" />
+            ) : (
+              <ChevronRight
+                size={14}
+                className="text-[var(--label-tertiary)] group-hover:text-[var(--label-secondary)] transition-colors"
+              />
+            )}
+          </span>
         </span>
       </button>
 
@@ -242,6 +283,8 @@ export function ToolCallCard({
           name={name}
           args={args}
           result={result}
+          durationDisplay={durationDisplay}
+          isRunning={isRunning}
           isAborted={isAborted}
           onClose={() => setShowModal(false)}
         />
@@ -258,8 +301,49 @@ interface DetailModalProps {
   name: string;
   args: Record<string, any>;
   result: ToolResult | null;
+  durationDisplay: React.ReactNode;
+  isRunning: boolean;
   isAborted: boolean;
   onClose: () => void;
+}
+
+/** 同一工具调用共享运行计时 */
+function useToolElapsed(startedAt?: number): number | undefined {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (startedAt === undefined) return;
+    const update = () => setElapsed(Math.max(0, performance.now() - startedAt));
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [startedAt]);
+  return startedAt === undefined ? undefined : elapsed;
+}
+
+/** 工具调用等待时间和最终执行耗时 */
+function ToolDuration({
+  elapsed,
+  isFinal,
+}: {
+  elapsed?: number;
+  isFinal: boolean;
+}) {
+  const { t } = useTranslation();
+  if (elapsed === undefined || !Number.isFinite(elapsed) || elapsed <= 0)
+    return null;
+  return (
+    <span
+      title={t(
+        isFinal ? "entries.executionDuration" : "entries.waitingDuration",
+      )}
+      className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)] flex-shrink-0"
+    >
+      <Timer size={12} />
+      {elapsed < 1000
+        ? `${Math.max(1, Math.round(elapsed))}\u00a0ms`
+        : `${(elapsed / 1000).toFixed(1)}\u00a0s`}
+    </span>
+  );
 }
 
 /** 执行中指示器 */
@@ -285,13 +369,20 @@ function AbortedIndicator() {
 }
 
 /** 工具弹窗标题（icon + name） */
-function ToolModalTitle({ name }: { name: string }) {
+function ToolModalTitle({
+  name,
+  isRunning = false,
+}: {
+  name: string;
+  isRunning?: boolean;
+}) {
   return (
     <>
       <span className="text-[var(--label-secondary)] select-none">
         {getToolIcon(name)}
       </span>
       {name}
+      {isRunning && <RunningIndicator />}
     </>
   );
 }
@@ -301,6 +392,8 @@ function ReadDetailModal({
   name,
   args,
   result,
+  durationDisplay,
+  isRunning,
   isAborted,
   onClose,
 }: DetailModalProps) {
@@ -325,7 +418,13 @@ function ReadDetailModal({
       : null;
 
   return (
-    <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
+    <ModalShell
+      title={
+        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
+      }
+      onClose={onClose}
+      trailing={durationDisplay}
+    >
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
         <p className="text-[13px] text-[var(--label-secondary)] break-all leading-[20px] font-mono">
@@ -360,9 +459,12 @@ function BashDetailModal({
   name,
   args,
   result,
+  durationDisplay,
+  isRunning,
   isAborted,
   onClose,
 }: DetailModalProps) {
+  const { t } = useTranslation();
   const command = args.command ?? "";
   const timeout = args.timeout as number | undefined;
 
@@ -376,28 +478,30 @@ function BashDetailModal({
 
   return (
     <ModalShell
-      title={<ToolModalTitle name={name} />}
-      onClose={onClose}
-      trailing={
-        timeout != null ? (
-          <span className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)]">
-            <Timer size={12} />
-            {timeout}s
-          </span>
-        ) : undefined
+      title={
+        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
       }
+      onClose={onClose}
+      trailing={durationDisplay}
     >
       {/* 内容区：命令 + 结果单一滚动 */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-auto">
         {/* 命令块 */}
         <div className="px-5 pt-3 pb-3 bg-[var(--fill-quaternary)]">
+          {timeout != null && (
+            <p className="mb-2 text-[11px] text-[var(--label-tertiary)]">
+              {t("entries.timeout")}
+              {": "}
+              <span className="whitespace-nowrap">{`${timeout}\u00a0s`}</span>
+            </p>
+          )}
           <MarkdownRenderer content={commandBlock} />
         </div>
 
         {/* 结果块 */}
         <div className="px-5 pt-3 pb-5">
           <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-2">
-            Output
+            {t("entries.output")}
           </h4>
           {result !== null ? (
             result.isError ? (
@@ -423,6 +527,8 @@ function WriteDetailModal({
   name,
   args,
   result,
+  durationDisplay,
+  isRunning,
   isAborted,
   onClose,
 }: DetailModalProps) {
@@ -436,7 +542,13 @@ function WriteDetailModal({
   const contentBlock = isMarkdown ? null : wrapInFence(content, language ?? "");
 
   return (
-    <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
+    <ModalShell
+      trailing={durationDisplay}
+      title={
+        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
+      }
+      onClose={onClose}
+    >
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
         <p className="text-[13px] text-[var(--label-secondary)] break-all leading-[20px] font-mono">
@@ -534,6 +646,8 @@ function EditDetailModal({
   name,
   args,
   result,
+  durationDisplay,
+  isRunning,
   isAborted,
   onClose,
 }: DetailModalProps) {
@@ -541,7 +655,13 @@ function EditDetailModal({
   const diff = result?.details?.diff as string | undefined;
 
   return (
-    <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
+    <ModalShell
+      trailing={durationDisplay}
+      title={
+        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
+      }
+      onClose={onClose}
+    >
       {/* 地址栏 */}
       <div className="px-5 py-2 border-b border-[var(--separator)] bg-[var(--fill-quaternary)]">
         <p className="text-[13px] text-[var(--label-secondary)] break-all leading-[20px] font-mono">
@@ -583,12 +703,20 @@ function DefaultDetailModal({
   name,
   args,
   result,
+  durationDisplay,
+  isRunning,
   isAborted,
   onClose,
 }: DetailModalProps) {
   const { t } = useTranslation();
   return (
-    <ModalShell title={<ToolModalTitle name={name} />} onClose={onClose}>
+    <ModalShell
+      title={
+        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
+      }
+      onClose={onClose}
+      trailing={durationDisplay}
+    >
       <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 space-y-3 scrollbar-auto">
         {/* 参数 */}
         <section>

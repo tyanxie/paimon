@@ -61,6 +61,7 @@ bin/
 ## 关键约定
 
 - **pi SDK 行为依赖** — `ctx.sessionManager.getBranch()` 只返回已完成的消息（`appendMessage` 在 `message_end` 触发），streaming 中的消息不在列表中。这是 pi SDK 的行为，非 paimon 控制
+- **工具生命周期** — Extension 保留全部 message 事件，并新增转发 `tool_execution_start/update/end`。Web 按 `toolCallId` 管理顶层工具的实时状态，部分结果使用最新快照，结束事件立即提供结果、错误和 `durationMs`；最终 `toolResult` 继续负责历史展示。实时状态随页面对话重置，后续更新或结束事件可以独立建立状态。运行计时表示调用等待时间，接收开始事件时使用 `performance.now()` 记录时间，每个 `ToolCallCard` 使用一个计时器供卡片和详情共享，完成、终止或卸载时清理计时器，最终耗时采用 Pi 的 `durationMs`。工具事件和运行状态使用 discriminated union。卡片右侧和详情标题统一显示耗时，单位使用 `s` 和 `ms`，数字与单位之间使用不换行空格。bash 详情命令区域显示提供的 `args.timeout`
 - **任务完成边界** — Pi 1.1.0 的 `agent_settled` 表示自动重试、压缩恢复和排队消息均已结束。Extension 仅在此事件中将运行状态更新为 `idle`，并通过 `settledOutcome` 区分 `completed`、`aborted` 和 `error`。Web 端仅为 `completed` 发送任务完成通知
 - **四层架构：Web → Hub → Edge → Pi** — Hub 不再直接连接 pi extension，所有 pi 通信通过 Edge 中转。Hub 只与 Edge 和 Browser 交互，Edge 只与本机 pi 和 Hub 交互
 - **Edge 是本机 pi 的聚合代理** — 每台服务器跑一个 Edge daemon，管理本机所有 pi 实例，通过单条 WS 多路复用上报 Hub
