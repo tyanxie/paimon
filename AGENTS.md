@@ -65,6 +65,7 @@ bin/
 - **任务完成边界** — Pi 1.1.0 的 `agent_settled` 表示自动重试、压缩恢复和排队消息均已结束。Extension 仅在此事件中将运行状态更新为 `idle`，并通过 `settledOutcome` 区分 `completed`、`aborted` 和 `error`。Web 端仅为 `completed` 发送任务完成通知
 - **四层架构：Web → Hub → Edge → Pi** — Hub 不再直接连接 pi extension，所有 pi 通信通过 Edge 中转。Hub 只与 Edge 和 Browser 交互，Edge 只与本机 pi 和 Hub 交互
 - **Edge 是本机 pi 的聚合代理** — 每台服务器跑一个 Edge daemon，管理本机所有 pi 实例，通过单条 WS 多路复用上报 Hub
+- **实例注册状态同步** — Edge 向 Hub 注册或重新注册实例时携带本地保存的当前 `status`。Hub 创建和更新实例时使用该状态，并通过现有实例广播同步给 Browser；未携带 `status` 时，已有实例保留当前状态，全新实例使用 `idle`。注册消息仅同步当前状态，`settledOutcome` 仅随任务结束状态更新传递
 - **Edge 端口与 Hub 端口独立** — Hub 默认 :8080（`PAIMON_PORT`），Edge 默认 :8033（`PAIMON_EDGE_PORT`）。Pi extension 连接本机 Edge 端口
 - **EdgeId 默认为 hostname** — `PAIMON_EDGE_ID` 环境变量或 `--edge-id` 可覆盖，用于区分多台机器
 - **Grace period 在 Edge 级别** — Edge 断连时其下所有 instance 整体进入 grace period，超时后批量移除

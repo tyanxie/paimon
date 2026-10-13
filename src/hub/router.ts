@@ -60,6 +60,7 @@ export function handleEdgeMessage(
         sessionId: msg.payload.sessionId,
         sessionName: msg.payload.sessionName,
         pid: msg.payload.pid,
+        status: msg.payload.status,
         availableModels: msg.payload.availableModels,
         contextUsage: msg.payload.contextUsage,
         gitBranch: msg.payload.gitBranch,
