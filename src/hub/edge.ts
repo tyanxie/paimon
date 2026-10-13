@@ -197,6 +197,7 @@ class HubEdgeRegistry {
       sessionId?: string;
       sessionName?: string;
       pid: number;
+      status?: InstanceStatus;
       availableModels?: ModelInfo[];
       contextUsage?: ContextUsageInfo;
       gitBranch?: string;
@@ -217,6 +218,7 @@ class HubEdgeRegistry {
       existing.info.sessionId = payload.sessionId;
       existing.info.sessionName = payload.sessionName;
       existing.info.pid = payload.pid;
+      existing.info.status = payload.status ?? existing.info.status;
       existing.info.availableModels = payload.availableModels;
       existing.info.contextUsage = payload.contextUsage;
       existing.info.gitBranch = payload.gitBranch;
@@ -246,7 +248,7 @@ class HubEdgeRegistry {
       sessionId: payload.sessionId,
       sessionName: payload.sessionName,
       pid: payload.pid,
-      status: "idle",
+      status: payload.status ?? "idle",
       availableModels: payload.availableModels,
       contextUsage: payload.contextUsage,
       gitBranch: payload.gitBranch,

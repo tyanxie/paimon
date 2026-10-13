@@ -670,6 +670,7 @@ export interface EdgeInstanceRegisterMessage {
     sessionId?: string;
     sessionName?: string;
     pid: number;
+    status?: InstanceStatus;
     availableModels?: ModelInfo[];
     contextUsage?: ContextUsageInfo;
     gitBranch?: string;
