@@ -36,8 +36,7 @@ export default defineConfig({
             return "markdown";
           }
 
-          // 其余第三方依赖：偶尔更新
-          return "vendor";
+          // 其余依赖自动分包，保留动态导入的按需加载边界
         },
       },
     },

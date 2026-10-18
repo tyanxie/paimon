@@ -29,7 +29,7 @@ bun run scripts/prepare-npm-packages.ts    # 从编译产物生成 npm 可发布
 | 构建     | Vite 6                                                                |
 | 进程管理 | Bun.spawn（detached）+ 状态文件（`~/.paimon/hub.json` / `edge.json`） |
 
-**关键依赖**: highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, i18next, react-i18next, zustand, rotating-file-stream, global-directory, package-manager-detector
+**关键依赖**: mermaid, dompurify, highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, i18next, react-i18next, zustand, rotating-file-stream, global-directory, package-manager-detector
 
 ## 项目结构（仅非标准部分）
 
@@ -63,6 +63,8 @@ bin/
 - **pi SDK 行为依赖** — `ctx.sessionManager.getBranch()` 只返回已完成的消息（`appendMessage` 在 `message_end` 触发），streaming 中的消息不在列表中。这是 pi SDK 的行为，非 paimon 控制
 - **工具生命周期** — Extension 保留全部 message 事件，并新增转发 `tool_execution_start/update/end`。Web 按 `toolCallId` 管理顶层工具的实时状态，部分结果使用最新快照，结束事件立即提供结果、错误和 `durationMs`；最终 `toolResult` 继续负责历史展示。实时状态随页面对话重置，后续更新或结束事件可以独立建立状态。运行计时表示调用等待时间，接收开始事件时使用 `performance.now()` 记录时间，每个 `ToolCallCard` 使用一个计时器供卡片和详情共享，完成、终止或卸载时清理计时器，最终耗时采用 Pi 的 `durationMs`。工具事件和运行状态使用 discriminated union。卡片右侧和详情标题统一显示耗时，单位使用 `s` 和 `ms`，数字与单位之间使用不换行空格。bash 详情命令区域显示提供的 `args.timeout`
 - **任务完成边界** — Pi 1.1.0 的 `agent_settled` 表示自动重试、压缩恢复和排队消息均已结束。Extension 仅在此事件中将运行状态更新为 `idle`，并通过 `settledOutcome` 区分 `completed`、`aborted` 和 `error`。Web 端仅为 `completed` 发送任务完成通知
+- **Markdown 图表** — `MarkdownRenderer` 将 `mermaid` 代码块交给 `MermaidBlock`，渲染、展示与复制逻辑集中在 `MermaidBlock.tsx`。`renderQueue` 和 `nextDiagramId` 使用模块级别变量供多个图表共享。图表渲染串行执行以隔离各次主题配置；SVG 使用严格安全配置、纯 SVG 标签和 DOMPurify 清理，并通过图片上下文展示。流式内容延迟 300ms 渲染，生成期间隐藏解析错误，内容更新或卸载时取消过期请求；最终渲染失败时显示源码。支持源码复制和明亮、暗黑主题切换。图表默认适应卡片宽度，标题栏提供放大查看入口，复用 `ImageLightbox` 全屏预览；预览使用当前内容和主题的渲染结果，重新渲染期间保持窗口与尺寸模式并显示生成提示，原始尺寸模式保留图片尺寸和横向、纵向滚动位置，生成提示独立显示在预览窗口内；新图片加载完成后采用其实际尺寸，浏览器将滚动位置限制在允许范围内；主动切换尺寸模式时返回起始位置，失败时显示错误提示和源码；预览支持适应窗口与原始尺寸切换，原始尺寸下可以横向和纵向滚动；图表图片区域使用现有 `--btn-solid` 作为不透明阅读底色，跟随明亮、暗黑主题。`ImageLightbox` 通过 Portal 展示，使用项目毛玻璃控件，支持 Safe Area、Esc 关闭、键盘焦点循环与关闭后恢复焦点。
+- **前端构建分组** — `manualChunks` 仅指定 `framework` 和 `markdown` 分组，其余依赖由 Rollup 自动分包。Mermaid 和 DOMPurify 在图表渲染时动态加载，Mermaid 内部图表模块与布局算法保留按需加载；构建回归测试检查入口静态依赖、HTML preload 和 Mermaid 内部动态导入。
 - **四层架构：Web → Hub → Edge → Pi** — Hub 不再直接连接 pi extension，所有 pi 通信通过 Edge 中转。Hub 只与 Edge 和 Browser 交互，Edge 只与本机 pi 和 Hub 交互
 - **Edge 是本机 pi 的聚合代理** — 每台服务器跑一个 Edge daemon，管理本机所有 pi 实例，通过单条 WS 多路复用上报 Hub
 - **实例注册状态同步** — Edge 向 Hub 注册或重新注册实例时携带本地保存的当前 `status`。Hub 创建和更新实例时使用该状态，并通过现有实例广播同步给 Browser；未携带 `status` 时，已有实例保留当前状态，全新实例使用 `idle`。注册消息仅同步当前状态，`settledOutcome` 仅随任务结束状态更新传递

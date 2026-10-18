@@ -11,10 +11,19 @@ import rehypeSanitize, {
   type Options as SanitizeSchema,
 } from "rehype-sanitize";
 import yaml from "js-yaml";
-import { useState, useCallback, useMemo } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  createContext,
+  useContext,
+} from "react";
 import type { Components } from "react-markdown";
 import { Copy, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { MermaidBlock } from "./MermaidBlock";
+
+const StreamingContext = createContext(false);
 
 /**
  * 自定义 remark 插件：将 remark-frontmatter 解析出的 yaml 节点
@@ -134,7 +143,17 @@ function CodeBlock({
 const components: Components = {
   // 代码：区分行内和块级
   code({ className, children, ...props }) {
+    const streaming = useContext(StreamingContext);
     const match = /language-(\w+)/.exec(className || "");
+
+    if (match?.[1] === "mermaid") {
+      return (
+        <MermaidBlock
+          source={extractText(children).replace(/\n$/, "")}
+          streaming={streaming}
+        />
+      );
+    }
 
     // frontmatter 特殊标记 → 元数据表格
     if (match?.[1] === "__frontmatter__") {
@@ -336,29 +355,36 @@ const sanitizeSchema: SanitizeSchema = {
 };
 
 /** Markdown 渲染入口 */
-export function MarkdownRenderer({ content }: { content: string }) {
+export function MarkdownRenderer({
+  content,
+  streaming = false,
+}: {
+  content: string;
+  streaming?: boolean;
+}) {
+  const processed = useMemo(() => preprocessFrontmatter(content), [content]);
   if (!content.trim()) return null;
 
-  const processed = useMemo(() => preprocessFrontmatter(content), [content]);
-
   return (
-    <div className="markdown-body min-w-0 max-w-full break-words">
-      <ReactMarkdown
-        remarkPlugins={[
-          remarkGfm,
-          remarkCjkFriendly,
-          remarkFrontmatter,
-          remarkFrontmatterToCode,
-        ]}
-        rehypePlugins={[
-          rehypeRaw,
-          [rehypeSanitize, sanitizeSchema],
-          rehypeHighlight,
-        ]}
-        components={components}
-      >
-        {processed}
-      </ReactMarkdown>
-    </div>
+    <StreamingContext.Provider value={streaming}>
+      <div className="markdown-body min-w-0 max-w-full break-words">
+        <ReactMarkdown
+          remarkPlugins={[
+            remarkGfm,
+            remarkCjkFriendly,
+            remarkFrontmatter,
+            remarkFrontmatterToCode,
+          ]}
+          rehypePlugins={[
+            rehypeRaw,
+            [rehypeSanitize, sanitizeSchema],
+            [rehypeHighlight, { plainText: ["mermaid"] }],
+          ]}
+          components={components}
+        >
+          {processed}
+        </ReactMarkdown>
+      </div>
+    </StreamingContext.Provider>
   );
 }
