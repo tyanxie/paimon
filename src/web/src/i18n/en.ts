@@ -12,6 +12,13 @@ const en: LocaleResource = {
     offline: "Offline",
   },
 
+  imagePreview: {
+    title: "Image preview",
+    close: "Close preview",
+    actualSize: "Actual size",
+    fitWindow: "Fit to window",
+  },
+
   // ─── Login ───
   login: {
     subtitle: "Enter access token to connect",
@@ -130,6 +137,10 @@ const en: LocaleResource = {
     aborted: "Aborted",
     copied: "Copied",
     copy: "Copy",
+    mermaidDiagram: "Mermaid diagram",
+    mermaidExpand: "Enlarge",
+    mermaidLoading: "Rendering diagram…",
+    mermaidError: "Unable to render diagram. Source shown below.",
     result: "Result",
     output: "Output",
     executionDuration: "Execution duration",

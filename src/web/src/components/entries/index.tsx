@@ -189,7 +189,7 @@ function AssistantMessage({
   if (!Array.isArray(content)) {
     return (
       <div className="px-4">
-        <MarkdownRenderer content={String(content)} />
+        <MarkdownRenderer content={String(content)} streaming={streaming} />
       </div>
     );
   }
@@ -252,7 +252,7 @@ function AssistantBlock({
 }) {
   switch (block.type) {
     case "text":
-      return <MarkdownRenderer content={block.text} />;
+      return <MarkdownRenderer content={block.text} streaming={streaming} />;
     case "thinking":
       // 思考内容为空时不渲染
       if (!block.thinking?.trim()) return null;

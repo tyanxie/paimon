@@ -49,7 +49,7 @@ export function ThinkingBlock({
       {/* 内容区域 */}
       {!collapsed && (
         <div className="px-3 pb-2.5 pt-0.5 text-[var(--label-secondary)] italic">
-          <MarkdownRenderer content={content} />
+          <MarkdownRenderer content={content} streaming={streaming} />
         </div>
       )}
     </div>

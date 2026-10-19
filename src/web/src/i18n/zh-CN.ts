@@ -10,6 +10,13 @@ const zhCN = {
     offline: "离线",
   },
 
+  imagePreview: {
+    title: "图片预览",
+    close: "关闭预览",
+    actualSize: "原始尺寸",
+    fitWindow: "适应窗口",
+  },
+
   // ─── 登录页 ───
   login: {
     subtitle: "输入 Access Token 以连接",
@@ -128,6 +135,10 @@ const zhCN = {
     aborted: "已终止",
     copied: "已复制",
     copy: "复制",
+    mermaidDiagram: "Mermaid 图表",
+    mermaidExpand: "放大查看",
+    mermaidLoading: "图表生成中…",
+    mermaidError: "图表渲染失败，以下为源码",
     result: "结果",
     output: "输出",
     executionDuration: "执行耗时",
