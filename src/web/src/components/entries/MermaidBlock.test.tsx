@@ -3,9 +3,11 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import mermaid from "mermaid";
 import DOMPurify from "dompurify";
+import { luminance } from "khroma";
 import i18n from "../../i18n";
 import { useSettings } from "../../stores/useSettings";
 import { MarkdownRenderer } from "./Markdown";
+import { createMermaidConfig } from "./mermaidTheme";
 
 let root: Root | undefined;
 let container: HTMLDivElement;
@@ -40,22 +42,22 @@ const svg =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50"><text>开始</text></svg>';
 const result = { svg, diagramType: "flowchart" };
 
-beforeEach(() => {
-  renderSpy = spyOn(mermaid, "render").mockResolvedValue(result);
-  sanitizeSpy = spyOn(DOMPurify, "sanitize").mockReturnValue(svg);
-});
-
-afterEach(async () => {
-  await act(async () => root?.unmount());
-  root = undefined;
-  container?.remove();
-  renderSpy.mockRestore();
-  sanitizeSpy.mockRestore();
-  useSettings.setState({ resolvedTheme: "light" });
-  await i18n.changeLanguage("zh-CN");
-});
-
 describe("MermaidBlock", () => {
+  beforeEach(() => {
+    renderSpy = spyOn(mermaid, "render").mockResolvedValue(result);
+    sanitizeSpy = spyOn(DOMPurify, "sanitize").mockReturnValue(svg);
+  });
+
+  afterEach(async () => {
+    await act(async () => root?.unmount());
+    root = undefined;
+    container?.remove();
+    renderSpy.mockRestore();
+    sanitizeSpy.mockRestore();
+    useSettings.setState({ resolvedTheme: "light" });
+    await i18n.changeLanguage("zh-CN");
+  });
+
   test("渲染图表并保留普通代码块", async () => {
     await render(diagram + "\n\n```typescript\nconst value = 1;\n```");
     await waitForRender();
@@ -134,16 +136,25 @@ describe("MermaidBlock", () => {
   });
 
   test("主题切换重新渲染图表", async () => {
-    const themes: string[] = [];
+    const themes: Array<{ theme: string; dark: boolean; background: string }> =
+      [];
     renderSpy.mockImplementation(async () => {
-      themes.push(mermaid.mermaidAPI.getConfig().theme!);
+      const config = mermaid.mermaidAPI.getConfig();
+      themes.push({
+        theme: config.theme!,
+        dark: config.themeVariables.darkMode,
+        background: config.themeVariables.background,
+      });
       return result;
     });
     await render(diagram);
     await waitForRender();
     await act(async () => useSettings.setState({ resolvedTheme: "dark" }));
     await waitForRender();
-    expect(themes).toEqual(["default", "dark"]);
+    expect(themes).toEqual([
+      { theme: "base", dark: false, background: "#f6f6f6" },
+      { theme: "base", dark: true, background: "#282828" },
+    ]);
   });
 
   test("复制 Mermaid 源码", async () => {
@@ -381,7 +392,7 @@ describe("MermaidBlock", () => {
     await render(diagram);
     await waitForRender();
     expect(sanitizeSpy).toHaveBeenCalledWith(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" width="100" height="50"><text>开始</text></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" width="100" height="50" style="background-color: transparent;"><text>开始</text></svg>',
       { USE_PROFILES: { svg: true, svgFilters: true } },
     );
     const config = mermaid.mermaidAPI.getConfig();
@@ -389,5 +400,118 @@ describe("MermaidBlock", () => {
     expect(config.htmlLabels).toBe(false);
     expect(config.secure).toContain("securityLevel");
     expect(config.secure).toContain("suppressErrorRendering");
+    for (const key of [
+      "theme",
+      "themeVariables",
+      "themeCSS",
+      "fontFamily",
+      "darkMode",
+      "look",
+    ]) {
+      expect(config.secure).toContain(key);
+    }
+  });
+});
+
+describe("Paimon Mermaid 主题", () => {
+  const previousStyle = document.documentElement.getAttribute("style");
+
+  afterEach(() => {
+    if (previousStyle === null)
+      document.documentElement.removeAttribute("style");
+    else document.documentElement.setAttribute("style", previousStyle);
+  });
+
+  function contrast(first: string, second: string) {
+    const values = [luminance(first), luminance(second)];
+    return (Math.max(...values) + 0.05) / (Math.min(...values) + 0.05);
+  }
+
+  for (const theme of ["light", "dark"] as const) {
+    test(`${theme} 主题的文字与连线保持阅读对比度`, () => {
+      const { themeVariables: colors } = createMermaidConfig(theme);
+      for (const fill of [
+        colors.background,
+        colors.mainBkg,
+        colors.clusterBkg,
+        colors.noteBkgColor,
+        colors.activationBkgColor,
+        colors.critBkgColor,
+        ...Array.from({ length: 12 }, (_, index) => colors[`pie${index + 1}`]),
+        ...Array.from({ length: 12 }, (_, index) => colors[`cScale${index}`]),
+      ]) {
+        expect(contrast(colors.textColor, fill)).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(
+        contrast(colors.lineColor, colors.background),
+      ).toBeGreaterThanOrEqual(3);
+      expect(
+        contrast(colors.lineColor, colors.clusterBkg),
+      ).toBeGreaterThanOrEqual(3);
+    });
+
+    test(`${theme} 主题对各类图表提供一致的默认颜色`, () => {
+      const config = createMermaidConfig(theme);
+      const colors = config.themeVariables;
+      expect(config.theme).toBe("base");
+      expect(config.darkMode).toBe(theme === "dark");
+      expect(colors.darkMode).toBe(theme === "dark");
+      expect(colors.actorBkg).toBe(colors.mainBkg);
+      expect(colors.stateBkg).toBe(colors.mainBkg);
+      expect(colors.requirementBackground).toBe(colors.mainBkg);
+      expect(colors.signalColor).toBe(colors.lineColor);
+      expect(colors.transitionColor).toBe(colors.lineColor);
+      expect(colors.relationColor).toBe(colors.lineColor);
+      expect(colors.edgeLabelBackground).toBe(colors.background);
+      expect(colors.attributeBackgroundColorOdd).not.toBe(
+        colors.attributeBackgroundColorEven,
+      );
+      expect(colors.useGradient).toBe(false);
+      expect(colors.dropShadow).toBe("none");
+      expect(colors.radius).toBe(8);
+      expect(config.fontFamily).toBe(colors.fontFamily);
+      expect(config.sequence!.actorFontFamily).toBe(config.fontFamily);
+      expect(config.sequence!.messageFontSize).toBe(13);
+      const palette = Array.from(
+        { length: 12 },
+        (_, index) => colors[`pie${index + 1}`],
+      );
+      expect(new Set(palette).size).toBe(12);
+      expect(new Set(colors.xyChart.plotColorPalette.split(",")).size).toBe(12);
+      for (const [key, value] of Object.entries(colors)) {
+        if (
+          typeof value === "string" &&
+          !/Width|Size/.test(key) &&
+          /Color|Bkg|Background|Border|^pie\d|^git\d|^cScale\d|^fillType/.test(
+            key,
+          )
+        ) {
+          expect(value).toMatch(/^#[0-9a-f]{6}$/);
+        }
+      }
+    });
+  }
+
+  test("XY 图表背景透明，复用卡片或预览的阅读表面", () => {
+    for (const theme of ["light", "dark"] as const) {
+      expect(
+        createMermaidConfig(theme).themeVariables.xyChart.backgroundColor,
+      ).toBe("transparent");
+    }
+  });
+
+  test("读取项目主题变量并将透明文字与阅读底色合成", () => {
+    const style = document.documentElement.style;
+    style.setProperty("--btn-solid", "#202020");
+    style.setProperty("--label-primary", "rgba(255, 255, 255, 0.85)");
+    style.setProperty("--label-secondary", "rgba(255, 255, 255, 0.55)");
+    style.setProperty("--color-accent", "#0a99ff");
+    style.setProperty("--font-sans", '"Inter", sans-serif');
+    const config = createMermaidConfig("dark");
+    expect(config.themeVariables.background).toBe("#202020");
+    expect(config.themeVariables.textColor).toBe("#dedede");
+    expect(config.themeVariables.lineColor).toBe("#9b9b9b");
+    expect(config.themeVariables.secondaryBorderColor).toBe("#0a99ff");
+    expect(config.fontFamily).toBe('"Inter", sans-serif');
   });
 });

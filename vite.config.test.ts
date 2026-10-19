@@ -30,7 +30,7 @@ test("构建保留 Mermaid 和 DOMPurify 的按需加载", async () => {
 
   const diagramChunks = chunks.filter((chunk) =>
     Object.keys(chunk.modules).some((id) =>
-      /\/node_modules\/(?:mermaid|dompurify)\//.test(id),
+      /\/node_modules\/(?:mermaid|dompurify|khroma)\//.test(id),
     ),
   );
   expect(diagramChunks.length).toBeGreaterThan(0);

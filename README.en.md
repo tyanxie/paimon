@@ -16,7 +16,7 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 
 - 💬 **Real-time Streaming** — Streaming output, thinking process, and tool calls fully displayed
 - 🛠️ **Tool Execution Details** — Live top-level tool status, tool-provided partial output, errors, and execution duration, with history support
-- 📊 **Mermaid Diagrams** — Automatically renders `mermaid` code blocks in Markdown, loading diagram dependencies on demand, with theme switching, source copying, and full-screen previews with theme-aware diagrams and reading backgrounds, actual-size viewing, and scrolling that preserves the reading position during theme updates
+- 📊 **Mermaid Diagrams** — Automatically renders `mermaid` code blocks in Markdown, with light and dark themes, source copying, and full-screen previews
 - 🖼️ **Image Support** — Paste or upload images to send to LLM, view full-size in history
 - 🔄 **Multi-instance Switching** — Manage all pi sessions in one page
 - 🌐 **Multi-machine Support** — Centralized Hub + distributed Edge, manage pi instances across servers

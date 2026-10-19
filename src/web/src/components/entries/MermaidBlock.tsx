@@ -1,7 +1,7 @@
 // Mermaid 图表：主题适配、流式更新与源码复制
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Expand } from "lucide-react";
+import { Check, Copy, Expand, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useResolvedTheme } from "../../stores/useSettings";
 import { ImageLightbox } from "../ui/ImageLightbox";
@@ -16,38 +16,23 @@ function renderMermaid(
 ): Promise<string> {
   const result = renderQueue.then(async () => {
     signal.throwIfAborted();
-    const [{ default: mermaid }, { default: DOMPurify }] = await Promise.all([
+    const [
+      { default: mermaid },
+      { default: DOMPurify },
+      { createMermaidConfig },
+    ] = await Promise.all([
       import("mermaid"),
       import("dompurify"),
+      import("./mermaidTheme"),
     ]);
     signal.throwIfAborted();
-    mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: "strict",
-      suppressErrorRendering: true,
-      theme: theme === "dark" ? "dark" : "default",
-      htmlLabels: false,
-      fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
-      secure: [
-        "secure",
-        "securityLevel",
-        "startOnLoad",
-        "maxTextSize",
-        "maxEdges",
-        "suppressErrorRendering",
-        "htmlLabels",
-        "dompurifyConfig",
-        "theme",
-        "themeCSS",
-        "themeVariables",
-        "fontFamily",
-      ],
-    });
+    const config = createMermaidConfig(theme);
+    mermaid.initialize(config);
 
-    // 临时容器参与浏览器布局测量，渲染结束后统一清理
+    // 临时容器提供稳定的布局宽度，渲染结束后统一清理
     const container = document.createElement("div");
     container.style.cssText =
-      "position:fixed;left:-100000px;top:0;visibility:hidden;pointer-events:none";
+      "position:fixed;left:-100000px;top:0;width:960px;visibility:hidden;pointer-events:none";
     document.body.append(container);
     try {
       const { svg } = await mermaid.render(
@@ -64,6 +49,7 @@ function renderMermaid(
         element.setAttribute("width", String(viewBox.width));
         element.setAttribute("height", String(viewBox.height));
       }
+      element.style.backgroundColor = "transparent";
       return DOMPurify.sanitize(
         new XMLSerializer().serializeToString(element),
         {
@@ -156,11 +142,18 @@ export function MermaidBlock({
     : "";
 
   const placeholder = (
-    <div>
+    <div className="text-[var(--label-primary)]">
       <p
-        className="px-3 pt-2 text-[12px] text-[var(--label-secondary)]"
+        className="flex min-h-24 items-center justify-center gap-2 px-3 py-3 text-[12px] text-[var(--label-secondary)]"
         role="status"
       >
+        {!failed && (
+          <LoaderCircle
+            size={14}
+            className="animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+        )}
         {failed ? t("entries.mermaidError") : t("entries.mermaidLoading")}
       </p>
       {failed && (
@@ -178,29 +171,36 @@ export function MermaidBlock({
           <span className="text-[11px] text-[var(--label-tertiary)] font-medium">
             {t("entries.mermaidDiagram")}
           </span>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1">
             <button
+              type="button"
               onClick={handleCopy}
-              className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)] hover:text-[var(--label-secondary)] transition-colors"
+              className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)] hover:text-[var(--label-secondary)] transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
             >
-              {copied ? <Check size={12} /> : <Copy size={12} />}
-              {copied ? t("entries.copied") : t("entries.copy")}
+              {copied ? (
+                <Check size={12} aria-hidden="true" />
+              ) : (
+                <Copy size={12} aria-hidden="true" />
+              )}
+              <span aria-live="polite">
+                {copied ? t("entries.copied") : t("entries.copy")}
+              </span>
             </button>
             {ready && (
               <button
                 type="button"
                 onClick={() => setPreviewOpen(true)}
                 aria-haspopup="dialog"
-                className="flex items-center gap-1 rounded-[4px] text-[11px] text-[var(--label-tertiary)] hover:text-[var(--label-secondary)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+                className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)] hover:text-[var(--label-secondary)] transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
               >
-                <Expand size={12} />
+                <Expand size={12} aria-hidden="true" />
                 {t("entries.mermaidExpand")}
               </button>
             )}
           </div>
         </div>
         {ready ? (
-          <div className="p-3 overflow-x-auto">
+          <div className="px-3 py-2.5 overflow-x-auto">
             {/* SVG 使用图片上下文展示，图表样式与页面保持独立 */}
             <img
               src={imageSrc}
