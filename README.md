@@ -142,7 +142,7 @@ proxy_set_header Authorization "Bearer <access-token>";
 
 ## 开发文档
 
-前端对话数据与派生展示模型见 [对话数据与展示模型](docs/design/conversation-rendering.md)，视觉重构的范围与阶段见 [Web 视觉重构方案](docs/design/web-visual-redesign.md)。
+前端对话数据与派生展示模型见 [对话数据与展示模型](docs/design/conversation-rendering.md)，视觉重构的范围与阶段见 [Web 视觉重构方案](docs/design/web-visual-redesign.md)，自动验证范围与用户检查清单见 [Web 整体验证](docs/design/web-validation.md)。
 
 本地修改、测试和文档完成后，通过以下命令编译并重启服务，随后在浏览器中检查效果：
 

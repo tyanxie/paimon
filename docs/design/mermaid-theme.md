@@ -4,13 +4,13 @@ Paimon 使用 Mermaid `base` 主题，并通过 `src/web/src/components/entries/
 
 ## 内容容器
 
-Mermaid 的外框、标题栏和操作按钮采用与普通代码块一致的样式。容器布局使用 Tailwind utility classes，颜色引用项目 CSS variables。
+Mermaid 的外框使用 `content-block`，标题栏使用公共 `ContentToolbar`，操作使用 `Button`，与普通代码块共用基本样式。规则位于 `src/web/src/index.css`，颜色引用项目 CSS variables。
 
-- 外框采用 8px 圆角、`my-2` 对应的上下间距和 `--separator` 边框。
+- 外框采用 14px 圆角、8px 上下间距和 `--separator` 边框。
 - 背景使用 `--fill-card`：亮色为黑色 3%，暗色为白色 8%。标题栏和内容区共同叠加在页面面板上。
-- 类型标签与操作文字采用 11px 系统字体、`--label-tertiary`。
+- 类型标签采用 11px 系统字体、`--label-secondary`；操作使用 compact 按钮规格，字体为 12px。
 - Mermaid 标题栏显示图表名称、源码复制和放大查看操作。
-- 操作按钮采用轻量文字样式，hover 使用 `--label-secondary`，键盘焦点使用强调色轮廓；reduced motion 下关闭颜色过渡。
+- 操作按钮使用公共聚焦、按下与 hover 反馈，常规指针下至少具有 36px 操作区域，触摸设备中至少为 44px；reduced motion 下关闭颜色与按下过渡。
 - 代码正文保持 13px 等宽字体、20px 行高和现有语法高亮配色，内边距对应 `px-3 py-2.5`。图表使用相同内边距，内部字体与节点样式独立配置。
 - Mermaid 源码复制成功后显示两秒反馈，卸载时清理计时器。
 - 毛玻璃用于页面面板与预览控件；代码与图表内容块使用相同的半透明卡片背景。

@@ -352,56 +352,31 @@ Glass Effect 层: `#000000`/0.2
 --font-size-base: 13px;
 ```
 
-### Tailwind 映射建议
+### 项目 CSS 配置与操作区域
 
-```js
-// tailwind.config.js
-theme: {
-  extend: {
-    borderRadius: {
-      'window': '26px',
-      'panel': '18px',
-      'item': '8px',
-      'control': '9px',
-    },
-    backdropBlur: {
-      'material': '30px',
-      'bg': '60px',
-    },
-    boxShadow: {
-      'window': '0 0 48px rgba(0,0,0,0.12)',
-      'panel': '0 8px 40px rgba(0,0,0,0.12)',
-    },
-    fontSize: {
-      'large-title': ['26px', '32px'],
-      'title-1': ['22px', '26px'],
-      'title-2': ['17px', '22px'],
-      'title-3': ['15px', '20px'],
-      'headline': ['13px', '16px'],
-      'body': ['13px', '16px'],
-      'callout': ['12px', '15px'],
-      'subheadline': ['11px', '14px'],
-      'footnote': ['10px', '13px'],
-      'caption': ['10px', '13px'],
-    },
-    colors: {
-      accent: {
-        DEFAULT: '#0091ff',
-        vibrant: '#0a99ff',
-      },
-      // Dark mode labels (白字)
-      'label-dark': {
-        primary: 'rgba(255,255,255,0.85)',
-        secondary: 'rgba(255,255,255,0.55)',
-        tertiary: 'rgba(255,255,255,0.25)',
-      },
-      // Light mode labels (黑字)
-      'label-light': {
-        primary: 'rgba(0,0,0,0.85)',
-        secondary: 'rgba(0,0,0,0.50)',
-        tertiary: 'rgba(0,0,0,0.25)',
-      },
-    }
-  }
+项目使用 Tailwind CSS 4，主题配置位于 `src/web/src/index.css` 的 `@theme` 中。上方 Figma 数据保留为设计参考，实际容器与操作区域按前端阅读和触摸场景定义。
+
+```css
+@theme {
+  --radius-window: 26px;
+  --radius-panel: 18px;
+  --radius-item: 8px;
+  --radius-control: 9px;
+  --radius-pill: 1000px;
+  --blur-material: 30px;
+  --blur-bg: 60px;
+  --shadow-window: 0 0 48px rgba(0, 0, 0, 0.12);
+  --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.08);
+  --color-accent: #0091ff;
+  --color-accent-vibrant: #0a99ff;
 }
 ```
+
+- `glass-panel` 使用 18px 圆角；顶部栏共用 `header-material`，输入区与回复使用 24px 圆角。
+- 桌面侧栏在 `md` 使用 300px 宽度，在 `lg` 使用 328px；正文与输入区保持 920px 最大阅读宽度。
+- 详情窗口采用 26px 圆角、最大 640px 宽度；表单最大 480px 宽度。手机详情使用接近全屏的底部 sheet，并保留 Safe Area。
+- 公共按钮、字段和菜单条目通常至少具有 44px 操作区域。compact 按钮在常规指针下至少为 36px，触摸设备中至少为 44px；行内入口保留自己的视觉尺寸与额外触摸区域。
+- `ContentToolbar` 与 `content-block` 为代码和 Mermaid 提供共用外框，外框圆角为 14px；图表内部节点继续采用各自的主题规则。
+- 字段在手机使用 16px 字体，桌面使用 14px 字体；正文、标题、辅助文字和图表字体分别按照内容用途定义。
+
+页面布局与交互规则见 [Web 视觉重构方案](web-visual-redesign.md)，实际浏览器检查范围见 [Web 整体验证](web-validation.md)。

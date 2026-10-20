@@ -117,7 +117,7 @@ bin/
 - **localStorage key 格式** — 前端 localStorage 统一使用 `paimon:camelCase` 命名格式（如 `paimon:appearance`、`paimon:accessToken`、`paimon:language`）
 - **前端国际化（i18n）** — 使用 `i18next` + `react-i18next`，fallback 语言为简体中文。所有用户可见的 UI 文本必须通过 `t('namespace.key')` 获取，禁止硬编码。新增 UI 文本时需同时更新 `src/web/src/i18n/zh-CN.ts` 和 `en.ts`。key 按模块分组（如 `sidebar.xxx`、`settings.xxx`）。语言偏好存储在 `paimon:language`
 - **前端 Store 规范** — `stores/` 目录下每个独立状态域一个 `useXxx.ts` 文件（不加 Store/State 后缀），使用 Zustand 管理。共享类型放 `types.ts`。`useWebSocket` store 提供 `subscribe(handler)` 发布订阅机制，各组件自行订阅感兴趣的 WS 消息。纯转换函数内联在所属 hook 文件中，不对外导出
-- **前端功能验证** — 功能单测使用 `MotionConfig reducedMotion="always"`，验证操作、状态、焦点与资源释放；DOM 存在与身份使用布尔断言。修改期间定向运行相关测试并使用 `--bail`，完成后运行完整测试、类型检查和构建。动画观感、真实手势、浏览器布局和性能由用户检查；不执行 E2E 或真实浏览器访问。临时验证文件在项目目录内保存，完成后删除。
+- **前端功能验证** — 功能单测使用 `MotionConfig reducedMotion="always"`，验证操作、状态、焦点与资源释放；DOM 存在与身份使用布尔断言。修改期间定向运行相关测试并使用 `--bail`，完成后运行完整测试、类型检查和构建。动画观感、真实手势、浏览器布局和性能由用户检查；不执行 E2E 或真实浏览器访问。临时验证文件在项目目录内保存，完成后删除。整体验证范围与用户检查清单见 [docs/design/web-validation.md](docs/design/web-validation.md)。
 - **测试环境** — 使用 `@happy-dom/global-registrator` + `bunfig.toml` preload 注入浏览器环境（localStorage、DOM 等），测试文件中无需手动 mock
 
 ## 设计风格（摘要）

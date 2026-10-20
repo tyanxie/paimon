@@ -142,6 +142,8 @@ proxy_set_header Authorization "Bearer <access-token>";
 
 ## Development
 
+See [Conversation Data and Display Model](docs/design/conversation-rendering.md) for data and pagination rules, [Web Visual Redesign](docs/design/web-visual-redesign.md) for implementation scope, and [Web Validation](docs/design/web-validation.md) for automated coverage and the browser checklist.
+
 After completing local changes, tests, and documentation, build and restart the services before checking the result in your browser:
 
 ```bash
