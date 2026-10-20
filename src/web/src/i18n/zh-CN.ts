@@ -43,6 +43,31 @@ const zhCN = {
     statusIdle: "空闲",
   },
 
+  navigation: {
+    brand: "Paimon",
+    main: "主导航",
+    home: "首页",
+    instances: "实例",
+    connection: "连接状态",
+    backToInstances: "返回实例列表",
+    copyEdge: "复制 Edge：{{edgeId}}",
+    instanceActions: "{{name}} 的实例操作",
+  },
+
+  composer: {
+    options: "输入选项",
+    moreOptions: "更多输入选项",
+    model: "选择模型",
+    thinkingLevel: "思考等级",
+    contextUsage: "上下文用量",
+    usedTokens: "已用 tokens",
+    contextWindow: "上下文窗口",
+    pendingUsage: "等待更新",
+    pendingUsageDescription: "上下文用量将在下一次响应后更新",
+    previewImage: "预览附加图片 {{count}}",
+    removeImage: "移除附加图片 {{count}}",
+  },
+
   // ─── 事件流 / 对话区 ───
   eventStream: {
     tagline: "守望 · 交互 · 掌控",

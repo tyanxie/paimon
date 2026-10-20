@@ -6,6 +6,7 @@
 import { type ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 interface MobileNavBarProps {
   title?: string;
@@ -25,13 +26,15 @@ export function MobileNavBar({
   children,
 }: MobileNavBarProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="md:hidden flex items-center gap-2">
       <button
+        type="button"
         onClick={() => navigate(backTo)}
-        aria-label="Back to instances"
-        className="flex select-none items-center text-[var(--label-secondary)] active:opacity-60 transition-opacity"
+        aria-label={t("navigation.backToInstances")}
+        className="flex h-[44px] w-[44px] shrink-0 select-none items-center justify-center rounded-full bg-[var(--material-thin)] text-[var(--label-secondary)] active:opacity-60 transition-opacity focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
         <ChevronLeft size={20} />
       </button>

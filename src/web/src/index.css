@@ -491,6 +491,135 @@ button,
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
 
+/* 侧栏入口、顶部与输入区材质 */
+.header-material,
+.composer-surface {
+  background: var(--material-thin);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+  border: 0.5px solid var(--panel-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.header-material {
+  border-radius: 18px;
+}
+
+.navigation-item,
+.navigation-create {
+  color: var(--label-secondary);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.navigation-item {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+}
+
+.navigation-create {
+  background: var(--fill-tertiary);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.navigation-item:hover,
+.navigation-create:hover {
+  color: var(--label-primary);
+  background: var(--fill-secondary);
+}
+
+.navigation-item[aria-current="page"] {
+  color: var(--color-accent);
+  background: var(--fill-secondary);
+}
+
+.navigation-item:active,
+.navigation-create:active {
+  transform: scale(0.95);
+}
+
+.navigation-item:focus-visible,
+.navigation-create:focus-visible,
+.instance-item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.instance-item {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.instance-item:hover {
+  background: var(--fill-quaternary);
+}
+
+.instance-item[aria-current="page"] {
+  background: var(--fill-secondary);
+  border-color: var(--separator);
+}
+
+.composer-surface {
+  container: composer / inline-size;
+  border-radius: 24px;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.composer-toolbar button {
+  min-height: 44px;
+}
+
+.composer-toolbar button:not([aria-haspopup]),
+.composer-more-options button {
+  min-width: 44px;
+}
+
+.composer-inline-options,
+.composer-context-detail {
+  display: none;
+}
+
+.composer-more-options {
+  display: flex;
+}
+
+@container composer (min-width: 640px) {
+  .composer-inline-options {
+    display: flex;
+  }
+  .composer-context-detail {
+    display: inline;
+  }
+  .composer-more-options {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-item,
+  .navigation-create,
+  .instance-item,
+  .composer-surface {
+    transition: none;
+  }
+  .navigation-item:active,
+  .navigation-create:active {
+    transform: none;
+  }
+}
+
 .glass-panel-disabled {
   opacity: 0.6;
   pointer-events: none;

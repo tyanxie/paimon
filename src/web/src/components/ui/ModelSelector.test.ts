@@ -1,9 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-// 确保 window 对象存在（单独运行此文件时 Bun 不提供浏览器全局）
-if (typeof window === "undefined") {
-  Object.assign(globalThis, { window: globalThis });
-}
+let viewport: { width: number; height: number };
+beforeEach(() => {
+  viewport = { width: window.innerWidth, height: window.innerHeight };
+});
+afterEach(() => {
+  window.innerWidth = viewport.width;
+  window.innerHeight = viewport.height;
+});
 
 const { calcPosition } = await import("./Popover");
 const popoverSource = await Bun.file(
@@ -73,6 +77,31 @@ describe("Popover 位置计算", () => {
       left: 12,
       bottom: 108,
     });
+  });
+
+  test("窄屏中左侧弹层根据实际宽度保持在视口内", () => {
+    window.innerWidth = 320;
+    window.innerHeight = 600;
+    expect(
+      calcPosition(
+        { top: 500, bottom: 520, left: 240, right: 280 },
+        "top",
+        "left",
+        8,
+        12,
+        280,
+      ),
+    ).toEqual({ left: 28, bottom: 108 });
+    expect(
+      calcPosition(
+        { top: 500, bottom: 520, left: 240, right: 280 },
+        "top",
+        "left",
+        8,
+        12,
+        600,
+      ),
+    ).toEqual({ left: 12, bottom: 108 });
   });
 
   test("placement=bottom 时向下弹出", () => {

@@ -45,6 +45,32 @@ const en: LocaleResource = {
     statusIdle: "Idle",
   },
 
+  navigation: {
+    brand: "Paimon",
+    main: "Main navigation",
+    home: "Home",
+    instances: "Instances",
+    connection: "Connection status",
+    backToInstances: "Back to instances",
+    copyEdge: "Copy Edge: {{edgeId}}",
+    instanceActions: "Actions for {{name}}",
+  },
+
+  composer: {
+    options: "Input options",
+    moreOptions: "More input options",
+    model: "Select model",
+    thinkingLevel: "Thinking level",
+    contextUsage: "Context usage",
+    usedTokens: "Used tokens",
+    contextWindow: "Context window",
+    pendingUsage: "Awaiting update",
+    pendingUsageDescription:
+      "Context usage will update after the next response",
+    previewImage: "Preview attached image {{count}}",
+    removeImage: "Remove attached image {{count}}",
+  },
+
   // ─── Event Stream / Conversation ───
   eventStream: {
     tagline: "Watch · Interact · Control",

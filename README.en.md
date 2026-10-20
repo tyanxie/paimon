@@ -20,6 +20,8 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 - 📊 **Mermaid Diagrams** — Automatically renders `mermaid` code blocks in Markdown, with light and dark themes, source copying, and full-screen previews
 - 🖼️ **Image Support** — Paste or upload images to send to LLM, view full-size in history
 - 🔄 **Multi-instance Switching** — Manage all pi sessions in one page
+- 🧭 **Instance Sidebar** — One glass panel contains home, settings, connection information, and instances grouped by Edge
+- ⌨️ **Adaptive Input Toolbar** — Images, models, thinking, and context in one toolbar; narrower areas move secondary options into a menu while keeping send/stop visible
 - 🌐 **Multi-machine Support** — Centralized Hub + distributed Edge, manage pi instances across servers
 - ➕ **Create Instances from UI** — Select Edge node + path picker
 - 📋 **Session Management** — Browse session history, create or switch with one click
@@ -32,6 +34,10 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 After a refresh or reconnection during tool execution, subsequent update or end events resume the live display. Final results are also available through history. Running tools show call elapsed time measured with a monotonic clock; completed tools show the execution duration reported by Pi. The card's right side and detail header share one elapsed-time value and the same duration display, using `s` and `ms` with a non-breaking space between the number and unit. Bash details show the supplied timeout in the command area.
 
 Reply, execution summary, and thinking sections retain your chosen expanded state and reset when switching instances or sessions. Collapse transitions use Motion and respect reduced-motion preferences. Message timestamps are available on hover, focus, or click. Running and compaction feedback appears beside the reply.
+
+A continuous, translucent header spans the conversation area, containing instance information and session actions. Conversation content retains its own reading width.
+
+The composer preserves drafts, IME input, image uploads, and pasting. Open the context readout to inspect full usage; missing token counts after compaction show an awaiting-update state. Model and thinking controls use the instance's available options.
 
 ## 📋 Prerequisites
 
@@ -129,6 +135,14 @@ proxy_set_header Authorization "Bearer <access-token>";
 ```
 
 > 🔒 Proxy authentication should protect the entire `/paimon/` path and allow access only to trusted users.
+
+## Development
+
+After completing local changes, tests, and documentation, build and restart the services before checking the result in your browser:
+
+```bash
+bun run build && paimon hub restart && paimon edge restart
+```
 
 ## 📄 License
 

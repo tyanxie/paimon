@@ -3,6 +3,7 @@
 import { ChevronDown, Check } from "lucide-react";
 import { Popover } from "./Popover";
 import type { ModelInfo } from "../../../../protocol/types";
+import { useTranslation } from "react-i18next";
 
 interface ModelSelectorProps {
   currentModel: ModelInfo;
@@ -15,6 +16,7 @@ export function ModelSelector({
   availableModels,
   onSelect,
 }: ModelSelectorProps) {
+  const { t } = useTranslation();
   const hasModels = availableModels && availableModels.length > 0;
   const canSelect = hasModels && onSelect;
 
@@ -33,12 +35,20 @@ export function ModelSelector({
 
   return (
     <Popover
+      label={t("composer.model")}
       disabled={!canSelect}
       width={280}
       align="left"
-      trigger={({ open }) => (
+      trigger={({ open, id }) => (
         <button
-          className={`inline-flex items-center gap-1 px-2 py-1 rounded-[9px] bg-[var(--fill-tertiary)] text-[12px] transition-colors ${
+          type="button"
+          disabled={!canSelect}
+          aria-label={`${t("composer.model")}: ${currentModel.name || currentModel.id}`}
+          aria-haspopup={canSelect ? "dialog" : undefined}
+          aria-expanded={canSelect ? open : undefined}
+          aria-controls={open ? id : undefined}
+          title={currentModel.name || currentModel.id}
+          className={`inline-flex min-h-9 max-w-full items-center gap-1.5 px-2.5 py-1.5 rounded-[12px] text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
             canSelect
               ? "hover:bg-[var(--fill-secondary)] hover:text-[var(--label-primary)] cursor-pointer"
               : "cursor-default"
@@ -49,15 +59,22 @@ export function ModelSelector({
           </span>
           {canSelect && (
             <ChevronDown
-              size={10}
-              className={`transition-transform ${open ? "rotate-180" : ""}`}
+              size={12}
+              aria-hidden="true"
+              className={`shrink-0 transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
             />
           )}
         </button>
       )}
     >
       {(close) => (
-        <div className="max-h-[320px] overflow-y-auto py-1.5 px-1.5 scrollbar-auto">
+        <div
+          className="max-h-[320px] overflow-y-auto py-1.5 px-1.5 scrollbar-auto"
+          style={{
+            maxHeight:
+              "min(320px, calc(var(--app-viewport-height, 100dvh) - 48px))",
+          }}
+        >
           {Array.from(groups.entries()).map(([provider, models], gi) => (
             <div key={provider}>
               {gi > 0 && (
@@ -70,7 +87,9 @@ export function ModelSelector({
                 const active = isCurrent(m);
                 return (
                   <button
+                    type="button"
                     key={`${m.provider}/${m.id}`}
+                    aria-pressed={active}
                     onClick={() => {
                       if (!active) onSelect?.(m.provider, m.id);
                       close();

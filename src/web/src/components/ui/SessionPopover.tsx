@@ -80,11 +80,18 @@ export function SessionPopover({
 
   return (
     <Popover
-      trigger={({ open }) => (
+      label={t("session.title")}
+      trigger={({ open, id }) => (
         <button
-          className={`flex items-center justify-center w-9 h-9 rounded-[8px] transition-colors ${
+          type="button"
+          disabled={disabled}
+          aria-label={t("session.title")}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-controls={open ? id : undefined}
+          className={`flex items-center justify-center w-[44px] h-[44px] rounded-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
             open
-              ? "bg-[rgba(0,0,0,0.11)] dark:bg-[rgba(255,255,255,0.11)]"
+              ? "bg-[var(--fill-secondary)]"
               : "hover:bg-[var(--fill-tertiary)]"
           } ${disabled ? "opacity-40 pointer-events-none" : ""}`}
           title={t("session.title")}
@@ -95,7 +102,11 @@ export function SessionPopover({
             }
           }}
         >
-          <History size={16} className="text-[var(--label-secondary)]" />
+          <History
+            size={18}
+            className="text-[var(--label-secondary)]"
+            aria-hidden="true"
+          />
         </button>
       )}
       width={320}

@@ -266,7 +266,7 @@ export function InstanceView() {
         <div className="pointer-events-none absolute left-0 right-0 top-0 z-20 px-3 pt-3 md:px-4 md:pt-4">
           <div
             ref={topChromeRef}
-            className="glass-panel pointer-events-auto mx-auto w-full max-w-[920px] px-3 py-2 md:px-4 md:py-2.5"
+            className="conversation-topbar header-material pointer-events-auto w-full px-3 py-2 md:px-4 md:py-2.5"
             role="region"
             aria-label={t("conversation.instanceInfo")}
           >
@@ -359,6 +359,7 @@ export function InstanceView() {
         >
           <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
             <Composer
+              key={`${instanceId}:${instance?.sessionId ?? ""}`}
               ref={composerRef}
               instance={instance}
               draft={draft}

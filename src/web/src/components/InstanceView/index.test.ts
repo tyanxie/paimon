@@ -142,18 +142,48 @@ describe("玻璃样式", () => {
   });
 });
 
+describe("导航、顶部与输入区布局", () => {
+  test("侧栏共用完整玻璃面板，选中实例使用轻量填充", () => {
+    expect(sidebarSource).toContain("sidebar-layout select-none glass-panel");
+    expect(sidebarSource).toContain("sidebar-header");
+    expect(sidebarSource).toContain("sidebar-navigation");
+    expect(sidebarSource).toContain("instance-list");
+    expect(css).toContain(
+      '.instance-item[aria-current="page"] {\n  background: var(--fill-secondary);',
+    );
+    expect(css).toContain("background: var(--panel-bg);");
+  });
+
+  test("顶部使用右侧区域宽度，正文与输入区保持阅读宽度", () => {
+    expect(instanceViewSource).toContain(
+      'className="conversation-topbar header-material pointer-events-auto w-full px-3 py-2 md:px-4 md:py-2.5"',
+    );
+    expect(instanceViewSource).toContain(
+      'className="mx-auto max-w-[920px] space-y-2"',
+    );
+    expect(instanceViewSource).toContain(
+      'className="pointer-events-auto mx-auto w-full max-w-[920px]"',
+    );
+    expect(instanceHeaderSource).not.toContain("header-material");
+    expect(instanceHeaderSource).not.toContain("max-w-");
+  });
+
+  test("工具栏按输入容器宽度收纳辅助操作", () => {
+    expect(css).toContain("container: composer / inline-size;");
+    expect(css).toContain("@container composer (min-width: 640px)");
+    expect(composerSource).toContain("composer-inline-options");
+    expect(composerSource).toContain("composer-more-options");
+    expect(composerSource).toContain("composer-surface glass-panel-input");
+  });
+});
+
 describe("文本选择边界", () => {
   test("纯导航和操作控件禁用误选", () => {
-    expect(sidebarSource).toContain("glass-panel select-none");
+    expect(sidebarSource).toContain("sidebar-layout select-none");
     expect(mobileNavBarSource).toContain("select-none");
     expect(toolCallCardSource).toContain("text-left group select-none");
     expect(instanceViewSource).toContain('className="select-none w-9 h-9');
-    expect(composerSource).toContain(
-      'className="select-none w-[28px] h-[28px]',
-    );
-    expect(composerSource).toContain(
-      "className={`select-none w-[28px] h-[28px]",
-    );
+    expect(composerSource).toContain("select-none flex h-10 w-10 shrink-0");
   });
 
   test("有复制价值的信息文本显式保留可选择", () => {
@@ -162,9 +192,7 @@ describe("文本选择边界", () => {
     );
     expect(instanceHeaderSource).not.toContain('select-text">{text}</span>');
 
-    expect(composerSource).toContain(
-      '<span className="select-text" style={{ color }}>',
-    );
+    expect(composerSource).toContain("composer-context-detail select-text");
     expect(mobileNavBarSource).toContain("truncate select-text");
     expect(modalShellSource).toContain(
       "text-[var(--label-primary)] select-text",

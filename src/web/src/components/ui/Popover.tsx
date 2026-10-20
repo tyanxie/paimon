@@ -1,6 +1,13 @@
 // 通用 Popover 浮层组件：Portal 到 body，glass-popover 样式
 
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useId,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 /** 弹出方向 */
@@ -10,7 +17,9 @@ export type PopoverAlign = "left" | "right";
 
 interface PopoverProps {
   /** 渲染触发按钮，接收 open 状态 */
-  trigger: (props: { open: boolean }) => ReactNode;
+  trigger: (props: { open: boolean; id: string }) => ReactNode;
+  /** 弹层的可访问名称 */
+  label?: string;
   /** 面板宽度（px） */
   width?: number;
   /** 面板内容，接收 close 回调 */
@@ -37,13 +46,24 @@ export function calcPosition(
   align: PopoverAlign = "right",
   margin = 8,
   viewportPadding = 12,
+  width = 0,
 ): PopoverPosition {
   const { innerWidth, innerHeight } = window;
 
   // 水平定位
   const horizontal: Pick<PopoverPosition, "left" | "right"> =
     align === "left"
-      ? { left: Math.max(viewportPadding, anchorRect.left) }
+      ? {
+          left: Math.max(
+            viewportPadding,
+            Math.min(
+              anchorRect.left,
+              innerWidth -
+                Math.min(width, Math.max(0, innerWidth - viewportPadding * 2)) -
+                viewportPadding,
+            ),
+          ),
+        }
       : { right: Math.max(viewportPadding, innerWidth - anchorRect.right) };
 
   // 垂直定位
@@ -62,6 +82,7 @@ export function calcPosition(
 
 export function Popover({
   trigger,
+  label,
   width = 200,
   children,
   disabled = false,
@@ -72,6 +93,34 @@ export function Popover({
   const [position, setPosition] = useState<PopoverPosition | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const popoverId = useId();
+  const close = useCallback(() => {
+    setOpen(false);
+    containerRef.current?.querySelector("button")?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  useEffect(() => {
+    if (!open) return;
+    const panel = popoverRef.current;
+    if (panel && !panel.contains(document.activeElement)) {
+      (
+        panel.querySelector<HTMLElement>("input, button:not([disabled])") ??
+        panel
+      ).focus();
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, close]);
 
   // 点击外部关闭
   useEffect(() => {
@@ -86,7 +135,11 @@ export function Popover({
       }
     }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("click", handleClick);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("click", handleClick);
+    };
   }, [open]);
 
   // resize 时关闭（锚点在固定定位面板上，scroll 不影响其位置，无需关闭）
@@ -107,17 +160,19 @@ export function Popover({
     }
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPosition(calcPosition(rect, placement, align));
+    setPosition(calcPosition(rect, placement, align, 8, 12, width));
     setOpen(true);
   };
-
-  const close = () => setOpen(false);
 
   const popoverPortal =
     open && position
       ? createPortal(
           <div
             ref={popoverRef}
+            id={popoverId}
+            role={label ? "dialog" : undefined}
+            aria-label={label}
+            tabIndex={-1}
             className="glass-popover z-50"
             style={{
               position: "fixed",
@@ -128,6 +183,7 @@ export function Popover({
                 ? { top: position.top }
                 : { bottom: position.bottom }),
               width: `${width}px`,
+              maxWidth: "calc(100vw - 24px)",
             }}
           >
             {children(close)}
@@ -139,8 +195,8 @@ export function Popover({
   return (
     <>
       {/* 触发区域：包裹一层 div 用于绑定点击和定位 */}
-      <div className="relative" ref={containerRef} onClick={toggle}>
-        {trigger({ open })}
+      <div className="relative min-w-0" ref={containerRef} onClick={toggle}>
+        {trigger({ open, id: popoverId })}
       </div>
       {popoverPortal}
     </>
