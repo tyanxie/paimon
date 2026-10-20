@@ -10,11 +10,7 @@ import { withBasePath } from "../utils/basePath";
 
 // ── 类型 ──
 
-export type ConnectionState =
-  | "idle"
-  | "connecting"
-  | "connected"
-  | "disconnected";
+type ConnectionState = "idle" | "connecting" | "connected" | "disconnected";
 
 type MessageHandler = (msg: HubToBrowserMessage) => void;
 type Unsubscribe = () => void;
@@ -143,7 +139,7 @@ function doConnect() {
     }
   };
 
-  socket.onclose = (event) => {
+  socket.onclose = () => {
     clearConnectingTimeout();
     useWebSocket.setState({ connectionState: "disconnected" });
     ws = null;

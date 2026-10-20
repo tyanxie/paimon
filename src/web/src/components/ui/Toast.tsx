@@ -22,8 +22,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type ToastLevel = "info" | "success" | "warning" | "error";
-export interface ToastItem {
+type ToastLevel = "info" | "success" | "warning" | "error";
+interface ToastItem {
   id: number;
   message: string;
   level: ToastLevel;

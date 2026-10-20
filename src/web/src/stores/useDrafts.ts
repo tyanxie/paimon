@@ -26,7 +26,7 @@ interface DraftsState {
 
 // ── Store ──
 
-export const useDrafts = create<DraftsState>((set, get) => ({
+export const useDrafts = create<DraftsState>((set) => ({
   drafts: new Map(),
 
   setDraft: (instanceId, value) => {

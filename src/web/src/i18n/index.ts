@@ -13,7 +13,7 @@ export type Language = "zh-CN" | "en";
 const STORAGE_KEY = "paimon:language";
 
 /** 从 localStorage 读取语言偏好 */
-export function getStoredLanguage(): Language {
+function getStoredLanguage(): Language {
   const val = localStorage.getItem(STORAGE_KEY);
   if (val === "zh-CN" || val === "en") return val;
   return "zh-CN";

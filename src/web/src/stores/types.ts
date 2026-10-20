@@ -80,7 +80,7 @@ export interface ConversationTool {
   state: ConversationToolState;
 }
 
-export interface ConversationThinking {
+interface ConversationThinking {
   type: "thinking";
   key: string;
   source: ConversationSource;
@@ -94,13 +94,13 @@ export interface ConversationExecution {
   counts: Record<ConversationToolState["status"], number>;
 }
 
-export interface ConversationSystemEvent {
+interface ConversationSystemEvent {
   type: "system";
   key: string;
   entry: SessionEntry;
 }
 
-export type ConversationPart =
+type ConversationPart =
   | ConversationExecution
   | ConversationSystemEvent
   | {

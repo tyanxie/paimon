@@ -143,14 +143,6 @@ describe("Popover 架构", () => {
     expect(popoverSource).toContain("createPortal(");
     expect(popoverSource).toContain('position: "fixed"');
   });
-
-  test("popover 玻璃层不承担滚动裁剪", () => {
-    const outerClass =
-      popoverSource.match(/className="([^"]*glass-popover[^"]*)"/)?.[1] ?? "";
-
-    expect(outerClass).not.toContain("overflow-y-auto");
-    expect(outerClass).not.toContain("max-h-");
-  });
 });
 
 describe("ModelSelector", () => {

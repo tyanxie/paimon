@@ -16,9 +16,9 @@ import { useFloatingViewport } from "./useFloatingViewport";
 import { createPortal } from "react-dom";
 
 /** 弹出方向 */
-export type PopoverPlacement = "top" | "bottom";
+type PopoverPlacement = "top" | "bottom";
 /** 水平对齐 */
-export type PopoverAlign = "left" | "right";
+type PopoverAlign = "left" | "right";
 
 interface PopoverProps {
   /** 渲染触发按钮，接收 open 状态 */

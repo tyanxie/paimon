@@ -108,7 +108,7 @@ describe("表单功能", () => {
     const created: string[] = [];
     let payload: unknown;
     fetchSpy.mockImplementation(
-      fakeFetch(async (url, options) => {
+      fakeFetch(async (_, options) => {
         if (options?.method === "POST") {
           payload = JSON.parse(String(options.body));
           return Response.json({ instanceId: "created" });
