@@ -182,7 +182,8 @@ describe("文本选择边界", () => {
     expect(sidebarSource).toContain("sidebar-layout select-none");
     expect(mobileNavBarSource).toContain("select-none");
     expect(toolCallCardSource).toContain("text-left group select-none");
-    expect(instanceViewSource).toContain('className="select-none w-9 h-9');
+    expect(instanceViewSource.includes("import { Button }")).toBe(true);
+    expect(css.includes("user-select: none;")).toBe(true);
     expect(composerSource).toContain("select-none flex h-10 w-10 shrink-0");
   });
 
@@ -209,10 +210,18 @@ describe("文本选择边界", () => {
   });
 
   test("加载和空状态占位文案禁用选择", () => {
-    expect(instanceViewSource).toContain('t("conversation.loadingEarlier")');
-    expect(instanceViewSource).toContain("text-[11px] py-2 select-none");
-    expect(instanceViewSource).toContain('t("conversation.noMessages")');
-    expect(instanceViewSource).toContain("text-[12px] pt-8 select-none");
+    expect(
+      instanceViewSource.includes('t("conversation.loadingEarlier")'),
+    ).toBe(true);
+    expect(
+      instanceViewSource.includes('<StatusMessage compact tone="loading"'),
+    ).toBe(true);
+    expect(instanceViewSource.includes('t("conversation.noMessages")')).toBe(
+      true,
+    );
+    expect(
+      instanceViewSource.includes('<StatusMessage className="pt-8">'),
+    ).toBe(true);
     expect(instanceViewSource).toContain(
       'className="space-y-3 pt-3 select-none"',
     );

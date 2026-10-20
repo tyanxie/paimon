@@ -1,6 +1,10 @@
 // Session 切换 Popover：列出历史 session，支持新建、切换、分页加载和服务端搜索
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Button } from "./Button";
+import { TextField } from "./FormControls";
+import { MenuItem } from "./MenuItem";
+import { StatusMessage } from "./StatusMessage";
 import { Plus, History, Loader2 } from "lucide-react";
 import type { TFunction } from "i18next";
 import type { SessionListItem } from "../../../../protocol/types";
@@ -53,6 +57,13 @@ export function SessionPopover({
   const [filter, setFilter] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
   // 输入变化时 debounce 触发服务端搜索
   const handleFilterChange = useCallback(
@@ -114,9 +125,9 @@ export function SessionPopover({
       placement="bottom"
     >
       {(close) => (
-        <div className="flex flex-col max-h-[360px]">
+        <div className="ui-menu-layout">
           {/* 头部：标题 + 新建按钮 */}
-          <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
+          <div className="ui-menu-heading">
             <span className="text-[13px] font-medium text-[var(--label-primary)] select-none">
               {t("session.title")}
               {total > 0 && (
@@ -125,27 +136,28 @@ export function SessionPopover({
                 </span>
               )}
             </span>
-            <button
+            <Button
+              size="compact"
+              variant="secondary"
               onClick={() => {
                 onNewSession();
                 close();
               }}
               disabled={disabled}
-              className="flex items-center gap-1 px-2 py-1 rounded-[6px] text-[12px] text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-40"
             >
               <Plus size={12} />
               <span>{t("session.new")}</span>
-            </button>
+            </Button>
           </div>
 
           {/* 搜索栏 */}
           <div className="px-3 pb-2">
-            <input
+            <TextField
+              aria-label={t("session.filter")}
               type="text"
               placeholder={t("session.filter")}
               value={filter}
               onChange={(e) => handleFilterChange(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-[6px] bg-[var(--fill-tertiary)] text-[12px] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none border border-transparent focus:border-[var(--separator)]"
               autoFocus
             />
           </div>
@@ -156,24 +168,23 @@ export function SessionPopover({
           {/* 列表 */}
           <div
             ref={listRef}
-            className="flex-1 overflow-y-auto scrollbar-auto py-1.5 px-1.5"
+            className="ui-menu-scroll flex-1 scrollbar-auto"
             onScroll={handleScroll}
           >
             {loading && sessions.length === 0 ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2
-                  size={16}
-                  className="animate-spin text-[var(--label-tertiary)]"
-                />
-              </div>
+              <StatusMessage tone="loading">
+                {t("common.loading")}
+              </StatusMessage>
             ) : sessions.length === 0 ? (
-              <div className="py-4 text-center text-[12px] text-[var(--label-tertiary)] select-none">
+              <StatusMessage>
                 {filter ? t("session.noMatch") : t("session.noPrevious")}
-              </div>
+              </StatusMessage>
             ) : (
               <>
                 {sessions.map((session) => (
-                  <button
+                  <MenuItem
+                    selected={session.isCurrent}
+                    aria-current={session.isCurrent || undefined}
                     key={session.id}
                     onClick={() => {
                       if (!session.isCurrent) {
@@ -182,15 +193,11 @@ export function SessionPopover({
                       }
                     }}
                     disabled={session.isCurrent}
-                    className={`w-full text-left px-2.5 py-2 rounded-[8px] transition-colors mb-0.5 ${
-                      session.isCurrent
-                        ? "bg-[var(--fill-secondary)] cursor-default"
-                        : "hover:bg-[var(--fill-tertiary)] cursor-pointer"
-                    }`}
+                    className="flex-col items-stretch gap-0.5"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`text-[13px] leading-[18px] truncate ${
+                        className={`text-[14px] leading-[20px] truncate ${
                           session.isCurrent
                             ? "font-medium text-[var(--color-accent)]"
                             : "text-[var(--label-primary)]"
@@ -200,21 +207,21 @@ export function SessionPopover({
                           session.firstMessage ||
                           t("session.empty")}
                       </span>
-                      <span className="text-[11px] text-[var(--label-tertiary)] whitespace-nowrap shrink-0">
+                      <span className="text-[12px] text-[var(--label-secondary)] whitespace-nowrap shrink-0">
                         {formatRelativeTime(session.modified, t)}
                       </span>
                     </div>
                     {session.name && session.firstMessage && (
-                      <div className="mt-0.5 text-[11px] leading-[15px] text-[var(--label-tertiary)] truncate">
+                      <div className="mt-0.5 text-[12px] leading-[18px] text-[var(--label-secondary)] truncate">
                         {session.firstMessage}
                       </div>
                     )}
-                    <div className="mt-0.5 text-[10px] text-[var(--label-quaternary)]">
+                    <div className="mt-0.5 text-[11px] text-[var(--label-secondary)]">
                       {t("session.messageCount", {
                         count: session.messageCount,
                       })}
                     </div>
-                  </button>
+                  </MenuItem>
                 ))}
                 {/* 加载更多指示器 */}
                 {loading && sessions.length > 0 && (

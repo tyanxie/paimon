@@ -6,8 +6,13 @@ import {
   useEffect,
   useCallback,
   useId,
+  useLayoutEffect,
+  type CSSProperties,
   type ReactNode,
 } from "react";
+import { AnimatePresence } from "motion/react";
+import { FloatingSurface } from "./FloatingSurface";
+import { useFloatingViewport } from "./useFloatingViewport";
 import { createPortal } from "react-dom";
 
 /** 弹出方向 */
@@ -90,7 +95,8 @@ export function Popover({
   align = "right",
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState<PopoverPosition | null>(null);
+  const [position, setPosition] = useState<CSSProperties | null>(null);
+  const bounds = useFloatingViewport(open);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const popoverId = useId();
@@ -98,6 +104,51 @@ export function Popover({
     setOpen(false);
     containerRef.current?.querySelector("button")?.focus();
   }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const panelWidth = Math.min(width, Math.max(0, bounds.width - 24));
+    const anchorTop = Math.max(
+      bounds.top + 12,
+      Math.min(rect.top, bounds.top + bounds.height - 12),
+    );
+    const anchorBottom = Math.max(
+      anchorTop,
+      Math.min(rect.bottom, bounds.top + bounds.height - 12),
+    );
+    const availableAbove = Math.max(0, anchorTop - bounds.top - 20);
+    const availableBelow = Math.max(
+      0,
+      bounds.top + bounds.height - anchorBottom - 20,
+    );
+    const below =
+      placement === "bottom"
+        ? availableBelow >= 160 || availableBelow >= availableAbove
+        : availableAbove < 160 && availableBelow > availableAbove;
+    const left = Math.max(
+      bounds.left + 12,
+      Math.min(
+        align === "left" ? rect.left : rect.right - panelWidth,
+        bounds.left + bounds.width - panelWidth - 12,
+      ),
+    );
+    const compactViewport = Math.max(availableAbove, availableBelow) < 160;
+    setPosition({
+      left,
+      ...(compactViewport
+        ? { top: bounds.top + 12 }
+        : below
+          ? { top: Math.max(bounds.top + 12, anchorBottom + 8) }
+          : { bottom: Math.max(12, window.innerHeight - anchorTop + 8) }),
+      maxHeight: compactViewport
+        ? Math.max(0, bounds.height - 24)
+        : below
+          ? availableBelow
+          : availableAbove,
+    });
+  }, [open, bounds, width, placement, align]);
 
   useEffect(() => {
     if (disabled) setOpen(false);
@@ -120,7 +171,7 @@ export function Popover({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, close]);
+  }, [open, !!position, close]);
 
   // 点击外部关闭
   useEffect(() => {
@@ -158,39 +209,35 @@ export function Popover({
       setOpen(false);
       return;
     }
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setPosition(calcPosition(rect, placement, align, 8, 12, width));
     setOpen(true);
   };
 
-  const popoverPortal =
-    open && position
-      ? createPortal(
-          <div
-            ref={popoverRef}
-            id={popoverId}
-            role={label ? "dialog" : undefined}
-            aria-label={label}
-            tabIndex={-1}
-            className="glass-popover z-50"
-            style={{
-              position: "fixed",
-              ...(position.left !== undefined
-                ? { left: position.left }
-                : { right: position.right }),
-              ...(position.top !== undefined
-                ? { top: position.top }
-                : { bottom: position.bottom }),
-              width: `${width}px`,
-              maxWidth: "calc(100vw - 24px)",
-            }}
-          >
-            {children(close)}
-          </div>,
-          document.body,
-        )
-      : null;
+  const popoverPortal = position
+    ? createPortal(
+        <AnimatePresence>
+          {open && position && (
+            <FloatingSurface
+              key="popover"
+              ref={popoverRef}
+              id={popoverId}
+              role={label ? "dialog" : undefined}
+              aria-label={label}
+              tabIndex={-1}
+              className="z-50"
+              style={{
+                position: "fixed",
+                ...position,
+                width: `${Math.min(width, Math.max(0, bounds.width - 24))}px`,
+                maxWidth: "calc(100vw - 24px)",
+              }}
+            >
+              {children(close)}
+            </FloatingSurface>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )
+    : null;
 
   return (
     <>

@@ -2,6 +2,7 @@
 
 import { ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { MenuItem } from "./MenuItem";
 import { Popover } from "./Popover";
 import type { ThinkingLevel } from "../../../../protocol/types";
 
@@ -28,11 +29,15 @@ export function ThinkingOptions({
   const levels =
     availableLevels.length > 0 ? availableLevels : DEFAULT_THINKING_LEVELS;
   return (
-    <div className="py-1.5 px-1.5">
+    <div
+      className="ui-menu-scroll scrollbar-auto"
+      style={{ maxHeight: "inherit" }}
+    >
       {levels.map((level) => {
         const active = level === currentLevel;
         return (
-          <button
+          <MenuItem
+            selected={active}
             type="button"
             key={level}
             aria-pressed={active}
@@ -40,7 +45,6 @@ export function ThinkingOptions({
               if (!active) onSelect?.(level);
               onDone();
             }}
-            className={`min-h-[44px] w-full text-left px-2.5 py-2 rounded-[8px] flex items-center gap-2 transition-colors select-none mb-0.5 ${active ? "bg-[var(--fill-secondary)]" : "hover:bg-[var(--fill-tertiary)]"}`}
           >
             <span className="flex-1 text-[13px] text-[var(--label-primary)]">
               {level}
@@ -52,7 +56,7 @@ export function ThinkingOptions({
                 aria-hidden="true"
               />
             )}
-          </button>
+          </MenuItem>
         );
       })}
     </div>

@@ -1,6 +1,8 @@
 // 实例详情页：自治页面组件
 // 从 URL 获取 instanceId，内部管理所有状态和操作
 
+import { Button } from "../ui/Button";
+import { StatusMessage } from "../ui/StatusMessage";
 import { AnimatePresence } from "motion/react";
 import { useRef, useLayoutEffect, useState, useCallback } from "react";
 import { useParams } from "react-router";
@@ -299,30 +301,27 @@ export function InstanceView() {
             className="mx-auto max-w-[920px] space-y-2"
           >
             {loadState === "loadingMore" && (
-              <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2 select-none">
+              <StatusMessage compact tone="loading" className="justify-center">
                 {t("conversation.loadingEarlier")}
-              </div>
+              </StatusMessage>
             )}
             {isRefreshing ? (
               <RefreshingConversationSkeleton />
             ) : loadState === "error" ? (
-              <div className="mx-auto mt-8 max-w-[520px] rounded-[12px] border border-[var(--separator)] bg-[var(--fill-card)] px-4 py-3 text-center">
-                <div className="text-[13px] text-[var(--label-primary)] select-none">
-                  {t("conversation.loadFailed")}
-                </div>
-                {errorMessage && (
-                  <div className="mt-1 text-[12px] text-[var(--label-secondary)] break-words select-text">
-                    {errorMessage}
-                  </div>
-                )}
-              </div>
+              <StatusMessage
+                tone="error"
+                detail={errorMessage}
+                className="mx-auto mt-8 max-w-[520px] border border-[var(--separator)] bg-[var(--fill-card)]"
+              >
+                {t("conversation.loadFailed")}
+              </StatusMessage>
             ) : displayItems.length === 0 &&
               !hasMore &&
               !isBusy(instance?.status) &&
               !isStreaming ? (
-              <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8 select-none">
+              <StatusMessage className="pt-8">
                 {t("conversation.noMessages")}
-              </div>
+              </StatusMessage>
             ) : (
               <ConversationList
                 items={displayItems}
@@ -343,13 +342,16 @@ export function InstanceView() {
             style={{ bottom: scrollSpacing.scrollButtonBottom }}
             className="absolute left-1/2 z-30 -translate-x-1/2"
           >
-            <button
+            <Button
+              size="icon"
+              variant="secondary"
               onClick={scrollToBottom}
-              className="select-none w-9 h-9 rounded-full bg-[var(--btn-solid)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--btn-solid-hover)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+              aria-label={t("eventStream.scrollToBottom")}
+              className="border border-[var(--separator)] shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
               title={t("eventStream.scrollToBottom")}
             >
               <ChevronsDown size={16} />
-            </button>
+            </Button>
           </div>
         )}
 
@@ -409,9 +411,12 @@ function RefreshingConversationSkeleton() {
       aria-label={t("conversation.loadingConversation")}
     >
       {[0, 1, 2, 3].map((item) => (
-        <div key={item} className="space-y-1.5 animate-pulse">
-          <div className="h-3 w-20 rounded-full bg-[var(--fill-tertiary)]" />
-          <div className="max-w-[680px] space-y-1.5 rounded-[10px] border border-[var(--separator)] bg-[var(--fill-card)] p-3">
+        <div
+          key={item}
+          className="space-y-4 rounded-[24px] border border-[var(--separator)] bg-[var(--fill-quaternary)] px-4 py-4 animate-pulse"
+        >
+          <div className="h-4 w-28 rounded-full bg-[var(--fill-tertiary)]" />
+          <div className="space-y-2.5">
             <div className="h-3 w-[82%] rounded-full bg-[var(--fill-secondary)]" />
             <div className="h-3 w-[64%] rounded-full bg-[var(--fill-tertiary)]" />
           </div>

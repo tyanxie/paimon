@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "../ui/Button";
 import { AnimatePresence } from "motion/react";
 import { AlertCircle, ChevronRight, GitBranch, Layers } from "lucide-react";
 import type { ImagePayload } from "../../../../protocol/types";
@@ -195,23 +196,25 @@ export function ErrorCard({
               <p className="text-[12px] font-medium text-[#ff4245]">{brief}</p>
               <div className="flex shrink-0 items-center gap-2">
                 {onReEdit && (
-                  <button
+                  <Button
+                    size="compact"
                     type="button"
                     onClick={onReEdit}
                     className="select-none text-[12px] text-[var(--color-accent)] hover:opacity-70"
                   >
                     {t("reEdit.button")}
-                  </button>
+                  </Button>
                 )}
                 {isLong && (
-                  <button
+                  <Button
+                    size="compact"
                     type="button"
                     aria-label={t("error.title")}
                     onClick={() => setShowModal(true)}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)]"
                   >
                     <ChevronRight size={14} />
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

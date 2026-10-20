@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { MotionConfig } from "motion/react";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, useLocation } from "react-router";
@@ -64,18 +65,20 @@ function Observer() {
 async function render(list = instances, path = "/instance/one") {
   await act(async () =>
     root.render(
-      <MemoryRouter initialEntries={[path]}>
-        <Observer />
-        <Sidebar
-          instances={list}
-          selectedId={path === "/instance/one" ? "one" : null}
-          onSelect={(id) => selected.push(id)}
-          onShutdown={(id) => shutdown.push(id)}
-          onNewInstance={() => {
-            created += 1;
-          }}
-        />
-      </MemoryRouter>,
+      <MotionConfig reducedMotion="always">
+        <MemoryRouter initialEntries={[path]}>
+          <Observer />
+          <Sidebar
+            instances={list}
+            selectedId={path === "/instance/one" ? "one" : null}
+            onSelect={(id) => selected.push(id)}
+            onShutdown={(id) => shutdown.push(id)}
+            onNewInstance={() => {
+              created += 1;
+            }}
+          />
+        </MemoryRouter>
+      </MotionConfig>,
     ),
   );
 }
@@ -214,7 +217,9 @@ describe("整体玻璃侧栏", () => {
     await click(exit);
     expect(shutdown).toEqual(["one"]);
     expect(selected).toEqual([]);
-    expect(document.querySelector(".glass-popover")).toBeNull();
+    expect(document.querySelector(".glass-popover:not([inert])") === null).toBe(
+      true,
+    );
   });
 
   test("右键保留实例菜单与 Esc 关闭能力", async () => {
@@ -233,7 +238,9 @@ describe("整体玻璃侧栏", () => {
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
       ),
     );
-    expect(document.querySelector(".glass-popover")).toBeNull();
+    expect(document.querySelector(".glass-popover:not([inert])") === null).toBe(
+      true,
+    );
   });
 
   test("长按打开实例菜单并限制随后的选择点击", async () => {
@@ -255,7 +262,7 @@ describe("整体玻璃侧栏", () => {
       touch(select("one"), "touchmove");
       await new Promise((resolve) => setTimeout(resolve, 520));
     });
-    expect(document.querySelector(".glass-popover")).toBeNull();
+    expect(document.querySelector(".glass-popover") === null).toBe(true);
     await click(select("one"));
     expect(selected).toEqual(["one"]);
   });

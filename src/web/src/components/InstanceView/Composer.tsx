@@ -29,6 +29,8 @@ import { processImageFile, getImagesFromClipboard } from "../../utils/image";
 import { showToast } from "../ui/Toast";
 import { ModelSelector } from "../ui/ModelSelector";
 import { ThinkingSelector, ThinkingOptions } from "../ui/ThinkingSelector";
+import { Button } from "../ui/Button";
+import { MenuItem } from "../ui/MenuItem";
 import { Popover } from "../ui/Popover";
 import { CompactModal } from "../ui/CompactModal";
 import { useTranslation } from "react-i18next";
@@ -239,14 +241,15 @@ export function Composer({
                     draggable={false}
                   />
                 </button>
-                <button
+                <Button
+                  size="compact"
                   type="button"
                   onClick={() => handleRemoveImage(img.id)}
                   className="absolute -right-2 -top-2 flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[var(--badge-bg)] text-[var(--badge-text)] hover:bg-[var(--badge-bg-hover)]"
                   aria-label={t("composer.removeImage", { count: index + 1 })}
                 >
                   <X size={12} aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -323,11 +326,8 @@ export function Composer({
                 >
                   {(close) => (
                     <div
-                      className="overflow-y-auto p-2 scrollbar-auto"
-                      style={{
-                        maxHeight:
-                          "calc(var(--app-viewport-height, 100dvh) - 100px)",
-                      }}
+                      className="ui-menu-scroll p-2"
+                      style={{ maxHeight: "inherit" }}
                     >
                       {thinkingLevel && (
                         <section aria-label={t("composer.thinkingLevel")}>
@@ -353,7 +353,7 @@ export function Composer({
                         >
                           <ContextDetails contextUsage={contextUsage} />
                           {canShowCompact && (
-                            <button
+                            <MenuItem
                               type="button"
                               disabled={compactDisabled}
                               onClick={() => {
@@ -364,7 +364,7 @@ export function Composer({
                             >
                               <Minimize2 size={15} aria-hidden="true" />
                               {t("eventStream.compactContext")}
-                            </button>
+                            </MenuItem>
                           )}
                         </section>
                       )}

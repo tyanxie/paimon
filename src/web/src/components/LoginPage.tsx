@@ -2,7 +2,10 @@
 //
 // macOS 26 Liquid Glass 风格：动态渐变背景 + 居中毛玻璃面板。
 
-import { useState, useCallback, type FormEvent } from "react";
+import { useState, useCallback, useId, type FormEvent } from "react";
+import { Button } from "./ui/Button";
+import { FormField, TextField } from "./ui/FormControls";
+import { StatusMessage } from "./ui/StatusMessage";
 import { useTranslation, Trans } from "react-i18next";
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { setStoredToken } from "../utils/token";
@@ -17,6 +20,8 @@ interface LoginPageProps {
 
 export function LoginPage({ onLogin, error }: LoginPageProps) {
   const { t } = useTranslation();
+  const tokenId = useId();
+  const errorId = useId();
   const [token, setToken] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState(false);
@@ -76,34 +81,38 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
         </div>
 
         {/* Token 输入框 */}
-        <div className="w-full">
-          <input
+        <FormField label={t("login.placeholder")} htmlFor={tokenId}>
+          <TextField
+            id={tokenId}
+            aria-describedby={error || verifyError ? errorId : undefined}
+            invalid={error || verifyError}
             type="password"
             value={token}
             onChange={(e) => setToken(e.target.value)}
             placeholder={t("login.placeholder")}
             autoFocus
-            className={`w-full h-9 px-3 rounded-[9px] text-[13px] bg-[var(--fill-primary)] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] border outline-none transition-colors ${
-              error || verifyError
-                ? "border-red-500 focus:border-red-500"
-                : "border-[var(--separator)] focus:border-[var(--color-accent)]"
-            }`}
+            disabled={verifying}
+            autoComplete="off"
           />
           {(error || verifyError) && (
-            <p className="mt-2 text-[11px] text-red-500">
-              {t("login.invalidToken")}
-            </p>
+            <div id={errorId}>
+              <StatusMessage compact tone="error">
+                {t("login.invalidToken")}
+              </StatusMessage>
+            </div>
           )}
-        </div>
+        </FormField>
 
         {/* 提交按钮 */}
-        <button
+        <Button
+          variant="primary"
+          loading={verifying}
           type="submit"
           disabled={!token.trim() || verifying}
-          className="w-full h-9 rounded-[1000px] bg-[var(--color-accent)] text-white text-[13px] font-medium transition-opacity disabled:opacity-40 hover:opacity-90 active:opacity-80"
+          className="w-full"
         >
           {verifying ? t("login.verifying") : t("login.connect")}
-        </button>
+        </Button>
 
         {/* 提示 */}
         <p className="text-[11px] text-[var(--label-tertiary)] text-center leading-relaxed">

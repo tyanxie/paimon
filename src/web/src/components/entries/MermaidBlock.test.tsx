@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { MotionConfig } from "motion/react";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import mermaid from "mermaid";
@@ -21,7 +22,11 @@ async function render(content: string, streaming = false) {
     root = createRoot(container);
   }
   await act(async () => {
-    root!.render(<MarkdownRenderer content={content} streaming={streaming} />);
+    root!.render(
+      <MotionConfig reducedMotion="always">
+        <MarkdownRenderer content={content} streaming={streaming} />
+      </MotionConfig>,
+    );
   });
 }
 
@@ -189,12 +194,12 @@ describe("MermaidBlock", () => {
     expect(renderSpy).toHaveBeenCalledTimes(1);
     await act(async () => preview.querySelector("button")!.click());
     expect(preview.querySelector("img")!.className).toContain("max-w-none");
-    await act(async () => {
-      preview.dispatchEvent(new Event("cancel", { cancelable: true }));
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    });
+    await act(async () =>
+      preview.dispatchEvent(new Event("cancel", { cancelable: true })),
+    );
+    await waitForRender();
     expect(document.body.querySelector('[role="dialog"]') === null).toBe(true);
-    expect(document.activeElement).toBe(expand);
+    expect(document.activeElement === expand).toBe(true);
   });
 
   test("全屏预览随主题更新，生成期间保持窗口、焦点和尺寸模式", async () => {
@@ -310,10 +315,10 @@ describe("MermaidBlock", () => {
     await act(async () => useSettings.setState({ resolvedTheme: "dark" }));
     await waitForRender();
     const preview = document.body.querySelector('[role="dialog"]')!;
-    await act(async () => {
-      preview.dispatchEvent(new Event("cancel", { cancelable: true }));
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    });
+    await act(async () =>
+      preview.dispatchEvent(new Event("cancel", { cancelable: true })),
+    );
+    await waitForRender();
     expect(document.body.querySelector('[role="dialog"]') === null).toBe(true);
     await act(async () => finish(result));
     expect(container.querySelector("img")).not.toBeNull();

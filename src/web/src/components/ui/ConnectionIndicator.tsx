@@ -22,7 +22,7 @@ export function ConnectionIndicator() {
 
   return (
     <span
-      className={`w-2 h-2 rounded-full transition-colors ${isDisconnected ? "bg-red-500" : "bg-green-500"}`}
+      className={`w-2 h-2 rounded-full transition-colors ${isDisconnected ? "bg-[var(--toast-icon-error)]" : "bg-[var(--toast-icon-success)]"}`}
       title={isDisconnected ? t("common.offline") : t("common.online")}
     />
   );

@@ -1,3 +1,4 @@
+import { Button } from "../ui/Button";
 import { useId, useState } from "react";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { Brain, ChevronRight, Loader2, Sparkles, Wrench } from "lucide-react";
@@ -210,13 +211,14 @@ function ReplyCard({
           />
         </button>
         {onReEdit && (
-          <button
+          <Button
+            size="compact"
             type="button"
             onClick={onReEdit}
             className="shrink-0 rounded-full px-2 py-1.5 text-[12px] text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
           >
             {t("reEdit.button")}
-          </button>
+          </Button>
         )}
         <MessageTime
           timestamps={reply.entries.map((entry) => entry.timestamp)}

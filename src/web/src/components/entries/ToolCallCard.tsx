@@ -14,6 +14,7 @@ import {
   Timer,
   CircleHelp,
 } from "lucide-react";
+import { ResultBlock } from "../ui/ContentBlock";
 import { ModalShell } from "../ui/ModalShell";
 import type {
   SessionEntry,
@@ -510,9 +511,7 @@ function ReadDetailModal({
       <div className="flex-1 overflow-y-auto px-5 pt-3 pb-5 scrollbar-auto">
         {result !== null ? (
           result.isError ? (
-            <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
-              {result.content}
-            </pre>
+            <ResultBlock error>{result.content}</ResultBlock>
           ) : isMarkdown ? (
             <MarkdownRenderer content={result.content} />
           ) : (
@@ -577,9 +576,7 @@ function BashDetailModal({
           </h4>
           {result !== null ? (
             result.isError ? (
-              <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 text-red-400 bg-red-400/5">
-                {result.content}
-              </pre>
+              <ResultBlock error>{result.content}</ResultBlock>
             ) : (
               <MarkdownRenderer content={resultBlock!} />
             )
@@ -639,15 +636,7 @@ function WriteDetailModal({
             <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
               {t("entries.result")}
             </h4>
-            <pre
-              className={`text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 ${
-                result.isError
-                  ? "text-red-400 bg-red-400/5"
-                  : "text-[var(--label-secondary)] bg-[var(--fill-tertiary)]"
-              }`}
-            >
-              {result.content}
-            </pre>
+            <ResultBlock error={result.isError}>{result.content}</ResultBlock>
           </section>
         )}
 
@@ -743,16 +732,14 @@ function EditDetailModal({
       <div className="flex-1 overflow-y-auto pt-3 pb-5 scrollbar-auto">
         {result !== null ? (
           result.isError ? (
-            <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] mx-5 px-3 py-2 text-red-400 bg-red-400/5">
+            <ResultBlock error className="mx-5">
               {result.content}
-            </pre>
+            </ResultBlock>
           ) : diff ? (
             <DiffView diff={diff} />
           ) : (
             // fallback: 无 diff 数据时显示纯文本结果
-            <pre className="text-[13px] leading-[20px] whitespace-pre-wrap break-words mx-5 px-3 py-2 text-[var(--label-secondary)] bg-[var(--fill-tertiary)] rounded-[8px]">
-              {result.content}
-            </pre>
+            <ResultBlock className="mx-5">{result.content}</ResultBlock>
           )
         ) : (
           <div className="px-5">
@@ -789,9 +776,7 @@ function DefaultDetailModal({
           <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
             {t("entries.params")}
           </h4>
-          <pre className="text-[13px] leading-[20px] text-[var(--label-secondary)] whitespace-pre-wrap break-words bg-[var(--fill-tertiary)] rounded-[8px] px-3 py-2 overflow-x-auto">
-            {JSON.stringify(args, null, 2)}
-          </pre>
+          <ResultBlock>{JSON.stringify(args, null, 2)}</ResultBlock>
         </section>
 
         {/* 结果 */}
@@ -800,15 +785,7 @@ function DefaultDetailModal({
             <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
               {t("entries.result")}
             </h4>
-            <pre
-              className={`text-[13px] leading-[20px] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2 overflow-x-auto ${
-                result.isError
-                  ? "text-red-400 bg-red-400/5"
-                  : "text-[var(--label-secondary)] bg-[var(--fill-tertiary)]"
-              }`}
-            >
-              {result.content}
-            </pre>
+            <ResultBlock error={result.isError}>{result.content}</ResultBlock>
           </section>
         )}
 

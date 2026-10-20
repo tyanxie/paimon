@@ -1,6 +1,7 @@
 // 模型选择器：点击弹出 Popover，按 provider 分组展示可选模型
 
 import { ChevronDown, Check } from "lucide-react";
+import { MenuItem } from "./MenuItem";
 import { Popover } from "./Popover";
 import type { ModelInfo } from "../../../../protocol/types";
 import { useTranslation } from "react-i18next";
@@ -69,24 +70,20 @@ export function ModelSelector({
     >
       {(close) => (
         <div
-          className="max-h-[320px] overflow-y-auto py-1.5 px-1.5 scrollbar-auto"
-          style={{
-            maxHeight:
-              "min(320px, calc(var(--app-viewport-height, 100dvh) - 48px))",
-          }}
+          className="ui-menu-scroll scrollbar-auto"
+          style={{ maxHeight: "inherit" }}
         >
           {Array.from(groups.entries()).map(([provider, models], gi) => (
             <div key={provider}>
               {gi > 0 && (
                 <div className="mx-1 my-1 h-px bg-[var(--separator)]" />
               )}
-              <div className="px-2.5 pt-2 pb-1 text-[11px] font-bold text-[var(--label-tertiary)] uppercase select-none">
-                {provider}
-              </div>
+              <div className="ui-menu-section">{provider}</div>
               {models.map((m) => {
                 const active = isCurrent(m);
                 return (
-                  <button
+                  <MenuItem
+                    selected={active}
                     type="button"
                     key={`${m.provider}/${m.id}`}
                     aria-pressed={active}
@@ -94,17 +91,12 @@ export function ModelSelector({
                       if (!active) onSelect?.(m.provider, m.id);
                       close();
                     }}
-                    className={`w-full text-left px-2.5 py-2 rounded-[8px] flex items-center gap-2 transition-colors select-none mb-0.5 ${
-                      active
-                        ? "bg-[var(--fill-secondary)]"
-                        : "hover:bg-[var(--fill-tertiary)]"
-                    }`}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="text-[13px] text-[var(--label-primary)] truncate select-text">
                         {m.name || m.id}
                       </div>
-                      <div className="text-[11px] text-[var(--label-tertiary)] truncate select-text">
+                      <div className="text-[12px] text-[var(--label-secondary)] truncate select-text">
                         {m.id}
                       </div>
                     </div>
@@ -114,7 +106,7 @@ export function ModelSelector({
                         className="text-[var(--color-accent)] flex-shrink-0"
                       />
                     )}
-                  </button>
+                  </MenuItem>
                 );
               })}
             </div>

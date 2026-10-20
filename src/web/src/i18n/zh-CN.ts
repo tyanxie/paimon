@@ -192,6 +192,7 @@ const zhCN = {
 
   // ─── 消息条目 ───
   entries: {
+    code: "代码",
     contextCompacted: "上下文已压缩",
     branchSummary: "分支摘要",
     thinking: "思考",

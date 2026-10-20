@@ -195,6 +195,7 @@ const en: LocaleResource = {
 
   // ─── Message Entries ───
   entries: {
+    code: "Code",
     contextCompacted: "Context compacted",
     branchSummary: "Branch summary",
     thinking: "Thinking",

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { Button } from "../ui/Button";
 import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -60,7 +61,8 @@ export function MessageTime({
   };
   return (
     <>
-      <button
+      <Button
+        size="compact"
         ref={buttonRef}
         type="button"
         aria-label={label}
@@ -73,17 +75,17 @@ export function MessageTime({
         className="conversation-time inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--label-secondary)] opacity-100 transition-opacity hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 motion-reduce:transition-none"
       >
         <Clock size={13} aria-hidden="true" />
-      </button>
+      </Button>
       {position &&
         createPortal(
           <div
             id={tooltipId}
             role="tooltip"
-            className="glass-popover pointer-events-none fixed z-50 max-w-[calc(100vw-24px)] px-3 py-2 text-[11px] text-[var(--label-primary)]"
+            className="glass-popover ui-floating pointer-events-none fixed z-50 max-w-[calc(100vw-24px)] px-3 py-2 text-[11px] text-[var(--label-primary)]"
             style={position}
           >
             {range.map(({ value }, index) => (
-              <div key={value} className="flex gap-3 whitespace-nowrap">
+              <div key={value} className="flex flex-wrap gap-x-3 gap-y-1">
                 {range.length > 1 && (
                   <span className="text-[var(--label-secondary)]">
                     {t(

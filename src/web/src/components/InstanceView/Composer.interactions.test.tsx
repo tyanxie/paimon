@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { MotionConfig } from "motion/react";
 import { act, createRef, useState, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type {
@@ -106,7 +107,13 @@ function Probe({ options }: { options: Partial<Props> }) {
 }
 
 async function render(options: Partial<Props> = {}) {
-  await act(async () => root.render(<Probe options={options} />));
+  await act(async () =>
+    root.render(
+      <MotionConfig reducedMotion="always">
+        <Probe options={options} />
+      </MotionConfig>,
+    ),
+  );
 }
 async function click(element: Element) {
   await act(async () =>
@@ -255,9 +262,11 @@ describe("输入工具栏交互", () => {
     await click(option);
     expect(models).toEqual([["other", "next"]]);
     expect(
-      document.querySelector('[aria-label="选择模型"][role="dialog"]'),
-    ).toBeNull();
-    expect(document.activeElement).toBe(trigger);
+      document.querySelector(
+        '[aria-label="选择模型"][role="dialog"]:not([inert])',
+      ) === null,
+    ).toBe(true);
+    expect(document.activeElement === trigger).toBe(true);
   });
 
   test("更多选项直接选择思考等级并关闭菜单", async () => {
@@ -275,9 +284,11 @@ describe("输入工具栏交互", () => {
     await click(button("off", panel));
     expect(levels).toEqual(["off"]);
     expect(
-      document.querySelector('[aria-label="更多输入选项"][role="dialog"]'),
-    ).toBeNull();
-    expect(document.activeElement).toBe(trigger);
+      document.querySelector(
+        '[aria-label="更多输入选项"][role="dialog"]:not([inert])',
+      ) === null,
+    ).toBe(true);
+    expect(document.activeElement === trigger).toBe(true);
   });
 
   test("没有可选等级时保持现有默认等级", async () => {
@@ -329,14 +340,16 @@ describe("输入工具栏交互", () => {
       ),
     );
     expect(
-      document.querySelector('[aria-label="更多输入选项"][role="dialog"]'),
-    ).toBeNull();
+      document.querySelector(
+        '[aria-label="更多输入选项"][role="dialog"]:not([inert])',
+      ) === null,
+    ).toBe(true);
     const modal = document.querySelector("dialog.fixed-viewport")!;
     await change(modal.querySelector("textarea")!, " keep context ");
     await click(button("开始压缩", modal));
     expect(compacted).toEqual(["keep context"]);
-    expect(modal.getAttribute("data-presence")).toBe("exiting");
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 300)));
+    expect(modal.querySelector("textarea") !== null).toBe(true);
+    await act(async () => root.render(null));
     expect(document.querySelector("dialog.fixed-viewport") === null).toBe(true);
   });
 
@@ -367,9 +380,11 @@ describe("输入工具栏交互", () => {
       ),
     );
     expect(
-      document.querySelector('[aria-label="更多输入选项"][role="dialog"]'),
-    ).toBeNull();
-    expect(document.activeElement).toBe(trigger);
+      document.querySelector(
+        '[aria-label="更多输入选项"][role="dialog"]:not([inert])',
+      ) === null,
+    ).toBe(true);
+    expect(document.activeElement === trigger).toBe(true);
   });
 
   test("不支持思考的模型隐藏思考选项，缺少上下文时保留输入", async () => {

@@ -69,7 +69,9 @@ describe("ToolCallCard lifecycle", () => {
     expect(container.textContent).toContain("1.2\u00a0s");
     await act(async () => container.querySelector("button")!.click());
     expect(container.textContent).toContain("command failed");
-    expect(container.querySelector("pre.text-red-400")).not.toBeNull();
+    expect(container.querySelector("pre.tool-result-error") !== null).toBe(
+      true,
+    );
   });
 
   test("uses final history content and tolerates legacy results", async () => {

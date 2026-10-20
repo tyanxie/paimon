@@ -12,6 +12,7 @@ import {
 import * as m from "motion/react-m";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "./Button";
 import { cycleDialogFocus, useNativeDialog } from "./useNativeDialog";
 
 interface ModalShellProps {
@@ -20,6 +21,8 @@ interface ModalShellProps {
   onClose: () => void;
   children: React.ReactNode;
   mobileSheet?: boolean;
+  size?: "detail" | "form";
+  footer?: React.ReactNode;
 }
 
 const loadFeatures = () =>
@@ -53,6 +56,8 @@ function ModalContent({
   onClose,
   children,
   mobileSheet = true,
+  size = "detail",
+  footer,
 }: ModalShellProps) {
   const { t } = useTranslation();
   const titleId = useId();
@@ -135,6 +140,7 @@ function ModalContent({
       >
         <m.div
           ref={panelRef}
+          data-size={size}
           className="modal-panel flex min-h-0 flex-col overflow-hidden"
           data-sheet={sheet}
           style={{ y }}
@@ -206,7 +212,8 @@ function ModalContent({
               </div>
               <div className="flex shrink-0 items-center gap-2 select-text">
                 {trailing}
-                <button
+                <Button
+                  size="icon"
                   ref={closeRef}
                   type="button"
                   onClick={requestClose}
@@ -214,7 +221,7 @@ function ModalContent({
                   className="modal-close select-none flex items-center justify-center rounded-full text-[var(--label-secondary)] transition-colors hover:bg-[var(--fill-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none"
                 >
                   <X size={18} aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             </header>
             <div
@@ -225,6 +232,7 @@ function ModalContent({
             >
               {children}
             </div>
+            {footer && <footer className="ui-dialog-actions">{footer}</footer>}
           </div>
         </m.div>
       </div>

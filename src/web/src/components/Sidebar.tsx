@@ -1,5 +1,7 @@
 // 整体玻璃侧栏：全局入口与按 Edge 分组的实例列表
 
+import { AnimatePresence } from "motion/react";
+import { Button } from "./ui/Button";
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import {
   Settings as SettingsIcon,
@@ -202,7 +204,8 @@ export function Sidebar({
                 data-edge-id={edgeId}
                 aria-label={edgeId}
               >
-                <button
+                <Button
+                  size="compact"
                   type="button"
                   onClick={() => handleCopyEdgeId(edgeId)}
                   title={t("navigation.copyEdge", { edgeId })}
@@ -224,7 +227,7 @@ export function Sidebar({
                       aria-hidden="true"
                     />
                   )}
-                </button>
+                </Button>
                 <ul className="space-y-1">
                   {groupInstances.map((instance) => {
                     const name =
@@ -266,7 +269,7 @@ export function Sidebar({
                           onTouchEnd={cancelLongPress}
                           onTouchMove={cancelLongPress}
                           onTouchCancel={cancelLongPress}
-                          className="instance-item w-full rounded-[16px] border border-transparent px-3 py-3 pr-[48px] text-left"
+                          className="instance-item w-full rounded-[16px] border border-transparent px-3 py-3 pr-[56px] text-left"
                         >
                           <div className="flex min-w-0 items-center gap-2.5">
                             <span
@@ -309,7 +312,8 @@ export function Sidebar({
                             </div>
                           )}
                         </button>
-                        <button
+                        <Button
+                          size="compact"
                           type="button"
                           aria-label={t("navigation.instanceActions", { name })}
                           title={t("navigation.instanceActions", { name })}
@@ -324,7 +328,7 @@ export function Sidebar({
                           }}
                         >
                           <MoreHorizontal size={16} aria-hidden="true" />
-                        </button>
+                        </Button>
                       </li>
                     );
                   })}
@@ -334,22 +338,25 @@ export function Sidebar({
           )}
         </div>
       </section>
-      {contextMenu && (
-        <ContextMenu
-          position={contextMenu.position}
-          onClose={() => setContextMenu(null)}
-        >
-          <ContextMenuItem
-            icon={<LogOut size={14} />}
-            label={t("sidebar.shutdown")}
-            danger
-            onClick={() => {
-              onShutdown(contextMenu.instanceId);
-              setContextMenu(null);
-            }}
-          />
-        </ContextMenu>
-      )}
+      <AnimatePresence>
+        {contextMenu && (
+          <ContextMenu
+            key={contextMenu.instanceId}
+            position={contextMenu.position}
+            onClose={() => setContextMenu(null)}
+          >
+            <ContextMenuItem
+              icon={<LogOut size={14} />}
+              label={t("sidebar.shutdown")}
+              danger
+              onClick={() => {
+                onShutdown(contextMenu.instanceId);
+                setContextMenu(null);
+              }}
+            />
+          </ContextMenu>
+        )}
+      </AnimatePresence>
     </aside>
   );
 }

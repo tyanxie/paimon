@@ -5,6 +5,8 @@ import { AnimatePresence } from "motion/react";
 import { Check, Copy, Expand, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useResolvedTheme } from "../../stores/useSettings";
+import { Button } from "../ui/Button";
+import { ContentToolbar } from "../ui/ContentBlock";
 import { ImageLightbox } from "../ui/ImageLightbox";
 
 let renderQueue: Promise<void> = Promise.resolve();
@@ -167,39 +169,30 @@ export function MermaidBlock({
 
   return (
     <>
-      <div className="my-2 min-w-0 max-w-full rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--separator)]">
-          <span className="text-[11px] text-[var(--label-tertiary)] font-medium">
-            {t("entries.mermaidDiagram")}
-          </span>
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)] hover:text-[var(--label-secondary)] transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-            >
-              {copied ? (
-                <Check size={12} aria-hidden="true" />
-              ) : (
-                <Copy size={12} aria-hidden="true" />
-              )}
-              <span aria-live="polite">
-                {copied ? t("entries.copied") : t("entries.copy")}
-              </span>
-            </button>
-            {ready && (
-              <button
-                type="button"
-                onClick={() => setPreviewOpen(true)}
-                aria-haspopup="dialog"
-                className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)] hover:text-[var(--label-secondary)] transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-              >
-                <Expand size={12} aria-hidden="true" />
-                {t("entries.mermaidExpand")}
-              </button>
+      <div className="content-block max-w-full">
+        <ContentToolbar label={t("entries.mermaidDiagram")}>
+          <Button size="compact" type="button" onClick={handleCopy}>
+            {copied ? (
+              <Check size={12} aria-hidden="true" />
+            ) : (
+              <Copy size={12} aria-hidden="true" />
             )}
-          </div>
-        </div>
+            <span aria-live="polite">
+              {copied ? t("entries.copied") : t("entries.copy")}
+            </span>
+          </Button>
+          {ready && (
+            <Button
+              size="compact"
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              aria-haspopup="dialog"
+            >
+              <Expand size={12} aria-hidden="true" />
+              {t("entries.mermaidExpand")}
+            </Button>
+          )}
+        </ContentToolbar>
         {ready ? (
           <div className="px-3 py-2.5 overflow-x-auto">
             {/* SVG 使用图片上下文展示，图表样式与页面保持独立 */}

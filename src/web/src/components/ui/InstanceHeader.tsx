@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
 } from "react";
+import { Button } from "./Button";
 import { GitBranch, Folder, Check } from "lucide-react";
 
 interface InstanceHeaderProps {
@@ -108,17 +109,22 @@ function CopyableInfo({
   }, [copyText]);
 
   return (
-    <button
+    <Button
+      size="inline"
       type="button"
       onClick={handleClick}
       title={title ?? copyText}
       className="inline-flex min-h-[24px] min-w-0 items-center gap-1 rounded-[6px] px-1 -mx-1 transition-colors hover:bg-[var(--fill-tertiary)] active:bg-[var(--fill-secondary)] cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
     >
       <span className="shrink-0 opacity-70">
-        {copied ? <Check size={11} className="text-green-500" /> : icon}
+        {copied ? (
+          <Check size={11} className="text-[var(--toast-icon-success)]" />
+        ) : (
+          icon
+        )}
       </span>
       <span className="truncate">{text}</span>
-    </button>
+    </Button>
   );
 }
 
