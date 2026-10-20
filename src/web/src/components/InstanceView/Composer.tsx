@@ -1,5 +1,6 @@
 // 消息输入区：textarea + 图片上传/粘贴/预览 + 工具栏 + 上下文用量 + 发送/停止
 
+import { AnimatePresence } from "motion/react";
 import {
   useRef,
   useLayoutEffect,
@@ -414,15 +415,18 @@ export function Composer({
           </div>
         </div>
       </div>
-      {showCompactModal && (
-        <CompactModal
-          onClose={() => setShowCompactModal(false)}
-          onConfirm={(customInstructions) => {
-            onCompact(customInstructions);
-            setShowCompactModal(false);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {showCompactModal && (
+          <CompactModal
+            key="compact"
+            onClose={() => setShowCompactModal(false)}
+            onConfirm={(customInstructions) => {
+              onCompact(customInstructions);
+              setShowCompactModal(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

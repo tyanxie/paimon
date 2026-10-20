@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { AlertCircle, ChevronRight, GitBranch, Layers } from "lucide-react";
 import type { ImagePayload } from "../../../../protocol/types";
 import { MarkdownRenderer } from "./Markdown";
@@ -72,9 +73,15 @@ export function UserBubble({
           {!text && images.length > 0 && <div className="h-2" />}
         </div>
       </div>
-      {lightboxSrc && (
-        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
-      )}
+      <AnimatePresence>
+        {lightboxSrc && (
+          <ImageLightbox
+            key="image"
+            src={lightboxSrc}
+            onClose={() => setLightboxSrc(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -129,13 +136,19 @@ export function MetaEntry({
         </button>
         <MessageTime timestamps={[timestamp]} />
       </div>
-      {showDetail && (
-        <ModalShell title={label} onClose={() => setShowDetail(false)}>
-          <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-auto">
-            <MarkdownRenderer content={summary} />
-          </div>
-        </ModalShell>
-      )}
+      <AnimatePresence>
+        {showDetail && (
+          <ModalShell
+            key="summary"
+            title={label}
+            onClose={() => setShowDetail(false)}
+          >
+            <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-auto">
+              <MarkdownRenderer content={summary} />
+            </div>
+          </ModalShell>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -210,36 +223,39 @@ export function ErrorCard({
           </div>
         </div>
       </div>
-      {showModal && (
-        <ModalShell
-          title={t("error.title")}
-          onClose={() => setShowModal(false)}
-        >
-          <div className="flex-1 overflow-y-auto px-5 py-6 scrollbar-auto">
-            <div className="mb-5 flex flex-col items-center text-center">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,66,69,0.1)]">
-                <AlertCircle size={20} className="text-[#ff4245]" />
+      <AnimatePresence>
+        {showModal && (
+          <ModalShell
+            key="error"
+            title={t("error.title")}
+            onClose={() => setShowModal(false)}
+          >
+            <div className="flex-1 overflow-y-auto px-5 py-6 scrollbar-auto">
+              <div className="mb-5 flex flex-col items-center text-center">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,66,69,0.1)]">
+                  <AlertCircle size={20} className="text-[#ff4245]" />
+                </div>
+                <p className="text-[15px] font-semibold text-[#ff4245]">
+                  {brief}
+                </p>
               </div>
-              <p className="text-[15px] font-semibold text-[#ff4245]">
-                {brief}
-              </p>
+              <div className="space-y-3 rounded-[10px] bg-[var(--fill-card)] p-4">
+                <ErrorDetailRow label={t("error.message")} value={detail} />
+                {errorType && (
+                  <ErrorDetailRow label={t("error.type")} value={errorType} />
+                )}
+                {requestId && (
+                  <ErrorDetailRow
+                    label={t("error.requestId")}
+                    value={requestId}
+                    mono
+                  />
+                )}
+              </div>
             </div>
-            <div className="space-y-3 rounded-[10px] bg-[var(--fill-card)] p-4">
-              <ErrorDetailRow label={t("error.message")} value={detail} />
-              {errorType && (
-                <ErrorDetailRow label={t("error.type")} value={errorType} />
-              )}
-              {requestId && (
-                <ErrorDetailRow
-                  label={t("error.requestId")}
-                  value={requestId}
-                  mono
-                />
-              )}
-            </div>
-          </div>
-        </ModalShell>
-      )}
+          </ModalShell>
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -2,6 +2,7 @@
 // 通过 entries 查找配对的 toolResult
 
 import { useState, useMemo, useEffect } from "react";
+import { AnimatePresence } from "motion/react";
 import {
   FileText,
   Terminal,
@@ -330,17 +331,20 @@ export function ToolCallCard({
       </button>
 
       {/* 详情弹窗 */}
-      {showModal && (
-        <DetailModal
-          name={name}
-          args={args}
-          result={result}
-          durationDisplay={durationDisplay}
-          isRunning={isRunning}
-          isAborted={terminated}
-          onClose={() => setShowModal(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showModal && (
+          <DetailModal
+            key={toolCallId ?? name}
+            name={name}
+            args={args}
+            result={result}
+            durationDisplay={durationDisplay}
+            isRunning={isRunning}
+            isAborted={terminated}
+            onClose={() => setShowModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

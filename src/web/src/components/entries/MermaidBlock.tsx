@@ -1,6 +1,7 @@
 // Mermaid 图表：主题适配、流式更新与源码复制
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { Check, Copy, Expand, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useResolvedTheme } from "../../stores/useSettings";
@@ -212,15 +213,18 @@ export function MermaidBlock({
           placeholder
         )}
       </div>
-      {previewOpen && (
-        <ImageLightbox
-          src={imageSrc}
-          alt={t("entries.mermaidDiagram")}
-          zoomable
-          placeholder={placeholder}
-          onClose={() => setPreviewOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {previewOpen && (
+          <ImageLightbox
+            key="preview"
+            src={imageSrc}
+            alt={t("entries.mermaidDiagram")}
+            zoomable
+            placeholder={placeholder}
+            onClose={() => setPreviewOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

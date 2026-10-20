@@ -6,10 +6,15 @@ const en: LocaleResource = {
   // ─── Common ───
   common: {
     cancel: "Cancel",
+    close: "Close",
     confirm: "Confirm",
     loading: "Loading…",
     online: "Online",
     offline: "Offline",
+  },
+
+  modal: {
+    content: "Dialog content",
   },
 
   imagePreview: {

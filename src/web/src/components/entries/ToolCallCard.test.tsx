@@ -6,7 +6,8 @@ import { ToolCallCard } from "./ToolCallCard";
 import type { SessionEntry, ToolExecutionState } from "../../stores/types";
 
 let root: Root | undefined;
-let container: HTMLDivElement;
+let container: HTMLElement;
+let mountPoint: HTMLDivElement;
 
 async function renderCard(
   execution?: ToolExecutionState,
@@ -14,9 +15,10 @@ async function renderCard(
   name = "bash",
 ) {
   if (!root) {
-    container = document.createElement("div");
-    document.body.append(container);
-    root = createRoot(container);
+    mountPoint = document.createElement("div");
+    document.body.append(mountPoint);
+    container = document.body;
+    root = createRoot(mountPoint);
   }
   await act(async () => {
     root!.render(
@@ -35,7 +37,7 @@ afterEach(async () => {
   await act(async () => root?.unmount());
   await act(async () => i18n.changeLanguage("zh-CN"));
   root = undefined;
-  container?.remove();
+  mountPoint?.remove();
 });
 
 describe("ToolCallCard lifecycle", () => {

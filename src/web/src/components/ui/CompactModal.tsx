@@ -18,7 +18,11 @@ export function CompactModal({ onClose, onConfirm }: CompactModalProps) {
   }, [instructions, onConfirm]);
 
   return (
-    <ModalShell title={t("compact.title")} onClose={onClose}>
+    <ModalShell
+      mobileSheet={false}
+      title={t("compact.title")}
+      onClose={onClose}
+    >
       <div className="px-5 py-4 space-y-3">
         <p className="text-[13px] leading-[18px] text-[var(--label-secondary)] select-none">
           {t("compact.description")}

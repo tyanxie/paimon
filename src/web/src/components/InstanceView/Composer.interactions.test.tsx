@@ -331,11 +331,13 @@ describe("输入工具栏交互", () => {
     expect(
       document.querySelector('[aria-label="更多输入选项"][role="dialog"]'),
     ).toBeNull();
-    const modal = container.querySelector(".fixed-viewport")!;
+    const modal = document.querySelector("dialog.fixed-viewport")!;
     await change(modal.querySelector("textarea")!, " keep context ");
     await click(button("开始压缩", modal));
     expect(compacted).toEqual(["keep context"]);
-    expect(container.querySelector(".fixed-viewport")).toBeNull();
+    expect(modal.getAttribute("data-presence")).toBe("exiting");
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 300)));
+    expect(document.querySelector("dialog.fixed-viewport") === null).toBe(true);
   });
 
   test("运行中禁用压缩，已经压缩时隐藏对应操作", async () => {

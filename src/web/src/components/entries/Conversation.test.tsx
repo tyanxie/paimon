@@ -9,7 +9,8 @@ import { ConversationList } from "./Conversation";
 import { MessageTime } from "./MessageTime";
 
 let root: Root;
-let container: HTMLDivElement;
+let container: HTMLElement;
+let mountPoint: HTMLDivElement;
 const emptyExecutions = new Map<string, ToolExecutionState>();
 
 function message(id: string, role: string, content: unknown): SessionEntry {
@@ -111,13 +112,14 @@ function contentOf(button: HTMLButtonElement) {
 
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
-  container = document.createElement("div");
-  document.body.append(container);
-  root = createRoot(container);
+  mountPoint = document.createElement("div");
+  document.body.append(mountPoint);
+  container = document.body;
+  root = createRoot(mountPoint);
 });
 afterEach(async () => {
   await act(async () => root.unmount());
-  container.remove();
+  mountPoint.remove();
   await i18n.changeLanguage("zh-CN");
 });
 

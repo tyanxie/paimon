@@ -1,5 +1,6 @@
 // 根组件：auth + 路由 + 全局 WS 订阅
 
+import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useViewportHeight } from "./hooks/useViewportHeight";
@@ -186,12 +187,15 @@ export default function App() {
       </Routes>
 
       {/* 新建实例弹窗 */}
-      {showNewInstance && (
-        <NewInstanceModal
-          onClose={() => setShowNewInstance(false)}
-          onCreated={handleInstanceCreated}
-        />
-      )}
+      <AnimatePresence>
+        {showNewInstance && (
+          <NewInstanceModal
+            key="new-instance"
+            onClose={() => setShowNewInstance(false)}
+            onCreated={handleInstanceCreated}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 全局 Toast */}
       <ToastContainer />

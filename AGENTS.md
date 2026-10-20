@@ -66,10 +66,11 @@ bin/
 - **对话容器与折叠** — `ConversationList` 渲染 `displayItems`，回复使用 24px 圆角中性半透明容器；执行汇总和 thinking 默认收起，用户展开后保持其选择。整组回复、执行汇总与 thinking 独立管理开关，折叠后保留组件身份并限制焦点访问，实例或 session 切换时重置。Motion 使用 `LazyMotion`、`m` 与共享 `Collapsible` 管理高度和透明度，支持 reduced motion。工具结果未知时使用静态状态提示；明确的终止消息结束回复内未完成工具，实例 `idle` 结束运行指示。消息时间使用历史时间或已有事件时间，流式消息保留首次事件时间，hover、聚焦和点击可查看；工具耗时独立显示。折叠前通过 `prepareForContentResize` 保持点击入口的阅读位置。运行与压缩提示位于回复附近，输入区显示上下文与操作控件。
 - **导航与输入布局** — `Sidebar` 使用单个 `glass-panel` 容器展示全局入口和 Edge 分组实例列表：首页与设置在页眉横向排列，新建按钮位于列表标题右侧，连接信息位于实例数量旁。列表独立滚动，保留复制、选择、右键与长按退出；选中项使用 `--fill-secondary` 轻量填充。`InstanceView` 的顶部栏沿右侧区域全宽使用单个 `header-material` 容器，标题、目录、Git branch 和 session 操作共同位于其中；`InstanceHeader` 提供内部内容，正文与输入区保持 920px 阅读宽度。`Composer` 使用单个 24px 圆角 `composer-surface`；640px container query 根据实际输入区域宽度，将 thinking 与压缩操作收纳到更多选项，发送／停止始终位于右侧，工具栏按钮至少具有 44px 高度。上下文支持紧凑百分比和完整用量查看，压缩后 tokens 暂缺时显示等待更新；保留草稿、IME、图片和原有操作。实例或 session 切换时重置输入区的局部弹层状态。
 - **前端选择器** — `Popover` 通过 Portal 展示，提供可访问名称、展开状态、Esc 和选项选择后的焦点恢复；实际宽度参与水平位置计算，窄屏保留视口间距。模型与 thinking 使用现有数据，`ThinkingOptions` 为独立选择器和输入区更多菜单提供共用选项。
+- **前端模态窗口** — `ModalShell` 与 `ImageLightbox` 通过 Portal 展示原生 `dialog`，共享 `useNativeDialog` 管理 `showModal()`、初始焦点、关闭后的入口焦点和背景滚动限制；`cycleDialogFocus` 提供 Tab 边界循环。调用位置的 `AnimatePresence` 位于可见条件之外，稳定 key 保留工具结果交接与预览更新期间的窗口；退出期间保留模态交互并限制内容操作，动画完成后卸载。详情窗口外层与 `modal-positioner` 使用 `overflow: clip` 保持固定的显示范围；遮罩与面板定位区域为同级元素，分别管理透明度与面板位移／缩放动画。详情在手机使用接近全屏的底部 sheet，顶部拖动区域通过 Motion 管理下滑关闭，正文保持独立滚动、横向代码滚动与文本选择；新建实例和压缩表单保持居中展示。`modalFeatures.ts` 按需加载 `domMax`。`useViewportHeight` 同步可见视口的初始高度、顶部位置与后续变化。减少动态效果时直接切换弹窗状态，保留下滑关闭，并暂停页面渐变与加载指示动画。
 - **任务完成边界** — Pi 1.1.0 的 `agent_settled` 表示自动重试、压缩恢复和排队消息均已结束。Extension 仅在此事件中将运行状态更新为 `idle`，并通过 `settledOutcome` 区分 `completed`、`aborted` 和 `error`。Web 端仅为 `completed` 发送任务完成通知
 - **Markdown 图表** — `MarkdownRenderer` 将 `mermaid` 代码块交给 `MermaidBlock.tsx`。模块级 `renderQueue` 串行渲染，`nextDiagramId` 生成独立 ID。流式更新延迟 300ms，内容更新或卸载时取消过期请求，最终失败显示源码。SVG 使用严格安全配置、纯 SVG 标签和 DOMPurify 清理，通过图片展示。全屏预览复用 `ImageLightbox`，主题更新时保留窗口、尺寸模式和阅读位置；支持 Safe Area、Esc、焦点循环和关闭后恢复焦点。
 - **Mermaid 视觉主题** — `mermaidTheme.ts` 使用 `base`、`themeVariables` 和局部 `themeCSS`，读取项目 CSS variables，通过 khroma 合成 HEX 色值。SVG 背景透明，卡片使用 `--fill-card`，预览使用 `--btn-solid`。`secure` 保护主题配置，保留特殊形状和源码局部样式；临时渲染容器宽度为 960px。完整规范见 [docs/design/mermaid-theme.md](docs/design/mermaid-theme.md)。
-- **前端构建分组** — `manualChunks` 仅指定 `framework` 和 `markdown`，其余由 Rollup 自动分包。Mermaid、DOMPurify、主题配置和 khroma 按需加载，Mermaid 内部模块保留动态导入。构建测试检查入口静态依赖、HTML preload 和内部动态导入。
+- **前端构建分组** — `manualChunks` 仅指定 `framework` 和 `markdown`，其余由 Rollup 自动分包。Mermaid、DOMPurify、主题配置、khroma 与弹窗 `domMax` features 按需加载，Mermaid 内部模块保留动态导入。构建测试检查入口静态依赖、HTML preload、内部动态导入与拖动实现的按需加载。
 - **四层架构：Web → Hub → Edge → Pi** — Hub 不再直接连接 pi extension，所有 pi 通信通过 Edge 中转。Hub 只与 Edge 和 Browser 交互，Edge 只与本机 pi 和 Hub 交互
 - **Edge 是本机 pi 的聚合代理** — 每台服务器跑一个 Edge daemon，管理本机所有 pi 实例，通过单条 WS 多路复用上报 Hub
 - **实例注册状态同步** — Edge 向 Hub 注册或重新注册实例时携带本地保存的当前 `status`。Hub 创建和更新实例时使用该状态，并通过现有实例广播同步给 Browser；未携带 `status` 时，已有实例保留当前状态，全新实例使用 `idle`。注册消息仅同步当前状态，`settledOutcome` 仅随任务结束状态更新传递
@@ -107,7 +108,7 @@ bin/
 - **注释用中文**，**日志用英文**（用户提示可用中文）
 - Git 提交格式：`type(scope): 描述`（中文描述）
 - Extension 开发遵循 pi extension 规范
-- **提交需用户确认** — 每次修改完成后，等待用户审阅确认才可执行 `git commit`
+- **提交与推送须用户明确指示** — 每次 `git commit` 与 `git push` 都须用户明确要求；实施授权和审阅通过仅确认当前工作
 - **发版** — 修改 `package.json` version → `git commit -am "Release version x.y.z"`。版本号由用户指定，未提供时须询问
 - 功能变更后主动检查并更新 AGENTS.md 和 README.md，保持文档与代码一致
 - **本地前端效果检查** — 修改、测试和文档完成后，执行 `bun run build && paimon hub restart && paimon edge restart` 编译并重启 Paimon，真实浏览器效果由用户检查

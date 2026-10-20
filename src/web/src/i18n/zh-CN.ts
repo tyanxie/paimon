@@ -4,10 +4,15 @@ const zhCN = {
   // ─── 通用 ───
   common: {
     cancel: "取消",
+    close: "关闭",
     confirm: "确认",
     loading: "加载中…",
     online: "在线",
     offline: "离线",
+  },
+
+  modal: {
+    content: "详情内容",
   },
 
   imagePreview: {

@@ -1,6 +1,7 @@
 // 实例详情页：自治页面组件
 // 从 URL 获取 instanceId，内部管理所有状态和操作
 
+import { AnimatePresence } from "motion/react";
 import { useRef, useLayoutEffect, useState, useCallback } from "react";
 import { useParams } from "react-router";
 import { ChevronsDown } from "lucide-react";
@@ -385,9 +386,15 @@ export function InstanceView() {
       </main>
 
       {/* 图片大图查看 */}
-      {lightboxSrc && (
-        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
-      )}
+      <AnimatePresence>
+        {lightboxSrc && (
+          <ImageLightbox
+            key="image"
+            src={lightboxSrc}
+            onClose={() => setLightboxSrc(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -204,7 +204,7 @@ describe("ImageLightbox", () => {
     await render(true);
     expect(document.body.style.overflow).toBe("hidden");
     await act(async () => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      dialog().dispatchEvent(new Event("cancel", { cancelable: true }));
     });
     expect(closeCount).toBe(1);
     await act(async () => root.render(null));
@@ -219,21 +219,23 @@ describe("ImageLightbox", () => {
     const first = dialog().querySelector("button")!;
     const last = dialog().querySelector<HTMLDivElement>('[role="region"]')!;
     first.focus();
-    document.dispatchEvent(
+    first.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "Tab",
         shiftKey: true,
         cancelable: true,
+        bubbles: true,
       }),
     );
-    expect(document.activeElement).toBe(last);
-    document.dispatchEvent(
+    expect(document.activeElement === last).toBe(true);
+    last.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "Tab",
         cancelable: true,
+        bubbles: true,
       }),
     );
-    expect(document.activeElement).toBe(first);
+    expect(document.activeElement === first).toBe(true);
   });
 
   test("预览操作支持英文", async () => {

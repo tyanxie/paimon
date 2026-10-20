@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { build } from "vite";
 
-test("构建保留 Mermaid 和 DOMPurify 的按需加载", async () => {
+test("构建保留 Mermaid、DOMPurify 和弹窗拖动的按需加载", async () => {
   const result = await build({
     configFile: resolve(import.meta.dirname, "vite.config.ts"),
     logLevel: "silent",
@@ -51,6 +51,14 @@ test("构建保留 Mermaid 和 DOMPurify 的按需加载", async () => {
   expect(mermaid?.isDynamicEntry).toBe(true);
   expect(mermaid!.dynamicImports.length).toBeGreaterThan(1);
   expect(purify?.isDynamicEntry).toBe(true);
+
+  const drag = chunks.find((chunk) =>
+    Object.keys(chunk.modules).some((id) =>
+      id.endsWith("/gestures/drag/VisualElementDragControls.mjs"),
+    ),
+  );
+  expect(drag !== undefined).toBe(true);
+  expect(initialFiles.has(drag!.fileName)).toBe(false);
 
   const html = result.output.find(
     (item) => item.type === "asset" && item.fileName === "index.html",

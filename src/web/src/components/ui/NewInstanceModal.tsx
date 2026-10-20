@@ -379,6 +379,7 @@ export function NewInstanceModal({
 
   return (
     <ModalShell
+      mobileSheet={false}
       title={
         <>
           <FolderPlus size={16} />

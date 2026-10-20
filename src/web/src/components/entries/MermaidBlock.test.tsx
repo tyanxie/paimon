@@ -190,9 +190,10 @@ describe("MermaidBlock", () => {
     await act(async () => preview.querySelector("button")!.click());
     expect(preview.querySelector("img")!.className).toContain("max-w-none");
     await act(async () => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      preview.dispatchEvent(new Event("cancel", { cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 300));
     });
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.querySelector('[role="dialog"]') === null).toBe(true);
     expect(document.activeElement).toBe(expand);
   });
 
@@ -308,13 +309,15 @@ describe("MermaidBlock", () => {
     );
     await act(async () => useSettings.setState({ resolvedTheme: "dark" }));
     await waitForRender();
+    const preview = document.body.querySelector('[role="dialog"]')!;
     await act(async () => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      preview.dispatchEvent(new Event("cancel", { cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 300));
     });
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.querySelector('[role="dialog"]') === null).toBe(true);
     await act(async () => finish(result));
     expect(container.querySelector("img")).not.toBeNull();
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.querySelector('[role="dialog"]') === null).toBe(true);
   });
 
   test("生成期间和渲染失败时隐藏放大入口，成功后显示国际化操作", async () => {

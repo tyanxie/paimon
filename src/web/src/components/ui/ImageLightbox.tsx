@@ -1,6 +1,15 @@
 // 图片大图查看：全屏预览、可选原始尺寸与滚动阅读
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useRef, useState, type ReactNode } from "react";
+import {
+  LazyMotion,
+  MotionConfigContext,
+  domAnimation,
+  useIsPresent,
+  useReducedMotion,
+} from "motion/react";
+import * as m from "motion/react-m";
+import { cycleDialogFocus, useNativeDialog } from "./useNativeDialog";
 import { createPortal } from "react-dom";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -18,7 +27,15 @@ interface ImageLightboxProps {
   onClose: () => void;
 }
 
-export function ImageLightbox({
+export function ImageLightbox(props: ImageLightboxProps) {
+  return (
+    <LazyMotion features={domAnimation} strict>
+      <LightboxContent {...props} />
+    </LazyMotion>
+  );
+}
+
+function LightboxContent({
   src,
   alt,
   zoomable = false,
@@ -31,47 +48,17 @@ export function ImageLightbox({
     width: number;
     height: number;
   } | null>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
-        previousFocus.focus();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      } else if (event.key === "Tab") {
-        const controls = overlayRef.current?.querySelectorAll<HTMLElement>(
-          'button, [tabindex="0"]',
-        );
-        if (!controls?.length) return;
-        const first = controls[0]!;
-        const last = controls[controls.length - 1]!;
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  const present = useIsPresent();
+  const motionPolicy = useContext(MotionConfigContext).reducedMotion;
+  const reducedMotion = useReducedMotion() || motionPolicy === "always";
+  useNativeDialog(overlayRef, closeRef);
+  function requestClose() {
+    if (present) onClose();
+  }
 
   function toggleSize() {
     setActualSize((value) => !value);
@@ -91,13 +78,25 @@ export function ImageLightbox({
   );
 
   return createPortal(
-    <div
+    <m.dialog
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
       aria-label={alt ?? t("imagePreview.title")}
-      className="fixed-viewport z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[30px] animate-in fade-in duration-150"
-      onClick={onClose}
+      inert={!present}
+      data-presence={present ? "present" : "exiting"}
+      className="native-dialog-viewport image-lightbox fixed-viewport z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[30px]"
+      initial={{ opacity: reducedMotion ? 1 : 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: reducedMotion ? 0 : 0.15 } }}
+      transition={{ duration: reducedMotion ? 0 : 0.2 }}
+      onClick={requestClose}
+      onKeyDown={cycleDialogFocus}
+      onCancel={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        requestClose();
+      }}
     >
       {/* 浮动工具栏与关闭按钮保持在滚动内容之外 */}
       {zoomable && (
@@ -120,7 +119,7 @@ export function ImageLightbox({
         type="button"
         onClick={(event) => {
           event.stopPropagation();
-          onClose();
+          requestClose();
         }}
         className={`absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-10 flex h-9 w-9 items-center justify-center select-none transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${zoomable ? "glass-panel text-[var(--label-primary)] hover:text-[var(--color-accent)]" : "rounded-full bg-[var(--badge-bg)] hover:bg-[var(--badge-bg-hover)] text-[var(--badge-text)]"}`}
         aria-label={t("imagePreview.close")}
@@ -188,7 +187,7 @@ export function ImageLightbox({
       ) : (
         placeholderContent
       )}
-    </div>,
+    </m.dialog>,
     document.body,
   );
 }

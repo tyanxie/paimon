@@ -35,6 +35,8 @@ After a refresh or reconnection during tool execution, subsequent update or end 
 
 Reply, execution summary, and thinking sections retain your chosen expanded state and reset when switching instances or sessions. Collapse transitions use Motion and respect reduced-motion preferences. Message timestamps are available on hover, focus, or click. Running and compaction feedback appears beside the reply.
 
+Tool details are centered on desktops and wide tablets, and use a nearly full-screen bottom sheet on phones. Swipe down from the top drag area to dismiss; the header stays visible while the content scrolls independently. The backdrop and panel animate independently. Focus returns to the opener after the exit animation. Image and Mermaid previews retain their size mode and reading position.
+
 A continuous, translucent header spans the conversation area, containing instance information and session actions. Conversation content retains its own reading width.
 
 The composer preserves drafts, IME input, image uploads, and pasting. Open the context readout to inspect full usage; missing token counts after compaction show an awaiting-update state. Model and thinking controls use the instance's available options.
