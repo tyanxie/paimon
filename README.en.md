@@ -39,7 +39,7 @@ Tool details are centered on desktops and wide tablets, and use a nearly full-sc
 
 A continuous, translucent header spans the conversation area, containing instance information and session actions. Conversation content retains its own reading width.
 
-Forms, menus, settings, and content actions share controls with consistent focus, disabled, loading, and selected states. Instance creation and compaction keep their action footer visible; menus adapt their position and scrolling to the visual viewport, and settings rows adapt to the available content width. Notices support long messages and reduced motion, using the native Popover API when available to appear while a detail dialog is open.
+Forms, menus, settings, and content actions share controls with consistent focus, disabled, loading, and selected states. Theme, background, language, and notification settings share compact segmented controls. Desktop buttons, fields, and lists use compact sizes and spacing; touch devices retain hit regions of at least 44px. Image removal and message timestamps use 24px visible controls with separate touch regions. Instance creation and compaction keep their action footer visible; menus adapt their position and scrolling to the visual viewport, and settings rows adapt to the available content width. Notices support long messages and reduced motion, using the native Popover API when available to appear while a detail dialog is open.
 
 The composer preserves drafts, IME input, image uploads, and pasting. Open the context readout to inspect full usage; missing token counts after compaction show an awaiting-update state. Model and thinking controls use the instance's available options.
 

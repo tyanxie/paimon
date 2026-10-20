@@ -34,7 +34,7 @@ export function UserBubble({
 
   return (
     <>
-      <div className="group flex flex-col items-end gap-1 px-1 py-2 md:px-2">
+      <div className="group flex flex-col items-end gap-1 px-1 py-1 md:px-2">
         <div className="flex items-center gap-1 text-[11px] font-medium text-[var(--label-secondary)] select-none">
           {t("conversation.you")}
           <MessageTime timestamps={[timestamp]} />
@@ -67,7 +67,7 @@ export function UserBubble({
             </div>
           )}
           {text && (
-            <p className="break-words whitespace-pre-wrap px-4 py-2.5 text-[14px] leading-[22px]">
+            <p className="break-words whitespace-pre-wrap px-3 py-2 text-[14px] leading-[22px]">
               {text}
             </p>
           )}

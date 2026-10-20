@@ -93,14 +93,15 @@ export function SessionPopover({
     <Popover
       label={t("session.title")}
       trigger={({ open, id }) => (
-        <button
+        <Button
+          size="icon"
           type="button"
           disabled={disabled}
           aria-label={t("session.title")}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? id : undefined}
-          className={`flex items-center justify-center w-[44px] h-[44px] rounded-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
+          className={`flex items-center justify-center rounded-[10px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
             open
               ? "bg-[var(--fill-secondary)]"
               : "hover:bg-[var(--fill-tertiary)]"
@@ -118,7 +119,7 @@ export function SessionPopover({
             className="text-[var(--label-secondary)]"
             aria-hidden="true"
           />
-        </button>
+        </Button>
       )}
       width={320}
       disabled={disabled}

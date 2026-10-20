@@ -1,6 +1,7 @@
 // 模型选择器：点击弹出 Popover，按 provider 分组展示可选模型
 
 import { ChevronDown, Check } from "lucide-react";
+import { Button } from "./Button";
 import { MenuItem } from "./MenuItem";
 import { Popover } from "./Popover";
 import type { ModelInfo } from "../../../../protocol/types";
@@ -41,7 +42,8 @@ export function ModelSelector({
       width={280}
       align="left"
       trigger={({ open, id }) => (
-        <button
+        <Button
+          size="compact"
           type="button"
           disabled={!canSelect}
           aria-label={`${t("composer.model")}: ${currentModel.name || currentModel.id}`}
@@ -49,7 +51,7 @@ export function ModelSelector({
           aria-expanded={canSelect ? open : undefined}
           aria-controls={open ? id : undefined}
           title={currentModel.name || currentModel.id}
-          className={`inline-flex min-h-9 max-w-full items-center gap-1.5 px-2.5 py-1.5 rounded-[12px] text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
+          className={`inline-flex max-w-full items-center gap-1.5 px-2 rounded-[9px] text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
             canSelect
               ? "hover:bg-[var(--fill-secondary)] hover:text-[var(--label-primary)] cursor-pointer"
               : "cursor-default"
@@ -65,7 +67,7 @@ export function ModelSelector({
               className={`shrink-0 transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
             />
           )}
-        </button>
+        </Button>
       )}
     >
       {(close) => (

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Button } from "./Button";
 
 export function SegmentedControl<T extends string>({
@@ -6,7 +7,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   label,
 }: {
-  options: { value: T; label: string }[];
+  options: { value: T; label: ReactNode }[];
   value: T;
   onChange: (value: T) => void;
   label: string;
@@ -15,6 +16,7 @@ export function SegmentedControl<T extends string>({
     <div className="ui-segmented select-none" role="group" aria-label={label}>
       {options.map((option) => (
         <Button
+          size="compact"
           key={option.value}
           aria-pressed={value === option.value}
           className="ui-segment"

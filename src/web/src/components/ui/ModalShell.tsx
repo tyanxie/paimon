@@ -203,7 +203,7 @@ function ModalContent({
                 <span className="h-1 w-9 rounded-full bg-[var(--label-tertiary)]" />
               </m.div>
             )}
-            <header className="modal-header flex shrink-0 items-center justify-between gap-3 border-b border-[var(--separator)] px-5 py-2">
+            <header className="modal-header flex shrink-0 items-center justify-between gap-3 border-b border-[var(--separator)] px-4 py-1.5">
               <div
                 id={titleId}
                 className="flex min-w-0 flex-wrap items-center gap-2 text-[15px] font-semibold text-[var(--label-primary)] select-text"

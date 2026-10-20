@@ -285,6 +285,27 @@ describe("整体玻璃侧栏", () => {
     ).toBe("95");
   });
 
+  test("侧栏采用紧凑宽度，进度轨道独立于文字操作区域", async () => {
+    await render([
+      {
+        ...base,
+        contextUsage: { tokens: 250, contextWindow: 1000, percent: 25 },
+      },
+    ]);
+    const panel = container.querySelector("aside")!;
+    expect(panel.classList.contains("md:w-[240px]")).toBe(true);
+    expect(panel.classList.contains("lg:w-[260px]")).toBe(true);
+    const item = select("one");
+    const track = item.querySelector('[role="progressbar"]')!;
+    expect(track.classList.contains("instance-progress-track")).toBe(true);
+    expect(track.parentElement === item).toBe(true);
+    expect(item.querySelectorAll(".instance-item-text").length).toBe(2);
+    expect((track.firstElementChild as HTMLElement).style.width).toBe("25%");
+    expect(track.getAttribute("aria-valuenow")).toBe("25");
+    await click(item);
+    expect(selected).toEqual(["one"]);
+  });
+
   test("空列表提供新建入口与英文说明", async () => {
     await i18n.changeLanguage("en");
     await render([], "/");

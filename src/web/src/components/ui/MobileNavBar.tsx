@@ -4,6 +4,7 @@
 //   2. children：<MobileNavBar><InstanceHeader .../></MobileNavBar>（完全自定义内容区）
 
 import { type ReactNode } from "react";
+import { Button } from "./Button";
 import { ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -30,14 +31,15 @@ export function MobileNavBar({
 
   return (
     <div className="md:hidden flex items-center gap-2">
-      <button
+      <Button
+        size="icon"
         type="button"
         onClick={() => navigate(backTo)}
         aria-label={t("navigation.backToInstances")}
-        className="flex h-[44px] w-[44px] shrink-0 select-none items-center justify-center rounded-full bg-[var(--material-thin)] text-[var(--label-secondary)] active:opacity-60 transition-opacity focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+        className="flex shrink-0 select-none items-center justify-center rounded-full bg-[var(--material-thin)] text-[var(--label-secondary)] active:opacity-60 transition-opacity focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
         <ChevronLeft size={20} />
-      </button>
+      </Button>
       {children ?? (
         <>
           <div className="flex-1 min-w-0">

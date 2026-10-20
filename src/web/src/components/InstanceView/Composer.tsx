@@ -225,7 +225,7 @@ export function Composer({
     <>
       <div className="composer-surface glass-panel-input">
         {draft.images.length > 0 && (
-          <div className="flex gap-3 overflow-x-auto px-4 pt-3 scrollbar-auto">
+          <div className="flex gap-2 overflow-x-auto px-4 pt-2 scrollbar-auto">
             {draft.images.map((img, index) => (
               <div key={img.id} className="relative shrink-0">
                 <button
@@ -237,15 +237,15 @@ export function Composer({
                   <img
                     src={img.previewUrl}
                     alt={t("conversation.attachedImage", { count: index + 1 })}
-                    className="h-16 w-16 object-cover"
+                    className="h-14 w-14 object-cover"
                     draggable={false}
                   />
                 </button>
                 <Button
-                  size="compact"
+                  size="badge"
                   type="button"
                   onClick={() => handleRemoveImage(img.id)}
-                  className="absolute -right-2 -top-2 flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[var(--badge-bg)] text-[var(--badge-text)] hover:bg-[var(--badge-bg-hover)]"
+                  className="absolute -right-1.5 -top-1.5 rounded-full bg-[var(--badge-bg)] text-[var(--badge-text)] hover:bg-[var(--badge-bg-hover)]"
                   aria-label={t("composer.removeImage", { count: index + 1 })}
                 >
                   <X size={12} aria-hidden="true" />
@@ -263,23 +263,24 @@ export function Composer({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          className="block min-h-12 w-full resize-none overflow-hidden bg-transparent px-4 pb-2 pt-4 text-[16px] leading-[24px] text-[var(--label-primary)] outline-none placeholder:text-[var(--label-tertiary)] md:px-5 md:text-[15px]"
+          className="block min-h-12 w-full resize-none overflow-hidden bg-transparent px-4 pb-2.5 pt-3 text-[16px] leading-[24px] text-[var(--label-primary)] outline-none placeholder:text-[var(--label-tertiary)] md:px-5 md:text-[14px] md:leading-[22px]"
         />
         <div
-          className="composer-toolbar flex min-w-0 items-center gap-2 px-2 pb-2 md:px-3 md:pb-3"
+          className="composer-toolbar flex min-w-0 items-center gap-1.5 px-3 pb-3"
           role="group"
           aria-label={t("composer.options")}
         >
           <div className="flex min-w-0 flex-1 items-center gap-1">
-            <button
+            <Button
+              size="icon"
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-[12px] text-[var(--label-secondary)] transition-colors hover:bg-[var(--fill-tertiary)] hover:text-[var(--label-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+              className="shrink-0 select-none rounded-[10px] text-[var(--label-secondary)] transition-colors hover:bg-[var(--fill-tertiary)] hover:text-[var(--label-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
               title={t("eventStream.attachImage")}
               aria-label={t("eventStream.attachImage")}
             >
-              <ImagePlus size={18} aria-hidden="true" />
-            </button>
+              <ImagePlus size={16} aria-hidden="true" />
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -311,17 +312,18 @@ export function Composer({
                   width={260}
                   align="left"
                   trigger={({ open, id }) => (
-                    <button
+                    <Button
+                      size="icon"
                       type="button"
                       aria-label={t("composer.moreOptions")}
                       title={t("composer.moreOptions")}
                       aria-haspopup="dialog"
                       aria-expanded={open}
                       aria-controls={open ? id : undefined}
-                      className="flex h-10 w-10 items-center justify-center rounded-[12px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+                      className="rounded-[10px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
                     >
-                      <MoreHorizontal size={18} aria-hidden="true" />
-                    </button>
+                      <MoreHorizontal size={16} aria-hidden="true" />
+                    </Button>
                   )}
                 >
                   {(close) => (
@@ -360,7 +362,7 @@ export function Composer({
                                 close();
                                 setShowCompactModal(true);
                               }}
-                              className="mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-[10px] px-3 text-left text-[12px] text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] disabled:opacity-40"
+                              className="mt-1 flex w-full items-center gap-2 rounded-[10px] px-3 text-left text-[12px] text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] disabled:opacity-40"
                             >
                               <Minimize2 size={15} aria-hidden="true" />
                               {t("eventStream.compactContext")}
@@ -378,39 +380,42 @@ export function Composer({
             {contextUsage && <ContextIndicator contextUsage={contextUsage} />}
             {canShowCompact && (
               <div className="composer-inline-options">
-                <button
+                <Button
+                  size="icon"
                   type="button"
                   onClick={() => setShowCompactModal(true)}
                   disabled={compactDisabled}
                   title={t("eventStream.compactContext")}
                   aria-label={t("eventStream.compactContext")}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] disabled:opacity-40"
+                  className="shrink-0 rounded-[10px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] disabled:opacity-40"
                 >
                   <Minimize2 size={15} aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             )}
             {buttonMode === "stop" ? (
-              <button
+              <Button
+                size="icon"
                 type="button"
                 onClick={onAbort}
-                className="select-none flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--toast-icon-error)] text-white transition-[opacity,transform] hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none motion-reduce:transform-none"
+                className="select-none shrink-0 rounded-full bg-[var(--toast-icon-error)] text-white transition-[opacity,transform] hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none motion-reduce:transform-none"
                 title={t("eventStream.stop")}
                 aria-label={t("eventStream.stop")}
               >
-                <Square size={14} fill="currentColor" aria-hidden="true" />
-              </button>
+                <Square size={12} fill="currentColor" aria-hidden="true" />
+              </Button>
             ) : (
-              <button
+              <Button
+                size="icon"
                 type="button"
                 onClick={handleSend}
                 disabled={!canSend}
-                className={`select-none flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-[opacity,transform] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none motion-reduce:transform-none ${canSend ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:scale-95" : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"}`}
+                className={`select-none shrink-0 rounded-full transition-[opacity,transform] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none motion-reduce:transform-none ${canSend ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:scale-95" : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"}`}
                 title={t("eventStream.send")}
                 aria-label={t("eventStream.send")}
               >
-                <ArrowUp size={20} strokeWidth={2.5} aria-hidden="true" />
-              </button>
+                <ArrowUp size={16} strokeWidth={2.5} aria-hidden="true" />
+              </Button>
             )}
           </div>
         </div>
@@ -461,14 +466,15 @@ function ContextIndicator({
       label={t("composer.contextUsage")}
       width={260}
       trigger={({ open, id }) => (
-        <button
+        <Button
+          size="compact"
           type="button"
           title={description}
           aria-label={`${t("composer.contextUsage")}: ${description}`}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? id : undefined}
-          className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-[12px] px-2 text-[11px] tabular-nums hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+          className="flex shrink-0 items-center gap-1.5 rounded-[10px] px-2 text-[11px] tabular-nums hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
           style={{ color }}
         >
           <Gauge size={14} aria-hidden="true" />
@@ -480,7 +486,7 @@ function ContextIndicator({
           <span className="select-text">
             {known ? `${Math.round(percent)}%` : "—"}
           </span>
-        </button>
+        </Button>
       )}
     >
       {() => <ContextDetails contextUsage={contextUsage} />}

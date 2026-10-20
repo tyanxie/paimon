@@ -59,7 +59,7 @@ export function ConversationList({
   return (
     <LazyMotion features={domAnimation} strict>
       <MotionConfig reducedMotion="user">
-        <div key={conversationKey} className="conversation-list space-y-4">
+        <div key={conversationKey} className="conversation-list space-y-3">
           {visibleItems.map((item) => {
             if (item.type === "user")
               return (
@@ -159,7 +159,7 @@ function ReplyCard({
     >
       <div
         data-entry-key={reply.key}
-        className="group flex items-center gap-1 px-3 py-2 md:px-5 md:py-3"
+        className="group flex items-center gap-1 px-3 py-1.5 md:px-4"
       >
         <button
           type="button"
@@ -175,9 +175,9 @@ function ReplyCard({
             onBeforeToggle?.(event.currentTarget);
             setExpanded(!expanded);
           }}
-          className="flex min-h-9 min-w-0 flex-1 items-center gap-2.5 rounded-[12px] text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+          className="conversation-reply-toggle flex min-w-0 flex-1 items-center gap-2 rounded-[12px] text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-[var(--fill-card)] text-[var(--label-secondary)]">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] bg-[var(--fill-card)] text-[var(--label-secondary)]">
             <Sparkles size={15} aria-hidden="true" />
           </span>
           <span className="shrink-0 text-[14px] font-semibold text-[var(--label-primary)]">
@@ -225,7 +225,7 @@ function ReplyCard({
         />
       </div>
       <Collapsible id={contentId} expanded={expanded}>
-        <div className="space-y-4 px-4 pb-4 md:px-6 md:pb-6">
+        <div className="space-y-2 px-4 pb-3 md:px-5 md:pb-4">
           {reply.parts.map((part) => {
             const anchor = expanded ? part.key : undefined;
             if (part.type === "execution")
@@ -252,7 +252,7 @@ function ReplyCard({
               <div
                 key={part.key}
                 data-entry-key={anchor}
-                className="group min-w-0"
+                className="conversation-part group grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-1"
               >
                 {part.type === "text" ? (
                   <MarkdownRenderer
@@ -262,9 +262,7 @@ function ReplyCard({
                 ) : (
                   <ErrorCard message={part.content} />
                 )}
-                <div className="flex h-8 items-center justify-end">
-                  <MessageTime timestamps={[part.source.entry.timestamp]} />
-                </div>
+                <MessageTime timestamps={[part.source.entry.timestamp]} />
               </div>
             );
           })}
@@ -313,7 +311,7 @@ function ExecutionSummary({
           setVisited(true);
           setExpanded(!expanded);
         }}
-        className="flex min-h-11 w-full items-center gap-2.5 rounded-[14px] px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+        className="conversation-execution-toggle flex w-full items-center gap-2 rounded-[14px] px-3 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
         <Icon
           size={14}

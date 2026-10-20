@@ -1,6 +1,5 @@
 // 设置页面：外观（主题 + 背景）+ 语言 + 通知
 
-import { Button } from "./ui/Button";
 import { SegmentedControl } from "./ui/SegmentedControl";
 import { useTranslation } from "react-i18next";
 import {
@@ -44,7 +43,7 @@ function SettingRow({
   );
 }
 
-/** 背景选择器（色块圆圈 + 文字） */
+/** 背景选项：彩色标记与文字共用分段控件。 */
 function BackgroundPicker({
   value,
   onChange,
@@ -54,33 +53,26 @@ function BackgroundPicker({
   onChange: (v: Background) => void;
   options: { value: Background; label: string; colors: string[] }[];
 }) {
+  const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-3 select-none">
-      {options.map((opt) => (
-        <Button
-          key={opt.value}
-          aria-pressed={value === opt.value}
-          onClick={() => onChange(opt.value)}
-          className="ui-background-choice"
-        >
-          <div
-            className={`w-8 h-8 rounded-full ${value === opt.value ? "ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-[var(--panel-bg)]" : ""}`}
-            style={{
-              background: `conic-gradient(${opt.colors.join(", ")})`,
-            }}
-          />
-          <span
-            className={`text-[12px] leading-[16px] ${
-              value === opt.value
-                ? "text-[var(--label-primary)] font-semibold"
-                : "text-[var(--label-secondary)] font-normal"
-            }`}
-          >
-            {opt.label}
-          </span>
-        </Button>
-      ))}
-    </div>
+    <SegmentedControl
+      label={t("settings.background")}
+      value={value}
+      onChange={onChange}
+      options={options.map((opt) => ({
+        value: opt.value,
+        label: (
+          <>
+            <span
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 rounded-full"
+              style={{ background: `conic-gradient(${opt.colors.join(", ")})` }}
+            />
+            <span>{opt.label}</span>
+          </>
+        ),
+      }))}
+    />
   );
 }
 

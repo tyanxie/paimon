@@ -118,12 +118,12 @@ export function Sidebar({
   }, [instances]);
 
   return (
-    <aside className="sidebar-layout select-none glass-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden md:w-[300px] md:flex-none lg:w-[328px]">
-      <header className="sidebar-header flex shrink-0 items-center justify-between gap-3 px-4 pb-2 pt-4">
+    <aside className="sidebar-layout select-none glass-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden md:w-[240px] md:flex-none lg:w-[260px]">
+      <header className="sidebar-header flex shrink-0 items-center justify-between gap-3 px-3 pb-1 pt-3">
         <img
           src={logoSrc}
           alt={t("navigation.brand")}
-          className="h-8 w-8 shrink-0 object-contain"
+          className="h-7 w-7 shrink-0 object-contain"
         />
         <nav
           className="sidebar-navigation flex shrink-0 items-center gap-1"
@@ -156,12 +156,12 @@ export function Sidebar({
         className="instance-list flex min-h-0 min-w-0 flex-1 flex-col"
         aria-label={t("navigation.instances")}
       >
-        <div className="flex shrink-0 items-center justify-between gap-2 px-4 pb-3 pt-2">
+        <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-1.5">
           <div className="min-w-0">
-            <h1 className="text-[20px] font-semibold leading-[26px] text-[var(--label-primary)]">
+            <h1 className="text-[18px] font-semibold leading-[24px] text-[var(--label-primary)]">
               {t("navigation.instances")}
             </h1>
-            <div className="mt-1 flex min-w-0 items-center gap-2 text-[12px] text-[var(--label-secondary)]">
+            <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] leading-[14px] text-[var(--label-secondary)]">
               <span className="truncate">
                 {t("sidebar.machine", { count: edgeGroups.length })}
                 {" · "}
@@ -175,18 +175,19 @@ export function Sidebar({
               </span>
             </div>
           </div>
-          <button
+          <Button
+            size="icon"
             type="button"
             onClick={onNewInstance}
             title={t("sidebar.newInstance")}
             aria-label={t("sidebar.newInstance")}
-            className="navigation-create flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            className="navigation-create shrink-0 rounded-full"
           >
-            <Plus size={20} aria-hidden="true" />
-          </button>
+            <Plus size={18} aria-hidden="true" />
+          </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 scrollbar-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 scrollbar-auto">
           {instances.length === 0 ? (
             <div className="px-4 py-12 text-center text-[13px] leading-[20px] text-[var(--label-secondary)]">
               <Server
@@ -200,7 +201,7 @@ export function Sidebar({
             edgeGroups.map(([edgeId, groupInstances]) => (
               <section
                 key={edgeId}
-                className="mb-5"
+                className="mb-3"
                 data-edge-id={edgeId}
                 aria-label={edgeId}
               >
@@ -210,7 +211,7 @@ export function Sidebar({
                   onClick={() => handleCopyEdgeId(edgeId)}
                   title={t("navigation.copyEdge", { edgeId })}
                   aria-label={t("navigation.copyEdge", { edgeId })}
-                  className="flex min-h-9 max-w-full items-center gap-2 rounded-[10px] px-3 text-[11px] font-semibold text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)]"
+                  className="flex max-w-full items-center gap-2 rounded-[8px] px-2 text-[11px] font-semibold text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)]"
                 >
                   <Server size={12} className="shrink-0" aria-hidden="true" />
                   <span className="truncate">{edgeId}</span>
@@ -228,7 +229,7 @@ export function Sidebar({
                     />
                   )}
                 </Button>
-                <ul className="space-y-1">
+                <ul className="space-y-0.5">
                   {groupInstances.map((instance) => {
                     const name =
                       instance.cwd.split("/").filter(Boolean).pop() ||
@@ -269,9 +270,9 @@ export function Sidebar({
                           onTouchEnd={cancelLongPress}
                           onTouchMove={cancelLongPress}
                           onTouchCancel={cancelLongPress}
-                          className="instance-item w-full rounded-[16px] border border-transparent px-3 py-3 pr-[56px] text-left"
+                          className="instance-item w-full rounded-[12px] border border-transparent px-3 py-1.5 text-left"
                         >
-                          <div className="flex min-w-0 items-center gap-2.5">
+                          <div className="instance-item-text flex min-w-0 items-center gap-2.5">
                             <span
                               className={`h-2 w-2 shrink-0 rounded-full ${instance.status === "streaming" ? "bg-[var(--color-accent)] animate-pulse motion-reduce:animate-none" : instance.status === "compacting" ? "bg-[var(--toast-icon-warning)] animate-pulse motion-reduce:animate-none" : "bg-[var(--toast-icon-success)]"}`}
                               title={t(statusKey)}
@@ -281,13 +282,13 @@ export function Sidebar({
                             </span>
                             <span className="sr-only">{t(statusKey)}</span>
                           </div>
-                          <div className="ml-4.5 mt-1 truncate text-[11px] leading-[16px] text-[var(--label-secondary)]">
+                          <div className="instance-item-text ml-4.5 mt-0.5 truncate text-[11px] leading-[14px] text-[var(--label-secondary)]">
                             {instance.model.name ||
                               `${instance.model.provider}/${instance.model.id}`}
                           </div>
                           {percent != null && percent > 0 && (
                             <div
-                              className="ml-4.5 mt-2 h-[3px] overflow-hidden rounded-full bg-[var(--fill-quaternary)]"
+                              className="instance-progress-track mt-1 h-[3px] overflow-hidden rounded-full bg-[var(--fill-quaternary)]"
                               role="progressbar"
                               aria-label={t("composer.contextUsage")}
                               aria-valuemin={0}
@@ -313,11 +314,11 @@ export function Sidebar({
                           )}
                         </button>
                         <Button
-                          size="compact"
+                          size="icon"
                           type="button"
                           aria-label={t("navigation.instanceActions", { name })}
                           title={t("navigation.instanceActions", { name })}
-                          className="absolute right-2 top-2 flex h-[36px] w-[36px] items-center justify-center rounded-full text-[var(--label-secondary)] hover:bg-[var(--fill-secondary)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100"
+                          className="absolute right-2 top-0.5 flex items-center justify-center rounded-full text-[var(--label-secondary)] hover:bg-[var(--fill-secondary)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100"
                           onClick={(event) => {
                             const rect =
                               event.currentTarget.getBoundingClientRect();

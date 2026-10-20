@@ -42,6 +42,21 @@ describe("公共控件功能", () => {
     await act(async () => ref.current!.click());
     expect(clicks).toBe(1);
   });
+  test("附属按钮保留独立规格、名称和点击操作", async () => {
+    let clicks = 0;
+    await act(async () =>
+      root.render(
+        <Button size="badge" aria-label="remove image" onClick={() => clicks++}>
+          remove
+        </Button>,
+      ),
+    );
+    const button = container.querySelector("button")!;
+    expect(button.classList.contains("ui-button--badge")).toBe(true);
+    expect(button.getAttribute("aria-label")).toBe("remove image");
+    await act(async () => button.click());
+    expect(clicks).toBe(1);
+  });
   test("加载按钮具有 busy 状态并阻止重复提交", async () => {
     let clicks = 0;
     await act(async () =>

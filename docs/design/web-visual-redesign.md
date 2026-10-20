@@ -21,6 +21,10 @@
 - [Sidebars](https://developer.apple.com/design/human-interface-guidelines/sidebars)
 - [Toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars)
 - [Motion](https://developer.apple.com/design/human-interface-guidelines/motion)
+- [Buttons](https://developer.apple.com/design/human-interface-guidelines/buttons)
+- [Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)
+- [Layout](https://developer.apple.com/design/human-interface-guidelines/layout)
+- [Typography](https://developer.apple.com/design/human-interface-guidelines/typography)
 - [Sheets](https://developer.apple.com/design/human-interface-guidelines/sheets)
 
 采用这些共同原则：
@@ -136,7 +140,7 @@ Paimon 继续使用现有颜色与材质体系，参考页面用于理解信息�
 - 保留输入草稿、IME、Enter / Shift+Enter、图片上传和粘贴、重新编辑等交互。
 - 小屏幕减少常驻文字，同时保证点击区域和控件可用性。
 - 工具栏的左侧组织输入相关选项，右侧展示发送／停止；上下文读数与压缩操作保持相邻。
-- 输入容器宽度达到 640px 时常驻 thinking 与压缩操作；较窄时使用更多选项菜单，发送／停止始终位于右侧。工具栏按钮至少具有 44px 高度。
+- 输入容器宽度达到 640px 时常驻 thinking 与压缩操作；较窄时使用更多选项菜单，发送／停止始终位于右侧。工具栏按钮在桌面至少具有 32px 高度，触摸设备中至少为 44px。
 - 更多选项直接展示共用的 `ThinkingOptions`，并将完整上下文用量与压缩操作放在一起；选项选择与 Esc 关闭后恢复入口焦点。
 - 图片预览和多行输入自然增加输入区高度，继续通过尺寸观察调整消息区域间距。
 - 输入聚焦通过现有强调色和轻量边缘反馈表达，新增 UI 文本同时提供中文与英文。
@@ -200,6 +204,20 @@ Paimon 继续使用现有颜色与材质体系，参考页面用于理解信息�
 - 简单 hover、颜色过渡和持续加载指示可以由 CSS 管理；组件进出与折叠动画统一管理其生命周期。
 - 流式文字与历史追加采用局部更新，整体页面布局动画须与滚动管理共同验证。
 - 通过根目录 `package.json` 和 lockfile 添加前端 Motion 依赖，产品实现位于 `src/web/`。
+
+## 尺寸与间距
+
+- 以 CSS px 定义 Web 尺寸，Apple 的平台尺寸用于设计参考。操作区域根据输入方式调整，使用 `pointer: coarse` 管理触摸规格。
+- 桌面 regular 按钮与字段采用 36px，icon 按钮采用 32px，compact 按钮采用 28px；badge 可见尺寸为 24px。触摸设备中常规控件至少为 44px，badge 与 inline 入口通过独立区域提供至少 44px 宽高。
+- 创建与取消、开始与取消保持相同尺寸；强调色和填充表达主要操作。发送、停止、上传、压缩及导航图标使用共用 icon 规格。
+- 顶部栏内部最小高度为 44px，上下内边距合计 16px；保留全宽玻璃材质、目录与 Git branch。桌面侧栏在 `md` 为 240px、`lg` 为 260px，页眉、标题与 Edge 分组采用紧凑间距。
+- 实例条目上下各 6px 内边距，名称采用 14px／20px，模型采用 11px／14px；进度条前间距为 4px，底色使用内容区全宽，填充长度保持真实用量；实例操作的位置仅在文字行预留。条目间距为 2px。
+- 回复内容项间距为 8px，底部内边距为手机 12px、桌面 16px。消息时间在正文旁边独立排列，触摸设备保留入口间距；Markdown 正文保持 14px／22px。
+- 执行汇总、工具条目和 thinking 入口在桌面至少为 32px，触摸设备至少为 44px。标题与折叠范围保持原有顺序及身份。
+- 输入框单行最小高度为 48px，上下内边距合计 22px，桌面采用 14px／22px 字体与行高，左右内边距为 20px；工具栏底部内边距为 12px，图片预览为 56px，移除入口采用 badge 规格。
+- 设置的主题、背景、语言与通知共用 compact 分段选项，桌面高度为 28px，触摸设备至少为 44px；背景在文字旁使用 16px 彩色标记，保留现有颜色组与原始 value。
+- 表单内容的内边距与分组间距均为 16px；多行字段最小高度为 88px。菜单、设置、代码与图表操作区采用共用紧凑规格，Safe Area 与独立滚动保持可用。
+- `Density.test.ts` 使用 PostCSS 检查尺寸声明及触摸规则。真实尺寸、文本阅读、点击范围和整体效果由用户检查。
 
 ## 实施顺序
 
@@ -272,7 +290,7 @@ bun run build && paimon hub restart && paimon edge restart
 - 第五阶段实现已完成：公共控件覆盖表单、菜单、设置、登录、内容操作和状态说明；新建实例与压缩采用独立操作区，浮层支持可见视口变化，通知支持独立的非模态显示层。第五阶段已通过用户效果审阅。
 - 第五阶段验证：新增 30 项功能单测；完整 `bun test --bail` 的 270 项测试通过，耗时 21.14 秒。类型、格式检查和生产构建通过，Hub 与 Edge 已重启。
 - 前端专项检查已完成：通过 TypeScript compiler API 核查入口依赖与 export 引用，CSS 使用 PostCSS 与 Lightning CSS 分析选择器并核查使用位置。产品模块均有入口引用，模块内部声明保持私有，滚动恢复仅返回调用位置使用的信息。前端 `noUnusedLocals` 与 `noUnusedParameters` 检查通过；完整 269 项测试通过，耗时 21.01 秒，类型和格式检查通过。
-- 第六阶段已完成文档核查、最终实现说明与自动验证范围整理，统一用户检查清单见 [Web 整体验证](web-validation.md)。产品代码保持 `bc79043` 的实现，组合场景与整体效果确认由用户继续检查。
+- 第六阶段已完成文档核查、最终实现说明与自动验证范围整理，统一用户检查清单见 [Web 整体验证](web-validation.md)。当前包含尺寸与间距调整，组合场景与整体效果由用户继续检查。
 
 ### 第四阶段实施记录
 
@@ -288,7 +306,7 @@ bun run build && paimon hub restart && paimon edge restart
 ### 第五阶段实施记录
 
 - `Button`、`FormControls`、`MenuItem`、`SegmentedControl`、`StatusMessage` 与 `ContentBlock` 共同提供按钮、字段、选项、状态和内容操作的基本样式。CSS components layer 保留调用位置的 utilities 布局调整；不同用途的控件分别使用常规、图标、紧凑与行内规格。
-- 常规按钮、字段和菜单条目至少具有 44px 操作区域，紧凑按钮在触摸设备中增加操作范围。表单在手机使用 16px 字体，桌面使用 14px 字体；沿用现有材质和状态颜色。
+- 桌面常规按钮与字段采用 36px，菜单条目采用 32px，compact 按钮采用 28px；触摸设备保留至少 44px 操作区域，badge 与 inline 使用独立触摸区域。表单在手机使用 16px 字体，桌面使用 14px 字体；沿用现有材质和状态颜色。
 - `ModalShell` 提供 form 尺寸与独立 footer。新建实例、目录补全、Edge 选择和压缩保留原有数据与操作；表单正文独立滚动。目录补全支持输入键盘操作和条目点击，卸载时清理待执行请求计时器。
 - `FloatingSurface` 为 Popover 和 ContextMenu 提供 120ms 的透明度与轻量位移／缩放过渡，退出内容限制操作。`useFloatingViewport` 管理可见视口尺寸与位置；菜单内容滚动，锚点两侧空间不足时使用视口内的完整可用范围。
 - Session 的当前状态、搜索、创建、切换与分页保留原有含义，模型与 thinking 保留原始 value。上下文详情和更多选项复用浮层外壳。

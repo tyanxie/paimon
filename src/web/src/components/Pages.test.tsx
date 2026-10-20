@@ -141,7 +141,22 @@ describe("设置页面功能", () => {
     await act(async () => button("极光").click());
     expect(useSettings.getState().background).toBe("aurora");
     expect(button("极光").getAttribute("aria-pressed")).toBe("true");
-    expect(container.querySelectorAll(".ui-background-choice").length).toBe(3);
+    const group = container.querySelector('[role="group"][aria-label="背景"]')!;
+    expect(group.querySelectorAll("button").length).toBe(3);
+    expect(group.querySelectorAll('[aria-hidden="true"]').length).toBe(3);
+  });
+  test("主题、背景和语言共用紧凑分段控件", async () => {
+    await settings();
+    for (const label of ["主题", "背景", "语言"]) {
+      const group = container.querySelector(
+        `[role="group"][aria-label="${label}"]`,
+      )!;
+      expect(group.classList.contains("ui-segmented")).toBe(true);
+      for (const option of group.querySelectorAll("button")) {
+        expect(option.classList.contains("ui-button--compact")).toBe(true);
+        expect(option.classList.contains("ui-segment")).toBe(true);
+      }
+    }
   });
   test("语言控件继续切换并保存用户选择", async () => {
     await settings();

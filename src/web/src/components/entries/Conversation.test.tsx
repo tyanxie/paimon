@@ -508,6 +508,23 @@ describe("消息时间", () => {
     expect(document.querySelector('[role="tooltip"]')).toBeNull();
   });
 
+  test("消息时间与正文共同排列，缺少时间时保留正文", async () => {
+    for (const timestamp of [undefined, "2026-01-01T12:00:00Z"]) {
+      const entry = message("a1", "assistant", [text("readable body")]);
+      entry.timestamp = timestamp;
+      await render([entry]);
+      const part = container.querySelector(
+        "article .markdown-body",
+      )!.parentElement!;
+      expect(part.classList.contains("grid")).toBe(true);
+      expect(part.classList.contains("h-8")).toBe(false);
+      expect(part.textContent).toContain("readable body");
+      expect(part.querySelector(".conversation-time") !== null).toBe(
+        Boolean(timestamp),
+      );
+    }
+  });
+
   test("缺少或无效时间时保留内容并省略时间入口", async () => {
     await act(async () =>
       root.render(<MessageTime timestamps={[undefined, "invalid"]} />),

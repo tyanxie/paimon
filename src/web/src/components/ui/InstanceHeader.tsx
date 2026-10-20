@@ -114,7 +114,7 @@ function CopyableInfo({
       type="button"
       onClick={handleClick}
       title={title ?? copyText}
-      className="inline-flex min-h-[24px] min-w-0 items-center gap-1 rounded-[6px] px-1 -mx-1 transition-colors hover:bg-[var(--fill-tertiary)] active:bg-[var(--fill-secondary)] cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+      className="inline-flex min-h-[18px] min-w-0 items-center gap-1 rounded-[6px] px-1 -mx-1 transition-colors hover:bg-[var(--fill-tertiary)] active:bg-[var(--fill-secondary)] cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
     >
       <span className="shrink-0 opacity-70">
         {copied ? (
@@ -185,9 +185,9 @@ export function InstanceHeader({
   }, [displayPath, gitBranch, recalculate]);
 
   return (
-    <div className="flex min-h-[52px] min-w-0 w-full flex-1 items-center justify-between gap-3">
+    <div className="flex min-h-[44px] min-w-0 w-full flex-1 items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[15px] leading-[21px] font-medium text-[var(--label-primary)] select-text">
+        <div className="truncate text-[14px] leading-[20px] font-medium text-[var(--label-primary)] select-text">
           {title}
         </div>
         {(displayPath || gitBranch) && (

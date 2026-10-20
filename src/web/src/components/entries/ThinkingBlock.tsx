@@ -28,7 +28,7 @@ export function ThinkingBlock({
           setVisited(true);
           setExpanded(!expanded);
         }}
-        className="flex min-h-10 w-full items-center gap-2 rounded-[10px] px-3 text-left text-[12px] text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+        className="conversation-thinking-toggle flex w-full items-center gap-2 rounded-[10px] px-3 text-left text-[12px] text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
         <Brain size={14} aria-hidden="true" />
         <span className="flex-1">

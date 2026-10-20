@@ -7,7 +7,9 @@
     "paimon": "./src/cli/index.ts"
   },
   "pi": {
-    "extensions": ["src/extensions"]
+    "extensions": [
+      "src/extensions"
+    ]
   },
   "repository": {
     "type": "git",
@@ -15,7 +17,13 @@
   },
   "homepage": "https://github.com/tyanxie/paimon",
   "bugs": "https://github.com/tyanxie/paimon/issues",
-  "keywords": ["pi", "pi-package", "coding-agent", "remote-panel", "websocket"],
+  "keywords": [
+    "pi",
+    "pi-package",
+    "coding-agent",
+    "remote-panel",
+    "websocket"
+  ],
   "scripts": {
     "dev": "vite build && concurrently -n hub,vite -c blue,green 'bun --watch src/hub/index.ts' 'vite build --watch'",
     "build": "vite build",
@@ -58,6 +66,7 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.4.1",
     "concurrently": "^9.2.1",
+    "postcss": "^8.5.31",
     "tailwindcss": "^4.1.5",
     "typescript": "^5.8.3",
     "vite": "^6.3.4"

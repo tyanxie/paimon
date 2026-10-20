@@ -2,6 +2,7 @@
 
 import { ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "./Button";
 import { MenuItem } from "./MenuItem";
 import { Popover } from "./Popover";
 import type { ThinkingLevel } from "../../../../protocol/types";
@@ -77,14 +78,15 @@ export function ThinkingSelector({
       width={160}
       align="left"
       trigger={({ open, id }) => (
-        <button
+        <Button
+          size="compact"
           type="button"
           disabled={!canSelect}
           aria-label={`${t("composer.thinkingLevel")}: ${currentLevel}`}
           aria-haspopup={canSelect ? "dialog" : undefined}
           aria-expanded={canSelect ? open : undefined}
           aria-controls={open ? id : undefined}
-          className={`inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1.5 rounded-[12px] text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${canSelect ? "hover:bg-[var(--fill-secondary)] cursor-pointer" : "cursor-default"} text-[var(--label-secondary)]`}
+          className={`inline-flex items-center gap-1.5 px-2 rounded-[9px] text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${canSelect ? "hover:bg-[var(--fill-secondary)] cursor-pointer" : "cursor-default"} text-[var(--label-secondary)]`}
         >
           <span className="select-text">{currentLevel}</span>
           {canSelect && (
@@ -94,7 +96,7 @@ export function ThinkingSelector({
               className={`transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
             />
           )}
-        </button>
+        </Button>
       )}
     >
       {(close) => (

@@ -3,7 +3,7 @@ import { LoaderCircle } from "lucide-react";
 
 interface ButtonProps extends ComponentPropsWithRef<"button"> {
   variant?: "primary" | "secondary" | "ghost" | "danger";
-  size?: "regular" | "icon" | "compact" | "inline";
+  size?: "regular" | "icon" | "compact" | "inline" | "badge";
   loading?: boolean;
 }
 

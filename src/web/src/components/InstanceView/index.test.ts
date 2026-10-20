@@ -156,7 +156,7 @@ describe("导航、顶部与输入区布局", () => {
 
   test("顶部使用右侧区域宽度，正文与输入区保持阅读宽度", () => {
     expect(instanceViewSource).toContain(
-      'className="conversation-topbar header-material pointer-events-auto w-full px-3 py-2 md:px-4 md:py-2.5"',
+      'className="conversation-topbar header-material pointer-events-auto w-full px-3 py-2 md:px-4"',
     );
     expect(instanceViewSource).toContain(
       'className="mx-auto max-w-[920px] space-y-2"',
@@ -164,6 +164,10 @@ describe("导航、顶部与输入区布局", () => {
     expect(instanceViewSource).toContain(
       'className="pointer-events-auto mx-auto w-full max-w-[920px]"',
     );
+    expect(instanceHeaderSource).toContain("min-h-[44px]");
+    expect(composerSource).toContain("block min-h-12 w-full");
+    expect(composerSource).toContain("px-4 pb-2.5 pt-3");
+    expect(composerSource).toContain("gap-1.5 px-3 pb-3");
     expect(instanceHeaderSource).not.toContain("header-material");
     expect(instanceHeaderSource).not.toContain("max-w-");
   });
@@ -184,7 +188,7 @@ describe("文本选择边界", () => {
     expect(toolCallCardSource).toContain("text-left group select-none");
     expect(instanceViewSource.includes("import { Button }")).toBe(true);
     expect(css.includes("user-select: none;")).toBe(true);
-    expect(composerSource).toContain("select-none flex h-10 w-10 shrink-0");
+    expect(composerSource).toContain("select-none shrink-0 rounded-full");
   });
 
   test("有复制价值的信息文本显式保留可选择", () => {

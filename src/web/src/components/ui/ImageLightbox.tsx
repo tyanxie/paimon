@@ -11,6 +11,7 @@ import {
 import * as m from "motion/react-m";
 import { cycleDialogFocus, useNativeDialog } from "./useNativeDialog";
 import { createPortal } from "react-dom";
+import { Button } from "./Button";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -100,32 +101,34 @@ function LightboxContent({
     >
       {/* 浮动工具栏与关闭按钮保持在滚动内容之外 */}
       {zoomable && (
-        <button
+        <Button
+          size="compact"
           type="button"
           onClick={(event) => {
             event.stopPropagation();
             toggleSize();
           }}
-          className="glass-panel absolute top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-10 flex h-9 items-center gap-2 px-4 text-[13px] text-[var(--label-primary)] select-none hover:text-[var(--color-accent)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+          className="glass-panel absolute top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 text-[13px] text-[var(--label-primary)] select-none hover:text-[var(--color-accent)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
         >
           {actualSize ? <ZoomOut size={16} /> : <ZoomIn size={16} />}
           {actualSize
             ? t("imagePreview.fitWindow")
             : t("imagePreview.actualSize")}
-        </button>
+        </Button>
       )}
-      <button
+      <Button
+        size="icon"
         ref={closeRef}
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           requestClose();
         }}
-        className={`absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-10 flex h-9 w-9 items-center justify-center select-none transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${zoomable ? "glass-panel text-[var(--label-primary)] hover:text-[var(--color-accent)]" : "rounded-full bg-[var(--badge-bg)] hover:bg-[var(--badge-bg-hover)] text-[var(--badge-text)]"}`}
+        className={`absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-10 flex items-center justify-center select-none transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${zoomable ? "glass-panel text-[var(--label-primary)] hover:text-[var(--color-accent)]" : "rounded-full bg-[var(--badge-bg)] hover:bg-[var(--badge-bg-hover)] text-[var(--badge-text)]"}`}
         aria-label={t("imagePreview.close")}
       >
         <X size={18} />
-      </button>
+      </Button>
 
       {zoomable ? (
         <div className="absolute left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] bottom-[max(1rem,env(safe-area-inset-bottom))]">
