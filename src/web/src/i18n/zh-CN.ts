@@ -61,7 +61,19 @@ const zhCN = {
 
   composer: {
     options: "输入选项",
-    moreOptions: "更多输入选项",
+    images: "图片",
+    modelLabel: "模型",
+    modelWaiting: "模型等待更新",
+    thinkingLabel: "思考",
+    pendingThinking: "等待更新",
+    unsupportedThinking: "不支持",
+    compact: "压缩",
+    compactBusy: "任务运行期间暂不可压缩",
+    compactUnavailable: "上下文用量更新后可压缩",
+    resizeHeight: "调整输入区高度",
+    resizeHeightHelp:
+      "拖动调整高度；双击或 Home 恢复自动高度；上下方向键调整，End 展开到最大高度",
+    heightPixels: "{{height}} 像素",
     model: "选择模型",
     thinkingLevel: "思考等级",
     contextUsage: "上下文用量",

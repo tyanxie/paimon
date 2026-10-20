@@ -97,6 +97,37 @@ describe("控件尺寸与间距", () => {
     );
   });
 
+  test("输入区顶部留白、工具按钮背景与高度按用途设置", () => {
+    expect(declarations(".composer-editor")["padding"]).toBe("6px 16px");
+    expect(declarations(".composer-control")["background"]).toBe(
+      "var(--fill-quaternary)",
+    );
+    expect(declarations(".composer-control")["white-space"]).toBe("nowrap");
+    expect(declarations(".composer-controls button")["height"]).toBe("26px");
+    expect(declarations(".composer-controls button")["min-height"]).toBe(
+      "26px",
+    );
+    expect(declarations(".composer-controls button", true)["height"]).toBe(
+      "44px",
+    );
+    expect(declarations(".composer-controls button", true)["min-height"]).toBe(
+      "44px",
+    );
+    expect(declarations(".composer-toolbar button")["height"]).toBe("32px");
+    expect(declarations(".composer-toolbar button", true)["height"]).toBe(
+      "44px",
+    );
+    expect(declarations(".composer-resize-handle")["touch-action"]).toBe(
+      "none",
+    );
+    expect(declarations(".composer-resize-handle", true)["height"]).toBe(
+      "32px",
+    );
+    expect(declarations(".composer-resize-handle::after", true)["height"]).toBe(
+      "44px",
+    );
+  });
+
   test("表单和设置保留内容分组与底部 Safe Area", () => {
     expect(declarations(".ui-form-content")["padding"]).toBe("16px");
     expect(declarations(".ui-form-content")["gap"]).toBe("16px");

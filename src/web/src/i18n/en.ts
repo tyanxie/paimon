@@ -63,7 +63,20 @@ const en: LocaleResource = {
 
   composer: {
     options: "Input options",
-    moreOptions: "More input options",
+    images: "Images",
+    modelLabel: "Model",
+    modelWaiting: "Awaiting model",
+    thinkingLabel: "Thinking",
+    pendingThinking: "Awaiting update",
+    unsupportedThinking: "Unsupported",
+    compact: "Compact",
+    compactBusy: "Compaction is unavailable while a task is running",
+    compactUnavailable:
+      "Compaction will be available after context usage updates",
+    resizeHeight: "Resize input area",
+    resizeHeightHelp:
+      "Drag to resize; double-click or press Home for automatic height; use arrow keys to resize and End for maximum height",
+    heightPixels: "{{height}} pixels",
     model: "Select model",
     thinkingLevel: "Thinking level",
     contextUsage: "Context usage",

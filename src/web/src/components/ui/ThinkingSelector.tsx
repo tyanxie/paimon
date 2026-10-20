@@ -1,6 +1,6 @@
 // 思考等级选择器与工具栏菜单共用选项
 
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Brain } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { MenuItem } from "./MenuItem";
@@ -68,9 +68,20 @@ export function ThinkingSelector({
   currentLevel,
   availableLevels,
   onSelect,
-}: ThinkingSelectorProps) {
+  showLabel = false,
+  pending = false,
+  className = "",
+}: Omit<ThinkingSelectorProps, "currentLevel"> & {
+  currentLevel?: ThinkingLevel;
+  showLabel?: boolean;
+  pending?: boolean;
+  className?: string;
+}) {
   const { t } = useTranslation();
-  const canSelect = !!onSelect;
+  const valueLabel =
+    currentLevel ??
+    t(pending ? "composer.pendingThinking" : "composer.unsupportedThinking");
+  const canSelect = !!onSelect && currentLevel != null;
   return (
     <Popover
       disabled={!canSelect}
@@ -82,13 +93,19 @@ export function ThinkingSelector({
           size="compact"
           type="button"
           disabled={!canSelect}
-          aria-label={`${t("composer.thinkingLevel")}: ${currentLevel}`}
+          aria-label={`${t("composer.thinkingLevel")}: ${valueLabel}`}
           aria-haspopup={canSelect ? "dialog" : undefined}
           aria-expanded={canSelect ? open : undefined}
           aria-controls={open ? id : undefined}
-          className={`inline-flex items-center gap-1.5 px-2 rounded-[9px] text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${canSelect ? "hover:bg-[var(--fill-secondary)] cursor-pointer" : "cursor-default"} text-[var(--label-secondary)]`}
+          className={`inline-flex items-center gap-1.5 px-2 rounded-[9px] text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${canSelect ? "hover:bg-[var(--fill-secondary)] cursor-pointer" : "cursor-default"} text-[var(--label-secondary)] ${className}`}
         >
-          <span className="select-text">{currentLevel}</span>
+          {showLabel && (
+            <>
+              <Brain size={14} aria-hidden="true" />
+              <span>{t("composer.thinkingLabel")}</span>
+            </>
+          )}
+          <span className="select-text">{valueLabel}</span>
           {canSelect && (
             <ChevronDown
               size={12}
@@ -99,14 +116,16 @@ export function ThinkingSelector({
         </Button>
       )}
     >
-      {(close) => (
-        <ThinkingOptions
-          currentLevel={currentLevel}
-          availableLevels={availableLevels}
-          onSelect={onSelect}
-          onDone={close}
-        />
-      )}
+      {(close) =>
+        currentLevel != null ? (
+          <ThinkingOptions
+            currentLevel={currentLevel}
+            availableLevels={availableLevels}
+            onSelect={onSelect}
+            onDone={close}
+          />
+        ) : null
+      }
     </Popover>
   );
 }

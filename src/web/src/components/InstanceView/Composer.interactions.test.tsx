@@ -80,12 +80,12 @@ function Probe({ options }: { options: Partial<Props> }) {
     options.draft ?? { text: " hello ", images: [] },
   );
   draft = value;
-  const current = options.instance ?? instance;
+  const current = "instance" in options ? options.instance : instance;
   return (
     <Composer
       instance={current}
-      buttonMode={getComposerButtonMode(current.status)}
-      compactDisabled={current.status !== "idle"}
+      buttonMode={getComposerButtonMode(current?.status)}
+      compactDisabled={current?.status !== "idle"}
       showCompactButton
       onSendMessage={(text, images) => sent.push({ text, images })}
       onAbort={() => {
@@ -269,12 +269,12 @@ describe("输入工具栏交互", () => {
     expect(document.activeElement === trigger).toBe(true);
   });
 
-  test("更多选项直接选择思考等级并关闭菜单", async () => {
+  test("思考等级直接选择并关闭菜单", async () => {
     await render();
-    const trigger = button("更多输入选项");
+    const trigger = button("思考等级: high");
     await click(trigger);
     const panel = document.querySelector(
-      '[role="dialog"][aria-label="更多输入选项"]',
+      '[role="dialog"][aria-label="思考等级"]',
     )!;
     expect(
       [...panel.querySelectorAll("[aria-pressed]")].map(
@@ -285,7 +285,7 @@ describe("输入工具栏交互", () => {
     expect(levels).toEqual(["off"]);
     expect(
       document.querySelector(
-        '[aria-label="更多输入选项"][role="dialog"]:not([inert])',
+        '[aria-label="思考等级"][role="dialog"]:not([inert])',
       ) === null,
     ).toBe(true);
     expect(document.activeElement === trigger).toBe(true);
@@ -293,9 +293,9 @@ describe("输入工具栏交互", () => {
 
   test("没有可选等级时保持现有默认等级", async () => {
     await render({ instance: { ...instance, availableModels: [] } });
-    await click(button("更多输入选项"));
+    await click(button("思考等级: high"));
     const panel = document.querySelector(
-      '[aria-label="更多输入选项"][role="dialog"]',
+      '[aria-label="思考等级"][role="dialog"]',
     )!;
     expect(
       [...panel.querySelectorAll("[aria-pressed]")].map(
@@ -330,20 +330,9 @@ describe("输入工具栏交互", () => {
     ).not.toBeNull();
   });
 
-  test("菜单中的压缩操作打开确认窗口并传递自定义提示", async () => {
+  test("压缩入口打开确认窗口并传递自定义提示", async () => {
     await render();
-    await click(button("更多输入选项"));
-    await click(
-      button(
-        "压缩上下文",
-        document.querySelector('[aria-label="更多输入选项"][role="dialog"]')!,
-      ),
-    );
-    expect(
-      document.querySelector(
-        '[aria-label="更多输入选项"][role="dialog"]:not([inert])',
-      ) === null,
-    ).toBe(true);
+    await click(button("压缩上下文"));
     const modal = document.querySelector("dialog.fixed-viewport")!;
     await change(modal.querySelector("textarea")!, " keep context ");
     await click(button("开始压缩", modal));
@@ -353,26 +342,18 @@ describe("输入工具栏交互", () => {
     expect(document.querySelector("dialog.fixed-viewport") === null).toBe(true);
   });
 
-  test("运行中禁用压缩，已经压缩时隐藏对应操作", async () => {
+  test("运行中与刚完成压缩时保留禁用入口", async () => {
     await render({ compactDisabled: true });
-    await click(button("更多输入选项"));
-    const panel = document.querySelector(
-      '[aria-label="更多输入选项"][role="dialog"]',
-    )!;
-    expect(button("压缩上下文", panel).disabled).toBe(true);
-    await render({ showCompactButton: false });
-    expect(
-      [...document.querySelectorAll("button")].some(
-        (element) =>
-          element.getAttribute("aria-label") === "压缩上下文" ||
-          element.textContent === "压缩上下文",
-      ),
-    ).toBe(false);
+    expect(button("压缩上下文").disabled).toBe(true);
+    expect(button("压缩上下文").title).toContain("任务运行");
+    await render({ showCompactButton: false, compactDisabled: false });
+    expect(button("压缩上下文").disabled).toBe(true);
+    expect(button("压缩上下文").textContent).toBe("压缩");
   });
 
-  test("Esc 关闭辅助菜单并恢复入口焦点", async () => {
+  test("Esc 关闭选择器并恢复入口焦点", async () => {
     await render();
-    const trigger = button("更多输入选项");
+    const trigger = button("思考等级: high");
     await click(trigger);
     await act(async () =>
       document.dispatchEvent(
@@ -381,13 +362,13 @@ describe("输入工具栏交互", () => {
     );
     expect(
       document.querySelector(
-        '[aria-label="更多输入选项"][role="dialog"]:not([inert])',
+        '[aria-label="思考等级"][role="dialog"]:not([inert])',
       ) === null,
     ).toBe(true);
     expect(document.activeElement === trigger).toBe(true);
   });
 
-  test("不支持思考的模型隐藏思考选项，缺少上下文时保留输入", async () => {
+  test("思考能力与用量不可用时保留说明和禁用入口", async () => {
     await render({
       instance: {
         ...instance,
@@ -395,21 +376,56 @@ describe("输入工具栏交互", () => {
         contextUsage: undefined,
       },
     });
-    expect(container.querySelector('[aria-label="更多输入选项"]')).toBeNull();
-    expect(container.querySelector('[aria-label^="思考等级"]')).toBeNull();
+    expect(button("思考等级: 不支持").disabled).toBe(true);
+    expect(button("压缩上下文").disabled).toBe(true);
     expect(button("发送").disabled).toBe(false);
   });
 
-  test("英文标签覆盖图片、更多选项与上下文", async () => {
+  test("实例信息等待更新时模型与思考保留等待入口", async () => {
+    await render({ instance: undefined });
+    expect(button("模型等待更新").disabled).toBe(true);
+    expect(button("思考等级: 等待更新").disabled).toBe(true);
+    expect(container.querySelectorAll(".composer-controls button").length).toBe(
+      4,
+    );
+  });
+
+  test("左侧四项有可见名称并保持顺序，右侧保留用量与发送", async () => {
+    await render();
+    const controls = [
+      ...container.querySelectorAll(".composer-controls button"),
+    ];
+    expect(controls.map((control) => control.textContent)).toEqual([
+      "图片",
+      "模型Current model",
+      "思考high",
+      "压缩",
+    ]);
+    expect(
+      controls.every((control) =>
+        control.classList.contains("composer-control"),
+      ),
+    ).toBe(true);
+    const right =
+      container.querySelector(".composer-toolbar")!.lastElementChild!;
+    expect(right.querySelector('[aria-label^="上下文用量"]') !== null).toBe(
+      true,
+    );
+    expect(right.querySelector('[aria-label="发送"]') !== null).toBe(true);
+  });
+
+  test("英文标签覆盖图片、选择器、压缩与高度入口", async () => {
     await i18n.changeLanguage("en");
     await render({ draft: { text: "", images: [image] } });
-    expect(button("Preview attached image 1")).toBeDefined();
-    expect(button("Remove attached image 1")).toBeDefined();
-    await click(button("More input options"));
-    const panel = document.querySelector(
-      '[aria-label="More input options"][role="dialog"]',
-    )!;
-    expect(panel.textContent).toContain("Thinking level");
-    expect(panel.textContent).toContain("Context usage");
+    expect(Boolean(button("Preview attached image 1"))).toBe(true);
+    expect(Boolean(button("Remove attached image 1"))).toBe(true);
+    expect(button("Select model: Current model").textContent).toContain(
+      "Model",
+    );
+    expect(button("Thinking level: high").textContent).toContain("Thinking");
+    expect(button("Compact context").textContent).toBe("Compact");
+    expect(
+      container.querySelector('[aria-label="Resize input area"]') !== null,
+    ).toBe(true);
   });
 });

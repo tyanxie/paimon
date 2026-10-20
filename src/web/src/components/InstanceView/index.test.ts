@@ -165,19 +165,23 @@ describe("导航、顶部与输入区布局", () => {
       'className="pointer-events-auto mx-auto w-full max-w-[920px]"',
     );
     expect(instanceHeaderSource).toContain("min-h-[44px]");
-    expect(composerSource).toContain("block min-h-12 w-full");
-    expect(composerSource).toContain("px-4 pb-2.5 pt-3");
-    expect(composerSource).toContain("gap-1.5 px-3 pb-3");
+    expect(composerSource).toContain("composer-editor block w-full");
+    expect(css).toContain("padding: 6px 16px;");
+    expect(composerSource).toContain("items-center gap-2 px-3 pb-3 pt-2");
     expect(instanceHeaderSource).not.toContain("header-material");
     expect(instanceHeaderSource).not.toContain("max-w-");
   });
 
-  test("工具栏按输入容器宽度收纳辅助操作", () => {
+  test("工具栏保持可见选项与顺序换行", () => {
     expect(css).toContain("container: composer / inline-size;");
+    expect(css).toContain("@container composer (max-width: 400px)");
+    expect(composerSource).toContain("composer-actions flex shrink-0");
     expect(css).toContain("@container composer (min-width: 640px)");
-    expect(composerSource).toContain("composer-inline-options");
-    expect(composerSource).toContain("composer-more-options");
+    expect(composerSource).toContain(
+      "composer-controls flex min-w-0 flex-1 flex-wrap",
+    );
     expect(composerSource).toContain("composer-surface glass-panel-input");
+    expect(composerSource).toContain('role="separator"');
   });
 });
 

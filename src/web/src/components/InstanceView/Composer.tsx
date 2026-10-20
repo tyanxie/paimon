@@ -3,20 +3,12 @@
 import { AnimatePresence } from "motion/react";
 import {
   useRef,
-  useLayoutEffect,
   useCallback,
   useState,
+  useId,
   useImperativeHandle,
 } from "react";
-import {
-  ArrowUp,
-  Square,
-  Minimize2,
-  ImagePlus,
-  X,
-  MoreHorizontal,
-  Gauge,
-} from "lucide-react";
+import { ArrowUp, Square, Minimize2, ImagePlus, X, Gauge } from "lucide-react";
 import type {
   InstanceInfo,
   ImagePayload,
@@ -28,9 +20,9 @@ import { isBusy } from "../../utils/status";
 import { processImageFile, getImagesFromClipboard } from "../../utils/image";
 import { showToast } from "../ui/Toast";
 import { ModelSelector } from "../ui/ModelSelector";
-import { ThinkingSelector, ThinkingOptions } from "../ui/ThinkingSelector";
+import { ThinkingSelector } from "../ui/ThinkingSelector";
 import { Button } from "../ui/Button";
-import { MenuItem } from "../ui/MenuItem";
+import { useComposerHeight } from "./useComposerHeight";
 import { Popover } from "../ui/Popover";
 import { CompactModal } from "../ui/CompactModal";
 import { useTranslation } from "react-i18next";
@@ -75,6 +67,10 @@ export function Composer({
 }: ComposerProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const textareaId = useId();
+  const heightHelpId = useId();
+  const editorHeight = useComposerHeight(textareaRef, surfaceRef, draft.text);
 
   // 暴露 focus 方法给父组件
   useImperativeHandle(ref, () => ({
@@ -104,22 +100,17 @@ export function Composer({
     (m) => m.provider === instanceModel?.provider && m.id === instanceModel?.id,
   )?.availableThinkingLevels;
 
-  const showContextInfo = !!contextUsage;
-  const canShowCompact = showCompactButton && showContextInfo;
-  const hasMoreOptions = !!thinkingLevel || showContextInfo;
-
-  const resizeTextarea = useCallback((el: HTMLTextAreaElement) => {
-    el.style.height = "auto";
-    const newHeight = Math.min(el.scrollHeight, 150);
-    el.style.height = `${newHeight}px`;
-    el.style.overflowY = el.scrollHeight > 150 ? "auto" : "hidden";
-  }, []);
-
-  useLayoutEffect(() => {
-    if (textareaRef.current) {
-      resizeTextarea(textareaRef.current);
-    }
-  }, [draft.text, resizeTextarea]);
+  const canCompact =
+    showCompactButton &&
+    !!contextUsage &&
+    !compactDisabled &&
+    contextUsage.tokens != null;
+  const compactDescription = compactDisabled
+    ? t("composer.compactBusy")
+    : !showCompactButton || contextUsage?.tokens == null
+      ? t("composer.compactUnavailable")
+      : t("eventStream.compactContext");
+  const resizeTextarea = editorHeight.resizeTextarea;
 
   // textarea 自动调整高度
   const handleInputChange = useCallback(
@@ -149,9 +140,6 @@ export function Composer({
         }))
       : undefined;
     onSendMessage(current.text.trim(), images);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
     startBottomFollow();
   }, [instanceStatus, onSendMessage, startBottomFollow]);
 
@@ -223,9 +211,34 @@ export function Composer({
 
   return (
     <>
-      <div className="composer-surface glass-panel-input">
+      <div ref={surfaceRef} className="composer-surface glass-panel-input">
+        <div
+          role="separator"
+          tabIndex={0}
+          aria-orientation="horizontal"
+          aria-label={t("composer.resizeHeight")}
+          aria-describedby={heightHelpId}
+          aria-controls={textareaId}
+          aria-valuemin={editorHeight.limits.minimum}
+          aria-valuemax={editorHeight.limits.maximum}
+          aria-valuenow={editorHeight.height}
+          aria-valuetext={t("composer.heightPixels", {
+            height: editorHeight.height,
+          })}
+          className="composer-resize-handle"
+          data-dragging={editorHeight.dragging || undefined}
+          onPointerDown={editorHeight.onPointerDown}
+          onKeyDown={editorHeight.onKeyDown}
+          onDoubleClick={editorHeight.resetHeight}
+          title={t("composer.resizeHeightHelp")}
+        >
+          <span aria-hidden="true" />
+        </div>
+        <span id={heightHelpId} className="sr-only">
+          {t("composer.resizeHeightHelp")}
+        </span>
         {draft.images.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto px-4 pt-2 scrollbar-auto">
+          <div className="composer-images flex gap-2 overflow-x-auto px-4 pt-4 scrollbar-auto">
             {draft.images.map((img, index) => (
               <div key={img.id} className="relative shrink-0">
                 <button
@@ -255,6 +268,7 @@ export function Composer({
           </div>
         )}
         <textarea
+          id={textareaId}
           ref={textareaRef}
           rows={1}
           aria-label={t("eventStream.sendPlaceholder")}
@@ -263,23 +277,24 @@ export function Composer({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          className="block min-h-12 w-full resize-none overflow-hidden bg-transparent px-4 pb-2.5 pt-3 text-[16px] leading-[24px] text-[var(--label-primary)] outline-none placeholder:text-[var(--label-tertiary)] md:px-5 md:text-[14px] md:leading-[22px]"
+          className="composer-editor block w-full resize-none overflow-hidden bg-transparent text-[16px] leading-[24px] text-[var(--label-primary)] outline-none placeholder:text-[var(--label-tertiary)] md:text-[14px] md:leading-[22px]"
         />
         <div
-          className="composer-toolbar flex min-w-0 items-center gap-1.5 px-3 pb-3"
+          className="composer-toolbar flex min-w-0 items-center gap-2 px-3 pb-3 pt-2"
           role="group"
           aria-label={t("composer.options")}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-1">
+          <div className="composer-controls flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
             <Button
-              size="icon"
+              size="compact"
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 select-none rounded-[10px] text-[var(--label-secondary)] transition-colors hover:bg-[var(--fill-tertiary)] hover:text-[var(--label-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+              className="composer-control shrink-0"
               title={t("eventStream.attachImage")}
               aria-label={t("eventStream.attachImage")}
             >
-              <ImagePlus size={16} aria-hidden="true" />
+              <ImagePlus size={14} aria-hidden="true" />
+              <span>{t("composer.images")}</span>
             </Button>
             <input
               ref={fileInputRef}
@@ -289,110 +304,42 @@ export function Composer({
               onChange={handleFileSelect}
               className="hidden"
             />
-            {instanceModel && (
+            {instanceModel ? (
               <ModelSelector
                 currentModel={instanceModel}
                 availableModels={availableModels}
                 onSelect={onSetModel}
+                showLabel
+                className="composer-control"
               />
+            ) : (
+              <Button size="compact" disabled className="composer-control">
+                {t("composer.modelWaiting")}
+              </Button>
             )}
-            {thinkingLevel && (
-              <div className="composer-inline-options shrink-0">
-                <ThinkingSelector
-                  currentLevel={thinkingLevel}
-                  availableLevels={availableThinkingLevels ?? []}
-                  onSelect={onSetThinkingLevel}
-                />
-              </div>
-            )}
-            {hasMoreOptions && (
-              <div className="composer-more-options shrink-0">
-                <Popover
-                  label={t("composer.moreOptions")}
-                  width={260}
-                  align="left"
-                  trigger={({ open, id }) => (
-                    <Button
-                      size="icon"
-                      type="button"
-                      aria-label={t("composer.moreOptions")}
-                      title={t("composer.moreOptions")}
-                      aria-haspopup="dialog"
-                      aria-expanded={open}
-                      aria-controls={open ? id : undefined}
-                      className="rounded-[10px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
-                    >
-                      <MoreHorizontal size={16} aria-hidden="true" />
-                    </Button>
-                  )}
-                >
-                  {(close) => (
-                    <div
-                      className="ui-menu-scroll p-2"
-                      style={{ maxHeight: "inherit" }}
-                    >
-                      {thinkingLevel && (
-                        <section aria-label={t("composer.thinkingLevel")}>
-                          <h2 className="px-3 pt-2 text-[11px] font-semibold text-[var(--label-secondary)]">
-                            {t("composer.thinkingLevel")}
-                          </h2>
-                          <ThinkingOptions
-                            currentLevel={thinkingLevel}
-                            availableLevels={availableThinkingLevels ?? []}
-                            onSelect={onSetThinkingLevel}
-                            onDone={close}
-                          />
-                        </section>
-                      )}
-                      {contextUsage && (
-                        <section
-                          className={
-                            thinkingLevel
-                              ? "mt-1 border-t border-[var(--separator)] pt-2"
-                              : ""
-                          }
-                          aria-label={t("composer.contextUsage")}
-                        >
-                          <ContextDetails contextUsage={contextUsage} />
-                          {canShowCompact && (
-                            <MenuItem
-                              type="button"
-                              disabled={compactDisabled}
-                              onClick={() => {
-                                close();
-                                setShowCompactModal(true);
-                              }}
-                              className="mt-1 flex w-full items-center gap-2 rounded-[10px] px-3 text-left text-[12px] text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] disabled:opacity-40"
-                            >
-                              <Minimize2 size={15} aria-hidden="true" />
-                              {t("eventStream.compactContext")}
-                            </MenuItem>
-                          )}
-                        </section>
-                      )}
-                    </div>
-                  )}
-                </Popover>
-              </div>
-            )}
+            <ThinkingSelector
+              currentLevel={thinkingLevel}
+              pending={!instance}
+              availableLevels={availableThinkingLevels ?? []}
+              onSelect={onSetThinkingLevel}
+              showLabel
+              className="composer-control"
+            />
+            <Button
+              size="compact"
+              type="button"
+              disabled={!canCompact}
+              aria-label={t("eventStream.compactContext")}
+              title={compactDescription}
+              onClick={() => setShowCompactModal(true)}
+              className="composer-control shrink-0"
+            >
+              <Minimize2 size={14} aria-hidden="true" />
+              <span>{t("composer.compact")}</span>
+            </Button>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="composer-actions flex shrink-0 items-center gap-1.5">
             {contextUsage && <ContextIndicator contextUsage={contextUsage} />}
-            {canShowCompact && (
-              <div className="composer-inline-options">
-                <Button
-                  size="icon"
-                  type="button"
-                  onClick={() => setShowCompactModal(true)}
-                  disabled={compactDisabled}
-                  title={t("eventStream.compactContext")}
-                  aria-label={t("eventStream.compactContext")}
-                  className="shrink-0 rounded-[10px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] disabled:opacity-40"
-                >
-                  <Minimize2 size={15} aria-hidden="true" />
-                </Button>
-              </div>
-            )}
             {buttonMode === "stop" ? (
               <Button
                 size="icon"

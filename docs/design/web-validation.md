@@ -4,7 +4,7 @@
 
 ## 当前范围
 
-- 前五阶段及前端专项清理已完成，当前包含桌面紧凑尺寸与间距、触摸点击范围和消息时间排列调整。
+- 前五阶段及前端专项清理已完成，当前包含桌面紧凑尺寸与间距、触摸点击范围、消息时间排列、可调编辑高度与等高文字工具栏。
 - 用户已认可对话组织、整体玻璃侧栏、全宽顶部栏、输入区、详情窗口与公共控件的整体效果。
 - 颜色组、协议及服务端实现保持不变，当前尺寸与间距效果等待用户检查。
 - 本文的组合场景仍需用户逐项确认；整体效果审阅与单元测试分别保留各自的验证范围。
@@ -12,18 +12,18 @@
 
 ## 自动检查
 
-完整 `bun test --bail`：279 项通过、0 项失败，1528 次断言，31 个测试文件，耗时 20.81 秒。测试使用项目的 happy-dom 环境；构建测试在内存中检查产物，不访问浏览器页面。
+完整 `bun test --bail`：293 项通过、0 项失败，1602 次断言，32 个测试文件，耗时 22.38 秒。测试使用项目的 happy-dom 环境；构建测试在内存中检查产物，不访问浏览器页面。
 
 - `bunx tsc --noEmit`、前端未使用声明检查、文档格式与 `git diff --check` 通过。
 - 21 个本地文档链接检查通过。
-- `bun run build` 通过，耗时 12.93 秒；Hub 与 Edge 已重启。
+- `bun run build` 通过，耗时 13.06 秒；Hub 与 Edge 已重启。
 - 构建提示部分图表模块超过 600kB；入口与按需加载关系通过构建单测，实际加载速度和运行性能由用户检查。
 
 ### 覆盖内容
 
 - **对话数据与顺序**：`useConversationDisplay.test.tsx`、`useConversation.test.tsx` 验证回复范围、工具去重、正文分隔、历史结果优先、真实状态、稳定 key、时间归属与原始 entry 分页 offset。
 - **回复与工具详情**：`Conversation.test.tsx`、`ToolCallCard.test.tsx` 验证独立折叠、结果交接、部分输出、错误、未知与终止状态、耗时、timeout 和消息时间入口。
-- **导航与输入**：`Sidebar.test.tsx`、`Composer.interactions.test.tsx`、`Composer.test.tsx`、`InstanceHeader.test.tsx` 验证实例操作、草稿、IME、发送／停止、模型与 thinking 原始 value、上下文、图片入口和压缩。
+- **导航与输入**：`Sidebar.test.tsx`、`Composer.height.test.tsx`、`Composer.interactions.test.tsx`、`Composer.test.tsx`、`InstanceHeader.test.tsx` 验证实例操作、草稿、IME、发送／停止、模型与 thinking 原始 value、上下文、图片入口、压缩、手动与自动高度、指针身份、取消、键盘操作、可见视口限制和监听清理。
 - **表单、菜单与页面**：`FormMenus.test.tsx`、`SharedControls.test.tsx`、`Pages.test.tsx`、`Popover.test.tsx`、`Toast.test.tsx` 验证字段关联、创建与错误、搜索与分页、设置持久化、认证、禁用与选中、焦点、视口计算和计时器清理。
 - **模态与滚动**：`ModalShell.test.tsx`、`ImageLightbox.test.tsx`、`useViewportHeight.test.tsx`、`useScrollAnchor.test.tsx` 验证 Portal、原生 dialog 调用、挂载与卸载、焦点循环与恢复、滚动限制、嵌套窗口、关闭条件和阅读位置计算。
 - **Markdown 与图表**：`Markdown.test.ts`、`MermaidBlock.test.tsx` 验证内容转换、图表主题与对比度、串行渲染、取消请求、复制、源码展示和预览状态。
@@ -59,7 +59,8 @@
 ### 输入、表单与手机键盘
 
 - [ ] 验证多行输入、IME、Enter／Shift+Enter、图片上传／粘贴／移除、重新编辑、发送和停止；图片压缩与系统文件选择由实际浏览器检查。
-- [ ] 在宽、窄输入区域选择模型、thinking、上下文和更多选项，确认发送／停止始终可操作；压缩后暂缺 tokens 时显示等待更新。
+- [ ] 在宽、窄输入区域检查图片、模型、thinking、压缩的文字、背景、左侧桌面 26px 高度与换行顺序，右侧 32px 上下文与发送／停止保持可见，左右区域垂直居中；压缩后暂缺 tokens 时显示等待更新与禁用说明。
+- [ ] 检查 36px 默认单行编辑高度与上下各 6px 内边距；鼠标和触摸拖动顶部入口，上下方向键调节，双击或 Home 恢复自动高度，End 展开；取消拖动恢复开始状态，发送后保留选择，实例或 session 切换时重置。键盘显示或窗口变小时检查高度限制、图片预览、拖动区域与文字之间的操作范围及对话阅读位置。
 - [ ] 新建实例时选择 Edge、输入目录并使用补全；检查创建中、失败和无可用 Edge。压缩时提交自定义提示并检查失败反馈。
 - [ ] 手机中显示、关闭键盘并改变屏幕方向，检查输入区、表单、菜单、详情窗口和 Safe Area；表单正文滚动，底部操作区保持可见。
 

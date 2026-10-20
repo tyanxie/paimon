@@ -1,6 +1,6 @@
 // 模型选择器：点击弹出 Popover，按 provider 分组展示可选模型
 
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Cpu } from "lucide-react";
 import { Button } from "./Button";
 import { MenuItem } from "./MenuItem";
 import { Popover } from "./Popover";
@@ -10,12 +10,16 @@ import { useTranslation } from "react-i18next";
 interface ModelSelectorProps {
   currentModel: ModelInfo;
   availableModels?: ModelInfo[];
+  showLabel?: boolean;
+  className?: string;
   onSelect?: (provider: string, id: string) => void;
 }
 
 export function ModelSelector({
   currentModel,
   availableModels,
+  showLabel = false,
+  className = "",
   onSelect,
 }: ModelSelectorProps) {
   const { t } = useTranslation();
@@ -55,9 +59,15 @@ export function ModelSelector({
             canSelect
               ? "hover:bg-[var(--fill-secondary)] hover:text-[var(--label-primary)] cursor-pointer"
               : "cursor-default"
-          } text-[var(--label-secondary)]`}
+          } text-[var(--label-secondary)] ${className}`}
         >
-          <span className="max-w-[140px] truncate select-text">
+          {showLabel && (
+            <>
+              <Cpu size={14} aria-hidden="true" />
+              <span>{t("composer.modelLabel")}</span>
+            </>
+          )}
+          <span className="composer-model-name max-w-[140px] truncate select-text">
             {currentModel.name || currentModel.id}
           </span>
           {canSelect && (

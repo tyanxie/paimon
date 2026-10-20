@@ -21,7 +21,7 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 - 🖼️ **Image Support** — Paste or upload images to send to LLM, view full-size in history
 - 🔄 **Multi-instance Switching** — Manage all pi sessions in one page
 - 🧭 **Instance Sidebar** — One glass panel contains home, settings, connection information, and instances grouped by Edge
-- ⌨️ **Adaptive Input Toolbar** — Images, models, thinking, and context in one toolbar; narrower areas move secondary options into a menu while keeping send/stop visible
+- ⌨️ **Resizable Composer** — Drag the top handle to resize the editor; equal-height labeled image, model, thinking, and compaction controls wrap in order, with context and send/stop on the right
 - 🌐 **Multi-machine Support** — Centralized Hub + distributed Edge, manage pi instances across servers
 - ➕ **Create Instances from UI** — Select Edge node + path picker
 - 📋 **Session Management** — Browse session history, create or switch with one click
@@ -41,7 +41,7 @@ A continuous, translucent header spans the conversation area, containing instanc
 
 Forms, menus, settings, and content actions share controls with consistent focus, disabled, loading, and selected states. Theme, background, language, and notification settings share compact segmented controls. Desktop buttons, fields, and lists use compact sizes and spacing; touch devices retain hit regions of at least 44px. Image removal and message timestamps use 24px visible controls with separate touch regions. Instance creation and compaction keep their action footer visible; menus adapt their position and scrolling to the visual viewport, and settings rows adapt to the available content width. Notices support long messages and reduced motion, using the native Popover API when available to appear while a detail dialog is open.
 
-The composer preserves drafts, IME input, image uploads, and pasting. Open the context readout to inspect full usage; missing token counts after compaction show an awaiting-update state. Model and thinking controls use the instance's available options.
+The editor starts at a single-line height of 36px, with 6px top and bottom padding. Drag the top handle to resize, double-click or press Home for automatic height, use arrow keys to adjust, and End for the current maximum. Sending preserves the manual height; switching instances or sessions resets it. Desktop left-side labeled buttons are 26px tall, with 32px controls on the right and vertically centered groups; touch controls remain 44px tall. The height limit adapts to the visible viewport. Drafts, IME input, image uploads, and pasting remain available. Open the context readout to inspect full usage; missing token counts after compaction show an awaiting-update state. Model and thinking controls use the instance's available options.
 
 ## 📋 Prerequisites
 
