@@ -161,9 +161,7 @@ describe("文本选择边界", () => {
       "font-medium text-[var(--label-primary)] select-text",
     );
     expect(instanceHeaderSource).not.toContain('select-text">{text}</span>');
-    expect(composerSource).toContain(
-      '<span className="text-[11px] font-medium leading-none">{label}</span>',
-    );
+
     expect(composerSource).toContain(
       '<span className="select-text" style={{ color }}>',
     );
@@ -174,10 +172,18 @@ describe("文本选择边界", () => {
     expect(modelSelectorSource).toContain("max-w-[140px] truncate select-text");
   });
 
+  test("对话列表使用派生分组并连接折叠阅读位置管理", () => {
+    expect(instanceViewSource).toContain("<ConversationList");
+    expect(instanceViewSource).toContain("items={displayItems}");
+    expect(instanceViewSource).toContain(
+      "onBeforeToggle={prepareForContentResize}",
+    );
+  });
+
   test("加载和空状态占位文案禁用选择", () => {
-    expect(instanceViewSource).toContain("Loading earlier messages...");
+    expect(instanceViewSource).toContain('t("conversation.loadingEarlier")');
     expect(instanceViewSource).toContain("text-[11px] py-2 select-none");
-    expect(instanceViewSource).toContain("No messages yet");
+    expect(instanceViewSource).toContain('t("conversation.noMessages")');
     expect(instanceViewSource).toContain("text-[12px] pt-8 select-none");
     expect(instanceViewSource).toContain(
       'className="space-y-3 pt-3 select-none"',

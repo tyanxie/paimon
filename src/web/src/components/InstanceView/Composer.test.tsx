@@ -1,57 +1,60 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-
-import type { InstanceStatus } from "../../../../protocol/types";
+import type { InstanceInfo, InstanceStatus } from "../../../../protocol/types";
 import "../../i18n";
-import { ComposerStatusIndicator } from "./Composer";
+import { Composer } from "./Composer";
 import { getComposerButtonMode } from "./utils";
 
-describe("ComposerStatusIndicator", () => {
-  test("renders online state without running animation", () => {
-    const markup = renderToStaticMarkup(
-      <ComposerStatusIndicator status="idle" />,
-    );
+function markup(status: InstanceStatus) {
+  const instance: InstanceInfo = {
+    id: "instance",
+    edgeId: "edge",
+    hostname: "host",
+    cwd: "/project",
+    homedir: "/home/user",
+    model: { provider: "provider", id: "model" },
+    pid: 1,
+    status,
+    connectedAt: 0,
+    lastHeartbeat: 0,
+    contextUsage: { tokens: 100, contextWindow: 1000, percent: 10 },
+  };
+  const noop = () => {};
+  return renderToStaticMarkup(
+    <Composer
+      instance={instance}
+      draft={{ text: "hello", images: [] }}
+      onDraftChange={noop}
+      onSendMessage={noop}
+      onAbort={noop}
+      onSetModel={noop}
+      onSetThinkingLevel={noop}
+      onCompact={noop}
+      buttonMode={getComposerButtonMode(status)}
+      showCompactButton
+      compactDisabled={status !== "idle"}
+      onImageLightbox={noop}
+      startBottomFollow={noop}
+    />,
+  );
+}
 
-    expect(markup).toContain("在线");
-    expect(markup).toContain("rounded-full");
-    expect(markup).toContain("bg-green-500/10");
-    expect(markup).toContain("bg-green-500");
-    expect(markup).toContain("text-green-500");
-    expect(markup).not.toContain("animate-pulse");
-  });
+describe("Composer 操作与上下文", () => {
+  for (const status of ["idle", "streaming", "compacting"] as const) {
+    test(`${status} 状态保留上下文用量与发送或停止操作`, () => {
+      const html = markup(status);
+      expect(html).toContain("100 / 1.0k (10%)");
+      expect(html).toContain(
+        status === "idle" ? 'title="发送"' : 'title="停止"',
+      );
+      expect(html).not.toContain('role="status"');
+    });
+  }
 
-  test("renders running state with accent pulse", () => {
-    const markup = renderToStaticMarkup(
-      <ComposerStatusIndicator status="streaming" />,
-    );
-
-    expect(markup).toContain("执行中");
-    expect(markup).toContain("rounded-full");
-    expect(markup).toContain(
-      "bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]",
-    );
-    expect(markup).toContain("bg-[var(--color-accent)]");
-    expect(markup).toContain("text-[var(--color-accent)]");
-    expect(markup).toContain("animate-pulse");
-  });
-
-  test("renders compacting state with amber pulse", () => {
-    const markup = renderToStaticMarkup(
-      <ComposerStatusIndicator status="compacting" />,
-    );
-
-    expect(markup).toContain("压缩中");
-    expect(markup).toContain("bg-amber-500/10");
-    expect(markup).toContain("bg-amber-500");
-    expect(markup).toContain("text-amber-500");
-    expect(markup).toContain("animate-pulse");
-  });
-
-  test("keeps stop action visible while streaming with a draft", () => {
+  test("运行中保留停止操作", () => {
     expect(getComposerButtonMode("streaming")).toBe("stop");
   });
-
-  test("shows stop button during compacting to allow abort", () => {
+  test("压缩中保留停止操作", () => {
     expect(getComposerButtonMode("compacting")).toBe("stop");
   });
 });

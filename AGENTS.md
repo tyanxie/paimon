@@ -29,7 +29,7 @@ bun run scripts/prepare-npm-packages.ts    # 从编译产物生成 npm 可发布
 | 构建     | Vite 6                                                                |
 | 进程管理 | Bun.spawn（detached）+ 状态文件（`~/.paimon/hub.json` / `edge.json`） |
 
-**关键依赖**: mermaid, dompurify, khroma, highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, i18next, react-i18next, zustand, rotating-file-stream, global-directory, package-manager-detector
+**关键依赖**: mermaid, dompurify, khroma, highlight.js, react-markdown, rehype-highlight, remark-gfm, remark-frontmatter, js-yaml, lucide-react, motion, i18next, react-i18next, zustand, rotating-file-stream, global-directory, package-manager-detector
 
 ## 项目结构（仅非标准部分）
 
@@ -62,6 +62,8 @@ bin/
 
 - **pi SDK 行为依赖** — `ctx.sessionManager.getBranch()` 只返回已完成的消息（`appendMessage` 在 `message_end` 触发），streaming 中的消息不在列表中。这是 pi SDK 的行为，非 paimon 控制
 - **工具生命周期** — Extension 保留全部 message 事件，并新增转发 `tool_execution_start/update/end`。Web 按 `toolCallId` 管理顶层工具的实时状态，部分结果使用最新快照，结束事件立即提供结果、错误和 `durationMs`；最终 `toolResult` 继续负责历史展示。实时状态随页面对话重置，后续更新或结束事件可以独立建立状态。运行计时表示调用等待时间，接收开始事件时使用 `performance.now()` 记录时间，每个 `ToolCallCard` 使用一个计时器供卡片和详情共享，完成、终止或卸载时清理计时器，最终耗时采用 Pi 的 `durationMs`。工具事件和运行状态使用 discriminated union。卡片右侧和详情标题统一显示耗时，单位使用 `s` 和 `ms`，数字与单位之间使用不换行空格。bash 详情命令区域显示提供的 `args.timeout`
+- **前端对话展示模型** — `useConversation` 保留原始 entries，并通过 `useConversationDisplay` 提供派生的 `displayItems`。用户消息独立，其后至下一条用户消息之前的 assistant 内容组成回复；连续 thinking 和工具调用可跨 assistant 消息进入一个执行区域，正文与系统事件分隔执行区域。工具按 `toolCallId` 去重及匹配结果，历史结果优先；缺少执行信息的历史工具保留未知状态。共享类型使用 discriminated union，原始消息身份、时间和结果字段保持可用；分页 offset 继续使用已完成的原始 entry 数量。完整说明见 [docs/design/conversation-rendering.md](docs/design/conversation-rendering.md)。
+- **对话容器与折叠** — `ConversationList` 渲染 `displayItems`，回复使用 24px 圆角中性半透明容器；执行汇总和 thinking 默认收起，用户展开后保持其选择。整组回复、执行汇总与 thinking 独立管理开关，折叠后保留组件身份并限制焦点访问，实例或 session 切换时重置。Motion 使用 `LazyMotion`、`m` 与共享 `Collapsible` 管理高度和透明度，支持 reduced motion。工具结果未知时使用静态状态提示；明确的终止消息结束回复内未完成工具，实例 `idle` 结束运行指示。消息时间使用历史时间或已有事件时间，流式消息保留首次事件时间，hover、聚焦和点击可查看；工具耗时独立显示。折叠前通过 `prepareForContentResize` 保持点击入口的阅读位置。运行与压缩提示位于回复附近，输入区显示上下文与操作控件。
 - **任务完成边界** — Pi 1.1.0 的 `agent_settled` 表示自动重试、压缩恢复和排队消息均已结束。Extension 仅在此事件中将运行状态更新为 `idle`，并通过 `settledOutcome` 区分 `completed`、`aborted` 和 `error`。Web 端仅为 `completed` 发送任务完成通知
 - **Markdown 图表** — `MarkdownRenderer` 将 `mermaid` 代码块交给 `MermaidBlock.tsx`。模块级 `renderQueue` 串行渲染，`nextDiagramId` 生成独立 ID。流式更新延迟 300ms，内容更新或卸载时取消过期请求，最终失败显示源码。SVG 使用严格安全配置、纯 SVG 标签和 DOMPurify 清理，通过图片展示。全屏预览复用 `ImageLightbox`，主题更新时保留窗口、尺寸模式和阅读位置；支持 Safe Area、Esc、焦点循环和关闭后恢复焦点。
 - **Mermaid 视觉主题** — `mermaidTheme.ts` 使用 `base`、`themeVariables` 和局部 `themeCSS`，读取项目 CSS variables，通过 khroma 合成 HEX 色值。SVG 背景透明，卡片使用 `--fill-card`，预览使用 `--btn-solid`。`secure` 保护主题配置，保留特殊形状和源码局部样式；临时渲染容器宽度为 960px。完整规范见 [docs/design/mermaid-theme.md](docs/design/mermaid-theme.md)。

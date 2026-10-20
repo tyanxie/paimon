@@ -11,9 +11,14 @@ import {
   Loader2,
   ChevronRight,
   Timer,
+  CircleHelp,
 } from "lucide-react";
 import { ModalShell } from "../ui/ModalShell";
-import type { SessionEntry, ToolExecutionState } from "../../stores/types";
+import type {
+  SessionEntry,
+  ToolExecutionState,
+  ConversationToolState,
+} from "../../stores/types";
 import { MarkdownRenderer } from "./Markdown";
 import { useTranslation } from "react-i18next";
 
@@ -183,6 +188,8 @@ export function ToolCallCard({
   entries,
   execution,
   isAborted = false,
+  state,
+  compact = false,
 }: {
   name: string;
   args: Record<string, any>;
@@ -190,7 +197,10 @@ export function ToolCallCard({
   entries: SessionEntry[];
   execution?: ToolExecutionState;
   isAborted?: boolean;
+  state?: ConversationToolState;
+  compact?: boolean;
 }) {
+  const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
   const summary = getToolSummary(name, args);
 
@@ -201,6 +211,13 @@ export function ToolCallCard({
   );
   const finalResult =
     historyResult ??
+    (state?.status === "completed" || state?.status === "error"
+      ? normalizeToolResult(
+          state.result,
+          state.status === "error",
+          state.durationMs,
+        )
+      : null) ??
     (execution?.status === "completed"
       ? normalizeToolResult(
           execution.result,
@@ -214,10 +231,11 @@ export function ToolCallCard({
       ? normalizeToolResult(execution.partialResult)
       : null);
   const isCompleted = finalResult !== null;
-  const isRunning = !isCompleted && !isAborted;
+  const terminated = isAborted || state?.status === "aborted";
+  const isUnknown = !isCompleted && state?.status === "unknown";
+  const isRunning = !isCompleted && !terminated && !isUnknown;
   const isError = finalResult?.isError ?? false;
-  // 工具未完成且消息已终止（abort / error）→ 视为失败
-  const isFailed = isError || (!isCompleted && isAborted);
+  const isFailed = isError || (!isCompleted && terminated);
   const elapsed = useToolElapsed(isRunning ? execution?.startedAt : undefined);
   const durationDisplay = (
     <ToolDuration
@@ -242,8 +260,25 @@ export function ToolCallCard({
     <>
       {/* 折叠卡片 */}
       <button
+        type="button"
+        aria-label={t("conversation.toolDetails", { name })}
+        data-tool-state={
+          isRunning
+            ? "running"
+            : isUnknown
+              ? "unknown"
+              : terminated && !isCompleted
+                ? "aborted"
+                : isError
+                  ? "error"
+                  : "completed"
+        }
         onClick={() => setShowModal(true)}
-        className="w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group select-none"
+        className={
+          compact
+            ? "conversation-tool-row flex min-h-11 w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left group select-none hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+            : "w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group select-none"
+        }
       >
         <span className="text-[var(--label-secondary)] group-hover:text-[var(--color-accent)] transition-colors">
           {getToolIcon(name)}
@@ -257,14 +292,31 @@ export function ToolCallCard({
           </span>
         )}
         <span className="ml-auto flex items-center gap-2.5 flex-shrink-0">
+          {compact && (
+            <span className="hidden text-[11px] text-[var(--label-secondary)] sm:inline">
+              {t(
+                isRunning
+                  ? "entries.running"
+                  : isUnknown
+                    ? "conversation.toolUnknown"
+                    : terminated && !isCompleted
+                      ? "entries.aborted"
+                      : isError
+                        ? "conversation.toolFailed"
+                        : "conversation.toolCompleted",
+              )}
+            </span>
+          )}
           {durationDisplay}
           {/* 右侧状态 icon：执行中 / 失败 / 完成 */}
           <span className="flex-shrink-0">
-            {!isCompleted && !isAborted ? (
+            {isRunning ? (
               <Loader2
                 size={14}
-                className="text-[var(--label-tertiary)] animate-spin"
+                className="text-[var(--label-tertiary)] animate-spin motion-reduce:animate-none"
               />
+            ) : isUnknown ? (
+              <CircleHelp size={14} className="text-[var(--label-secondary)]" />
             ) : isFailed ? (
               <CircleX size={14} className="text-red-400" />
             ) : (
@@ -285,7 +337,7 @@ export function ToolCallCard({
           result={result}
           durationDisplay={durationDisplay}
           isRunning={isRunning}
-          isAborted={isAborted}
+          isAborted={terminated}
           onClose={() => setShowModal(false)}
         />
       )}
@@ -351,7 +403,7 @@ function RunningIndicator() {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
-      <Loader2 size={14} className="animate-spin" />
+      <Loader2 size={14} className="animate-spin motion-reduce:animate-none" />
       <span>{t("entries.running")}</span>
     </div>
   );
@@ -365,6 +417,24 @@ function AbortedIndicator() {
       <CircleX size={14} />
       <span>{t("entries.aborted")}</span>
     </div>
+  );
+}
+
+/** 缺少结果时展示已有的运行状态。 */
+function ToolPendingIndicator({
+  isRunning,
+  isAborted,
+}: {
+  isRunning: boolean;
+  isAborted: boolean;
+}) {
+  const { t } = useTranslation();
+  if (isAborted) return <AbortedIndicator />;
+  if (isRunning) return <RunningIndicator />;
+  return (
+    <p className="text-[12px] text-[var(--label-secondary)]">
+      {t("conversation.toolUnknown")}
+    </p>
   );
 }
 
@@ -444,10 +514,8 @@ function ReadDetailModal({
           ) : (
             <MarkdownRenderer content={codeBlock!} />
           )
-        ) : isAborted ? (
-          <AbortedIndicator />
         ) : (
-          <RunningIndicator />
+          <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
         )}
       </div>
     </ModalShell>
@@ -511,10 +579,8 @@ function BashDetailModal({
             ) : (
               <MarkdownRenderer content={resultBlock!} />
             )
-          ) : isAborted ? (
-            <AbortedIndicator />
           ) : (
-            <RunningIndicator />
+            <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
           )}
         </div>
       </div>
@@ -581,9 +647,9 @@ function WriteDetailModal({
           </section>
         )}
 
-        {/* 执行中 / 已终止 */}
-        {result === null &&
-          (isAborted ? <AbortedIndicator /> : <RunningIndicator />)}
+        {result === null && (
+          <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
+        )}
       </div>
     </ModalShell>
   );
@@ -684,13 +750,9 @@ function EditDetailModal({
               {result.content}
             </pre>
           )
-        ) : isAborted ? (
-          <div className="px-5">
-            <AbortedIndicator />
-          </div>
         ) : (
           <div className="px-5">
-            <RunningIndicator />
+            <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
           </div>
         )}
       </div>
@@ -746,10 +808,9 @@ function DefaultDetailModal({
           </section>
         )}
 
-        {/* 执行中 / 已终止 */}
         {result === null && (
           <section>
-            {isAborted ? <AbortedIndicator /> : <RunningIndicator />}
+            <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
           </section>
         )}
       </div>

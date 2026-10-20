@@ -32,6 +32,7 @@
     "khroma": "^2.1.0",
     "lucide-react": "^1.14.0",
     "mermaid": "^11.17.2",
+    "motion": "^14.4.0",
     "package-manager-detector": "^1.8.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

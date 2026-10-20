@@ -62,6 +62,7 @@ export interface UseScrollAnchorReturn {
   scrollToBottom: () => void;
   showScrollBtn: boolean;
   startBottomFollow: () => void;
+  prepareForContentResize: (element: HTMLElement) => void;
 }
 
 // ─── DOM 工具函数 ────────────────────────────────────────────────
@@ -599,6 +600,29 @@ export function useScrollAnchor({
     startAnchorPin,
   ]);
 
+  const prepareForContentResize = useCallback(
+    (element: HTMLElement) => {
+      const el = scrollRef.current;
+      if (!el || loadingMoreRef.current) return;
+      suppressLoadMoreUntilRef.current =
+        performance.now() + LOAD_MORE_SUPPRESS_MS;
+      if (isAtBottomRef.current) return;
+      const entryElement = getEntryElementFromElement(el, element);
+      const entryKey = entryElement ? getEntryKey(entryElement) : undefined;
+      if (!entryElement || !entryKey) return;
+      const containerRect = el.getBoundingClientRect();
+      startAnchorPin({
+        entryKey,
+        element,
+        elementTop: getRelativeTop(containerRect, element),
+        entryTop: getRelativeTop(containerRect, entryElement),
+        fallbackScrollTop: getSafeScrollTop(el.scrollTop),
+        fallbackScrollHeight: el.scrollHeight,
+      });
+    },
+    [scrollRef, startAnchorPin],
+  );
+
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -675,5 +699,6 @@ export function useScrollAnchor({
     scrollToBottom,
     showScrollBtn,
     startBottomFollow,
+    prepareForContentResize,
   };
 }

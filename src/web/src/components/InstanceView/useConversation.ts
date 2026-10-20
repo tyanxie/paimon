@@ -8,7 +8,7 @@
 // 5. 检测 instance.sessionId / status 变化 → 自动 re-fetch
 // 6. 暴露 loadMore() 加载更多历史
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   InstanceId,
@@ -21,14 +21,17 @@ import { useWebSocket } from "../../stores/useWebSocket";
 import type {
   SessionEntry,
   ConversationLoadState,
+  ConversationItem,
   ToolExecutionState,
 } from "../../stores/types";
+import { useConversationDisplay } from "./useConversationDisplay";
 import { showToast } from "../ui/Toast";
 
 // ── 返回值类型 ──
 
 export interface ConversationState {
   entries: SessionEntry[];
+  displayItems: ConversationItem[];
   toolExecutions: ReadonlyMap<string, ToolExecutionState>;
   streamingEntry: SessionEntry | null;
   isStreaming: boolean;
@@ -85,6 +88,7 @@ export function useConversation(
   );
   // 追踪当前 streamingEntry 的 renderKey，避免闭包读取 state 过时
   const streamingKeyRef = useRef<string | null>(null);
+  const streamingTimestampRef = useRef<string | null>(null);
   const [loadState, setLoadState] = useState<ConversationLoadState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -108,6 +112,7 @@ export function useConversation(
     setEntries([]);
     setToolExecutions(new Map());
     streamingKeyRef.current = null;
+    streamingTimestampRef.current = null;
     setStreamingEntry(null);
     setLoadState("refreshing");
     setErrorMessage(null);
@@ -124,7 +129,12 @@ export function useConversation(
       switch (msg.type) {
         case "forwarded_event": {
           if (msg.payload.instanceId !== instanceId) return;
-          handleStreamEvent(instanceId, msg.payload.event, msg.payload.data);
+          handleStreamEvent(
+            instanceId,
+            msg.payload.event,
+            msg.payload.data,
+            msg.payload.timestamp,
+          );
           break;
         }
         case "history": {
@@ -230,8 +240,14 @@ export function useConversation(
   }, [instance?.status, instanceId, send, resetConversation]);
 
   // ── 处理 streaming 事件 ──
-  function handleStreamEvent(id: InstanceId, event: string, data: unknown) {
+  function handleStreamEvent(
+    id: InstanceId,
+    event: string,
+    data: unknown,
+    timestamp: number,
+  ) {
     const d = data as Record<string, unknown>;
+    const eventTime = new Date(timestamp).toISOString();
 
     switch (event) {
       case "tool_execution_start":
@@ -283,26 +299,33 @@ export function useConversation(
         if (!message || message.role !== "assistant") break;
         const entry = ensureRenderKey(
           id,
-          { type: "message", timestamp: new Date().toISOString(), message },
+          { type: "message", timestamp: eventTime, message },
           "streaming",
         );
         streamingKeyRef.current = entry.__renderKey ?? entry.id ?? null;
+        streamingTimestampRef.current = eventTime;
         setStreamingEntry(entry);
         break;
       }
       case "message_update": {
         const message = d.message as SessionEntry["message"];
         if (!message) break;
+        const stableKey =
+          streamingKeyRef.current ?? nextRenderKey(id, "streaming");
+        streamingKeyRef.current = stableKey;
+        const messageTime = streamingTimestampRef.current ?? eventTime;
+        streamingTimestampRef.current = messageTime;
         setStreamingEntry((prev) => {
           if (prev) {
             return { ...prev, message };
           }
           // 刷新后场景：隐式创建 streaming entry
-          return ensureRenderKey(
-            id,
-            { type: "message", timestamp: new Date().toISOString(), message },
-            "streaming",
-          );
+          return {
+            type: "message",
+            timestamp: messageTime,
+            message,
+            __renderKey: stableKey,
+          };
         });
         break;
       }
@@ -314,7 +337,7 @@ export function useConversation(
             streamingKeyRef.current ?? nextRenderKey(id, "live");
           const entry: SessionEntry = {
             type: "message",
-            timestamp: new Date().toISOString(),
+            timestamp: streamingTimestampRef.current ?? eventTime,
             message,
             __renderKey: stableKey,
           };
@@ -333,6 +356,7 @@ export function useConversation(
           }
         }
         streamingKeyRef.current = null;
+        streamingTimestampRef.current = null;
         setStreamingEntry(null);
         break;
       }
@@ -401,8 +425,20 @@ export function useConversation(
     [instanceId, send],
   );
 
+  const visibleEntries = useMemo(
+    () => (streamingEntry ? [...entries, streamingEntry] : entries),
+    [entries, streamingEntry],
+  );
+  const displayItems = useConversationDisplay(
+    visibleEntries,
+    toolExecutions,
+    streamingEntry,
+    instance?.status,
+  );
+
   return {
-    entries: streamingEntry ? [...entries, streamingEntry] : entries,
+    entries: visibleEntries,
+    displayItems,
     toolExecutions,
     streamingEntry,
     isStreaming: streamingEntry !== null,

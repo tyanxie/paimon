@@ -1,4 +1,4 @@
-// 消息输入区：textarea + 图片上传/粘贴/预览 + 工具栏 + 状态指示 + 发送/停止
+// 消息输入区：textarea + 图片上传/粘贴/预览 + 工具栏 + 上下文用量 + 发送/停止
 
 import {
   useRef,
@@ -11,7 +11,6 @@ import { ArrowUp, Square, Minimize2, ImagePlus, X } from "lucide-react";
 import type {
   InstanceInfo,
   ImagePayload,
-  InstanceStatus,
   ContextUsageInfo,
   ThinkingLevel,
 } from "../../../../protocol/types";
@@ -214,26 +213,21 @@ export function Composer({
   return (
     <>
       <div className="glass-panel glass-panel-input px-3 py-2 md:px-4">
-        {/* 信息行：状态 + 上下文 + 压缩按钮 */}
-        {(instanceStatus || showContextInfo) && (
+        {/* 信息行：上下文 + 压缩按钮 */}
+        {showContextInfo && (
           <div className="mb-1.5 flex items-center gap-2 px-1 text-[12px] leading-[15px] text-[var(--label-secondary)]">
-            <ComposerStatusIndicator status={instanceStatus} />
-            {showContextInfo && (
-              <span className="min-w-0 flex items-center gap-1">
-                <span className="min-w-0 truncate">
-                  <ContextIndicator contextUsage={contextUsage!} />
-                </span>
-                {showCompactButton && (
-                  <button
-                    onClick={() => setShowCompactModal(true)}
-                    disabled={compactDisabled}
-                    title={t("eventStream.compactContext")}
-                    className="shrink-0 inline-flex items-center justify-center p-0.5 rounded-[4px] text-[var(--label-secondary)] hover:text-[var(--color-accent)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                  >
-                    <Minimize2 size={12} />
-                  </button>
-                )}
-              </span>
+            <span className="min-w-0 truncate">
+              <ContextIndicator contextUsage={contextUsage!} />
+            </span>
+            {showCompactButton && (
+              <button
+                onClick={() => setShowCompactModal(true)}
+                disabled={compactDisabled}
+                title={t("eventStream.compactContext")}
+                className="shrink-0 inline-flex items-center justify-center p-0.5 rounded-[4px] text-[var(--label-secondary)] hover:text-[var(--color-accent)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <Minimize2 size={12} />
+              </button>
             )}
           </div>
         )}
@@ -354,49 +348,6 @@ export function Composer({
 }
 
 // ─── 内部子组件 ──────────────────────────────────────────────────
-
-export function ComposerStatusIndicator({
-  status,
-}: {
-  status?: InstanceStatus;
-}) {
-  const { t } = useTranslation();
-  if (!status) return null;
-
-  const isRunning = status === "streaming";
-  const isCompacting = status === "compacting";
-
-  const colorClass = isRunning
-    ? "bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] text-[var(--color-accent)]"
-    : isCompacting
-      ? "bg-amber-500/10 text-amber-500"
-      : "bg-green-500/10 text-green-500";
-
-  const dotClass = isRunning
-    ? "bg-[var(--color-accent)] animate-pulse"
-    : isCompacting
-      ? "bg-amber-500 animate-pulse"
-      : "bg-green-500";
-
-  const label = isRunning
-    ? t("eventStream.statusRunning")
-    : isCompacting
-      ? t("eventStream.statusCompacting")
-      : t("eventStream.statusOnline");
-
-  return (
-    <span
-      className={`flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 ${colorClass}`}
-      title={label}
-      role="status"
-      aria-live="polite"
-      aria-label={label}
-    >
-      <span aria-hidden="true" className={`h-2 w-2 rounded-full ${dotClass}`} />
-      <span className="text-[11px] font-medium leading-none">{label}</span>
-    </span>
-  );
-}
 
 /** 上下文用量指示器 */
 function ContextIndicator({

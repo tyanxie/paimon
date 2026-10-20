@@ -15,6 +15,7 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 ## ✨ Features
 
 - 💬 **Real-time Streaming** — Streaming output, thinking process, and tool calls fully displayed
+- 🧩 **Replies and Execution Summaries** — Rounded reply containers support collapsing the whole reply, with ordered tool summaries and distinct text, thinking, and tool details
 - 🛠️ **Tool Execution Details** — Live top-level tool status, tool-provided partial output, errors, and execution duration, with history support
 - 📊 **Mermaid Diagrams** — Automatically renders `mermaid` code blocks in Markdown, with light and dark themes, source copying, and full-screen previews
 - 🖼️ **Image Support** — Paste or upload images to send to LLM, view full-size in history
@@ -29,6 +30,8 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 - 📱 **Responsive Design** — Desktop/mobile adaptive, iOS Safe Area support
 
 After a refresh or reconnection during tool execution, subsequent update or end events resume the live display. Final results are also available through history. Running tools show call elapsed time measured with a monotonic clock; completed tools show the execution duration reported by Pi. The card's right side and detail header share one elapsed-time value and the same duration display, using `s` and `ms` with a non-breaking space between the number and unit. Bash details show the supplied timeout in the command area.
+
+Reply, execution summary, and thinking sections retain your chosen expanded state and reset when switching instances or sessions. Collapse transitions use Motion and respect reduced-motion preferences. Message timestamps are available on hover, focus, or click. Running and compaction feedback appears beside the reply.
 
 ## 📋 Prerequisites
 

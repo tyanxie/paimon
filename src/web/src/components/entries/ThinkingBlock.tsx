@@ -1,57 +1,52 @@
-// Thinking 区块：streaming 时展开，输出开始后自动折叠
-
-import { useState, useEffect, useRef } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight } from "lucide-react";
+import { Brain, ChevronRight } from "lucide-react";
 import { MarkdownRenderer } from "./Markdown";
+import { Collapsible } from "../ui/Collapsible";
 
 export function ThinkingBlock({
   content,
   streaming,
-  autoCollapse,
+  onBeforeToggle,
 }: {
   content: string;
   streaming: boolean;
-  autoCollapse: boolean;
+  onBeforeToggle?: (element: HTMLElement) => void;
 }) {
   const { t } = useTranslation();
-  const [collapsed, setCollapsed] = useState(autoCollapse);
-  const hasAutoCollapsed = useRef(false);
-
-  // 自动折叠：当 autoCollapse 变为 true 时折叠一次
-  useEffect(() => {
-    if (autoCollapse && !hasAutoCollapsed.current) {
-      hasAutoCollapsed.current = true;
-      setCollapsed(true);
-    }
-  }, [autoCollapse]);
-
+  const [expanded, setExpanded] = useState(false);
+  const [visited, setVisited] = useState(false);
+  const contentId = useId();
   return (
-    <div
-      className={`rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] overflow-hidden transition-all ${collapsed ? "max-w-[640px]" : ""}`}
-    >
-      {/* 标题栏：可点击切换折叠 */}
+    <div className="rounded-[10px] bg-[var(--fill-quaternary)]">
       <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center gap-1.5 px-3 py-1.5 text-left hover:bg-[var(--fill-quaternary)] transition-colors"
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={contentId}
+        onClick={(event) => {
+          onBeforeToggle?.(event.currentTarget);
+          setVisited(true);
+          setExpanded(!expanded);
+        }}
+        className="flex min-h-10 w-full items-center gap-2 rounded-[10px] px-3 text-left text-[12px] text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
-        <ChevronRight
-          size={12}
-          className={`text-[var(--label-tertiary)] transition-transform ${
-            collapsed ? "" : "rotate-90"
-          }`}
-        />
-        <span className="text-[12px] font-medium text-[var(--label-tertiary)]">
+        <Brain size={14} aria-hidden="true" />
+        <span className="flex-1">
           {streaming ? t("entries.thinkingStreaming") : t("entries.thinking")}
         </span>
+        <ChevronRight
+          size={13}
+          aria-hidden="true"
+          className={`transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`}
+        />
       </button>
-
-      {/* 内容区域 */}
-      {!collapsed && (
-        <div className="px-3 pb-2.5 pt-0.5 text-[var(--label-secondary)] italic">
-          <MarkdownRenderer content={content} streaming={streaming} />
-        </div>
-      )}
+      <Collapsible id={contentId} expanded={expanded}>
+        {visited && (
+          <div className="px-3 pb-3 text-[var(--label-secondary)]">
+            <MarkdownRenderer content={content} streaming={streaming} />
+          </div>
+        )}
+      </Collapsible>
     </div>
   );
 }

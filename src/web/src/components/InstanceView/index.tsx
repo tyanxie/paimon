@@ -9,12 +9,11 @@ import type {
   ImagePayload,
   ThinkingLevel,
 } from "../../../../protocol/types";
-import { getSessionEntryRenderKey } from "../../stores/types";
 import { useWebSocket } from "../../stores/useWebSocket";
 import { useInstances, selectInstance } from "../../stores/useInstances";
 import { useDrafts, EMPTY_DRAFT } from "../../stores/useDrafts";
 import { isBusy } from "../../utils/status";
-import { EntryItem } from "../entries";
+import { ConversationList } from "../entries/Conversation";
 import { ImageLightbox } from "../ui/ImageLightbox";
 import { MobileNavBar } from "../ui/MobileNavBar";
 import { InstanceHeader } from "../ui/InstanceHeader";
@@ -40,7 +39,7 @@ export function InstanceView() {
   // ── 对话状态（私有 hook） ──
   const {
     entries,
-    toolExecutions,
+    displayItems,
     isStreaming,
     loadState,
     errorMessage,
@@ -215,21 +214,26 @@ export function InstanceView() {
   }, [instanceId]);
 
   // 滚动 hook
-  const { handleScroll, scrollToBottom, showScrollBtn, startBottomFollow } =
-    useScrollAnchor({
-      scrollRef,
-      contentRef,
-      bottomChromeRef,
-      entries,
-      entriesRef,
-      instanceId,
-      hasMore,
-      shouldScrollToBottom,
-      onScrollToBottomHandled: clearScrollToBottom,
-      onLoadMore: loadMore,
-      bottomChromeHeight,
-      bottomSafeGap,
-    });
+  const {
+    handleScroll,
+    scrollToBottom,
+    showScrollBtn,
+    startBottomFollow,
+    prepareForContentResize,
+  } = useScrollAnchor({
+    scrollRef,
+    contentRef,
+    bottomChromeRef,
+    entries,
+    entriesRef,
+    instanceId,
+    hasMore,
+    shouldScrollToBottom,
+    onScrollToBottomHandled: clearScrollToBottom,
+    onLoadMore: loadMore,
+    bottomChromeHeight,
+    bottomSafeGap,
+  });
 
   // ── 渲染 ──
   const title = instance?.cwd.split("/").pop() || instance?.cwd || "";
@@ -264,7 +268,7 @@ export function InstanceView() {
             ref={topChromeRef}
             className="glass-panel pointer-events-auto mx-auto w-full max-w-[920px] px-3 py-2 md:px-4 md:py-2.5"
             role="region"
-            aria-label="Instance info"
+            aria-label={t("conversation.instanceInfo")}
           >
             {/* PC 端 */}
             <div className="hidden md:flex">
@@ -295,7 +299,7 @@ export function InstanceView() {
           >
             {loadState === "loadingMore" && (
               <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2 select-none">
-                Loading earlier messages...
+                {t("conversation.loadingEarlier")}
               </div>
             )}
             {isRefreshing ? (
@@ -303,7 +307,7 @@ export function InstanceView() {
             ) : loadState === "error" ? (
               <div className="mx-auto mt-8 max-w-[520px] rounded-[12px] border border-[var(--separator)] bg-[var(--fill-card)] px-4 py-3 text-center">
                 <div className="text-[13px] text-[var(--label-primary)] select-none">
-                  Failed to load conversation
+                  {t("conversation.loadFailed")}
                 </div>
                 {errorMessage && (
                   <div className="mt-1 text-[12px] text-[var(--label-secondary)] break-words select-text">
@@ -311,27 +315,23 @@ export function InstanceView() {
                   </div>
                 )}
               </div>
-            ) : entries.length === 0 && !hasMore ? (
+            ) : displayItems.length === 0 &&
+              !hasMore &&
+              !isBusy(instance?.status) &&
+              !isStreaming ? (
               <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8 select-none">
-                No messages yet
+                {t("conversation.noMessages")}
               </div>
             ) : (
-              entries.map((entry, i) => {
-                const key = getSessionEntryRenderKey(entry);
-                const isLast = i === entries.length - 1;
-                return (
-                  <div key={key} data-entry-key={key}>
-                    <EntryItem
-                      entry={entry}
-                      entries={entries}
-                      toolExecutions={toolExecutions}
-                      isLast={isLast}
-                      isStreaming={isStreaming}
-                      onReEdit={isLast ? onReEdit : undefined}
-                    />
-                  </div>
-                );
-              })
+              <ConversationList
+                items={displayItems}
+                entries={entries}
+                conversationKey={`${instanceId}:${instance?.sessionId ?? ""}`}
+                status={instance?.status}
+                isStreaming={isStreaming}
+                onReEdit={onReEdit}
+                onBeforeToggle={prepareForContentResize}
+              />
             )}
           </div>
         </div>
@@ -394,10 +394,11 @@ export function InstanceView() {
 // ─── 内部子组件 ──────────────────────────────────────────────────
 
 function RefreshingConversationSkeleton() {
+  const { t } = useTranslation();
   return (
     <div
       className="space-y-3 pt-3 select-none"
-      aria-label="Loading conversation"
+      aria-label={t("conversation.loadingConversation")}
     >
       {[0, 1, 2, 3].map((item) => (
         <div key={item} className="space-y-1.5 animate-pulse">
