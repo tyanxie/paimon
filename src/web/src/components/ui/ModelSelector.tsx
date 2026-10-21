@@ -1,8 +1,9 @@
 // 模型选择器：点击弹出 Popover，按 provider 分组展示可选模型
 
-import { ChevronDown, Check, Cpu } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { Button } from "./Button";
 import { MenuItem } from "./MenuItem";
+import { ModelBrandIcon } from "./ModelBrandIcon";
 import { Popover } from "./Popover";
 import type { ModelInfo } from "../../../../protocol/types";
 import { useTranslation } from "react-i18next";
@@ -10,7 +11,6 @@ import { useTranslation } from "react-i18next";
 interface ModelSelectorProps {
   currentModel: ModelInfo;
   availableModels?: ModelInfo[];
-  showLabel?: boolean;
   className?: string;
   onSelect?: (provider: string, id: string) => void;
 }
@@ -18,7 +18,6 @@ interface ModelSelectorProps {
 export function ModelSelector({
   currentModel,
   availableModels,
-  showLabel = false,
   className = "",
   onSelect,
 }: ModelSelectorProps) {
@@ -61,12 +60,7 @@ export function ModelSelector({
               : "cursor-default"
           } text-[var(--label-secondary)] ${className}`}
         >
-          {showLabel && (
-            <>
-              <Cpu size={14} aria-hidden="true" />
-              <span>{t("composer.modelLabel")}</span>
-            </>
-          )}
+          <ModelBrandIcon model={currentModel.id} />
           <span className="composer-model-name max-w-[140px] truncate select-text">
             {currentModel.name || currentModel.id}
           </span>
@@ -74,7 +68,7 @@ export function ModelSelector({
             <ChevronDown
               size={12}
               aria-hidden="true"
-              className={`shrink-0 transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+              className={`selector-chevron shrink-0 transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
             />
           )}
         </Button>
@@ -104,6 +98,7 @@ export function ModelSelector({
                       close();
                     }}
                   >
+                    <ModelBrandIcon model={m.id} size={18} />
                     <div className="flex-1 min-w-0">
                       <div className="text-[13px] text-[var(--label-primary)] truncate select-text">
                         {m.name || m.id}

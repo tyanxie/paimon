@@ -63,7 +63,6 @@ const zhCN = {
   composer: {
     options: "输入选项",
     images: "图片",
-    modelLabel: "模型",
     modelWaiting: "模型等待更新",
     thinkingLabel: "思考",
     pendingThinking: "等待更新",

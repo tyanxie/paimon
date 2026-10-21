@@ -344,13 +344,12 @@ export function InstanceView() {
           >
             <Button
               size="icon"
-              variant="secondary"
               onClick={scrollToBottom}
               aria-label={t("eventStream.scrollToBottom")}
-              className="border border-[var(--separator)] shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+              className="conversation-scroll-bottom"
               title={t("eventStream.scrollToBottom")}
             >
-              <ChevronsDown size={16} />
+              <ChevronsDown size={16} aria-hidden="true" />
             </Button>
           </div>
         )}

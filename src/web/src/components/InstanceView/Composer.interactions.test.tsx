@@ -307,6 +307,126 @@ describe("输入工具栏交互", () => {
     expect(document.activeElement === trigger).toBe(true);
   });
 
+  test("模型入口和菜单根据 identifier 自动展示品牌图标", async () => {
+    const availableModels = [
+      { provider: "openrouter", id: "openai/gpt-5", name: "GPT model" },
+      {
+        provider: "openrouter",
+        id: "anthropic/claude-sonnet-4",
+        name: "Claude model",
+      },
+      {
+        provider: "openrouter",
+        id: "deepseek/deepseek-r1",
+        name: "DeepSeek model",
+      },
+      {
+        provider: "openrouter",
+        id: "google/gemini-2.5-pro",
+        name: "Gemini model",
+      },
+      { provider: "openrouter", id: "qwen/qwen3", name: "Qwen model" },
+      { provider: "openrouter", id: "x-ai/grok-4", name: "Grok model" },
+      { provider: "openrouter", id: "moonshotai/kimi-k2", name: "Kimi model" },
+      { provider: "openrouter", id: "z-ai/glm-5", name: "GLM model" },
+    ];
+    const titles = [
+      "OpenAI",
+      "Claude",
+      "DeepSeek",
+      "Gemini",
+      "Qwen",
+      "Grok",
+      "MoonshotAI",
+      "Z.ai",
+    ];
+    const brandColors = new Map([
+      ["Claude", "#D97757"],
+      ["DeepSeek", "#4D6BFE"],
+    ]);
+    for (const [index, model] of availableModels.entries()) {
+      await render({ instance: { ...instance, model, availableModels } });
+      await act(async () => {
+        await import("@lobehub/icons/es/features/ModelIcon");
+      });
+      const trigger = button(`选择模型: ${model.name}`);
+      expect(trigger.querySelector(".composer-model-name")!.textContent).toBe(
+        model.name,
+      );
+      expect(
+        trigger.querySelector(".model-brand-icon title")!.textContent,
+      ).toBe(titles[index]);
+      expect(
+        trigger.querySelector(".model-brand-icon")!.getAttribute("aria-hidden"),
+      ).toBe("true");
+      expect(
+        trigger.querySelector(".model-brand-icon svg")!.getAttribute("width"),
+      ).toBe("14");
+      const brandColor = brandColors.get(titles[index]!);
+      if (brandColor) {
+        expect(
+          trigger.querySelector(".model-brand-icon path")!.getAttribute("fill"),
+        ).toBe(brandColor);
+      }
+    }
+    await click(button("选择模型: GLM model"));
+    const panel = document.querySelector(
+      '[role="dialog"][aria-label="选择模型"]',
+    )!;
+    expect(
+      [...panel.querySelectorAll(".model-brand-icon title")].map(
+        (element) => element.textContent,
+      ),
+    ).toEqual(titles);
+    const menuIcons = [...panel.querySelectorAll(".model-brand-icon")];
+    expect(menuIcons[1]!.querySelector("path")!.getAttribute("fill")).toBe(
+      brandColors.get("Claude")!,
+    );
+    expect(menuIcons[2]!.querySelector("path")!.getAttribute("fill")).toBe(
+      brandColors.get("DeepSeek")!,
+    );
+    expect(panel.querySelector(".ui-menu-section")!.textContent).toBe(
+      "openrouter",
+    );
+    expect(panel.querySelector(".ui-menu-section svg")).toBeNull();
+    const first = panel.querySelector<HTMLButtonElement>(".ui-menu-item")!;
+    expect(
+      first.querySelector(".model-brand-icon svg")!.getAttribute("width"),
+    ).toBe("18");
+    await click(first);
+    expect(models).toEqual([["openrouter", "openai/gpt-5"]]);
+  });
+
+  test("未知模型展示通用图标，禁用入口保留品牌图标与思考提示", async () => {
+    await render();
+    await act(async () => {
+      await import("@lobehub/icons/es/features/ModelIcon");
+    });
+    expect(
+      button("选择模型: Current model").querySelector(
+        ".model-brand-icon .lucide-brain",
+      ),
+    ).not.toBeNull();
+    expect(button("选择模型: Current model").textContent).toBe("Current model");
+    expect(button("思考等级: high").textContent).toBe("思考high");
+    await render({
+      instance: {
+        ...instance,
+        model: {
+          provider: "openrouter",
+          id: "claude-sonnet-4",
+          name: "Sonnet",
+        },
+        availableModels: [],
+      },
+    });
+    const trigger = button("选择模型: Sonnet");
+    expect(trigger.disabled).toBe(true);
+    expect(trigger.querySelector(".model-brand-icon title")!.textContent).toBe(
+      "Claude",
+    );
+  });
+
   test("思考等级直接选择并关闭菜单", async () => {
     await render();
     const trigger = button("思考等级: high");
@@ -430,8 +550,8 @@ describe("输入工具栏交互", () => {
     await render({ draft: { text: "", images: [image] } });
     expect(Boolean(button("Preview attached image 1"))).toBe(true);
     expect(Boolean(button("Remove attached image 1"))).toBe(true);
-    expect(button("Select model: Current model").textContent).toContain(
-      "Model",
+    expect(button("Select model: Current model").textContent).toBe(
+      "Current model",
     );
     expect(button("Thinking level: high").textContent).toContain("Thinking");
     expect(button("Compact context").textContent).toBe("Compact");

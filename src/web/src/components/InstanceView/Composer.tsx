@@ -313,7 +313,6 @@ export function Composer({
                 currentModel={instanceModel}
                 availableModels={availableModels}
                 onSelect={onSetModel}
-                showLabel
                 className="composer-control"
               />
             ) : (

@@ -110,7 +110,7 @@ export function ThinkingSelector({
             <ChevronDown
               size={12}
               aria-hidden="true"
-              className={`transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+              className={`selector-chevron transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
             />
           )}
         </Button>

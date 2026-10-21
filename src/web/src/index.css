@@ -13,7 +13,7 @@
 
 /* Paimon 主题 */
 @theme {
-  /* 圆角按元素用途统一，圆形保留给发送、停止与状态标记。 */
+  /* 圆角按元素用途统一，圆形用于发送、停止、悬浮导航与状态标记。 */
   --radius-inline: 4px;
   --radius-control: 6px;
   --radius-content: 8px;
@@ -1084,6 +1084,57 @@ button,
     padding-inline: 20px;
   }
 }
+.model-brand-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--label-primary);
+}
+.model-brand-icon svg {
+  color: inherit;
+}
+
+.conversation-scroll-bottom {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--label-primary) 12%, transparent);
+  background: var(--material-thick);
+  color: var(--label-primary);
+  -webkit-backdrop-filter: blur(var(--blur-material));
+  backdrop-filter: blur(var(--blur-material));
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.conversation-scroll-bottom:hover:not(:disabled) {
+  background: var(--material-modal);
+}
+@media (pointer: coarse) {
+  .conversation-scroll-bottom::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .conversation-scroll-bottom {
+    background: var(--btn-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .conversation-scroll-bottom:hover:not(:disabled) {
+    background: var(--btn-solid-hover);
+  }
+}
+
 .composer-control {
   max-width: 100%;
   min-width: 0;
@@ -1092,7 +1143,8 @@ button,
   border-radius: var(--radius-inline);
   background: transparent;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 16px;
 }
 .composer-control:hover:not(:disabled),
@@ -1105,10 +1157,14 @@ button,
 .composer-control .composer-model-name {
   max-width: clamp(40px, 16cqw, 140px);
 }
-.composer-control svg {
+.composer-control > svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.composer-control > .selector-chevron {
   width: 11px;
   height: 11px;
-  flex-shrink: 0;
 }
 .composer-toolbar button {
   min-width: 0;
