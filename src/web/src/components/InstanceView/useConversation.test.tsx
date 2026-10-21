@@ -207,6 +207,58 @@ describe("useConversation tool lifecycle", () => {
 });
 
 describe("useConversation 展示模型", () => {
+  test("实时工具调用在消息完成后保留准备阶段并按事件更新", async () => {
+    const message = {
+      role: "assistant",
+      content: ["one", "two"].map((id) => ({
+        type: "toolCall",
+        id,
+        name: "bash",
+        arguments: {},
+      })),
+    };
+    const statuses = () =>
+      state.displayItems.flatMap((item) =>
+        item.type === "reply"
+          ? item.parts.flatMap((part) =>
+              part.type === "execution"
+                ? part.items.flatMap((item) =>
+                    item.type === "tool" ? [item.state.status] : [],
+                  )
+                : [],
+            )
+          : [],
+      );
+    await event("message_start", { message });
+    expect(statuses()).toEqual(["pending", "pending"]);
+    await event("message_end", { message });
+    expect(statuses()).toEqual(["pending", "pending"]);
+    await event("tool_execution_start", {
+      toolCallId: "one",
+      toolName: "bash",
+    });
+    expect(statuses()).toEqual(["running", "pending"]);
+    await event("tool_execution_end", {
+      toolCallId: "one",
+      toolName: "bash",
+      result: { content: [] },
+      isError: false,
+    });
+    expect(statuses()).toEqual(["completed", "pending"]);
+    await event("tool_execution_start", {
+      toolCallId: "two",
+      toolName: "bash",
+    });
+    expect(statuses()).toEqual(["completed", "running"]);
+    await act(async () =>
+      useWebSocket.setState({ connectionState: "disconnected" }),
+    );
+    await act(async () =>
+      useWebSocket.setState({ connectionState: "connected" }),
+    );
+    await history([{ type: "message", id: "history", message }]);
+    expect(statuses()).toEqual(["unknown", "unknown"]);
+  });
   test("实时消息使用事件时间，增长与完成保留开始时间", async () => {
     const message = {
       role: "assistant",

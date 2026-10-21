@@ -83,6 +83,9 @@ export function useConversation(
   const [toolExecutions, setToolExecutions] = useState<
     Map<string, ToolExecutionState>
   >(new Map());
+  const [liveToolCallIds, setLiveToolCallIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [streamingEntry, setStreamingEntry] = useState<SessionEntry | null>(
     null,
   );
@@ -111,6 +114,7 @@ export function useConversation(
   const resetConversation = useCallback(() => {
     setEntries([]);
     setToolExecutions(new Map());
+    setLiveToolCallIds(new Set());
     streamingKeyRef.current = null;
     streamingTimestampRef.current = null;
     setStreamingEntry(null);
@@ -239,6 +243,22 @@ export function useConversation(
     prevStatusRef.current = currentStatus;
   }, [instance?.status, instanceId, send, resetConversation]);
 
+  // 当前实时 assistant 消息中的工具调用保留准备阶段，直到收到执行事件。
+  function rememberLiveToolCalls(message: SessionEntry["message"]) {
+    if (message?.role !== "assistant") return;
+    const blocks = Array.isArray(message.content) ? message.content : [];
+    setLiveToolCallIds(
+      new Set(
+        blocks
+          .filter(
+            (block) =>
+              block?.type === "toolCall" && typeof block.id === "string",
+          )
+          .map((block) => block.id as string),
+      ),
+    );
+  }
+
   // ── 处理 streaming 事件 ──
   function handleStreamEvent(
     id: InstanceId,
@@ -297,6 +317,7 @@ export function useConversation(
       case "message_start": {
         const message = d.message as SessionEntry["message"];
         if (!message || message.role !== "assistant") break;
+        rememberLiveToolCalls(message);
         const entry = ensureRenderKey(
           id,
           { type: "message", timestamp: eventTime, message },
@@ -310,6 +331,7 @@ export function useConversation(
       case "message_update": {
         const message = d.message as SessionEntry["message"];
         if (!message) break;
+        rememberLiveToolCalls(message);
         const stableKey =
           streamingKeyRef.current ?? nextRenderKey(id, "streaming");
         streamingKeyRef.current = stableKey;
@@ -332,6 +354,7 @@ export function useConversation(
       case "message_end": {
         const message = d.message as SessionEntry["message"];
         if (message) {
+          rememberLiveToolCalls(message);
           // 复用 streamingEntry 的 key，避免 React 重建组件导致弹窗状态丢失
           const stableKey =
             streamingKeyRef.current ?? nextRenderKey(id, "live");
@@ -434,6 +457,7 @@ export function useConversation(
     toolExecutions,
     streamingEntry,
     instance?.status,
+    liveToolCallIds,
   );
 
   return {

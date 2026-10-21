@@ -3,17 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence } from "motion/react";
-import {
-  FileText,
-  Terminal,
-  Pencil,
-  Wrench,
-  CircleX,
-  Loader2,
-  ChevronRight,
-  Timer,
-  CircleHelp,
-} from "lucide-react";
+import { ChevronRight, Timer } from "lucide-react";
 import { ResultBlock } from "../ui/ContentBlock";
 import { ModalShell } from "../ui/ModalShell";
 import type {
@@ -23,17 +13,7 @@ import type {
 } from "../../stores/types";
 import { MarkdownRenderer } from "./Markdown";
 import { useTranslation } from "react-i18next";
-
-/** 工具图标映射 */
-function getToolIcon(name: string) {
-  const iconMap: Record<string, React.ReactNode> = {
-    read: <FileText size={14} />,
-    bash: <Terminal size={14} />,
-    edit: <Pencil size={14} />,
-    write: <Pencil size={14} />,
-  };
-  return iconMap[name] ?? <Wrench size={14} />;
-}
+import { ToolStatusIndicator, useToolStatusLabel } from "./ToolStatus";
 
 /** 从 args 中提取摘要信息 */
 function getToolSummary(name: string, args: Record<string, any>): string {
@@ -233,12 +213,18 @@ export function ToolCallCard({
       ? normalizeToolResult(execution.partialResult)
       : null);
   const isCompleted = finalResult !== null;
-  const terminated = isAborted || state?.status === "aborted";
-  const isUnknown = !isCompleted && state?.status === "unknown";
-  const isRunning = !isCompleted && !terminated && !isUnknown;
-  const isError = finalResult?.isError ?? false;
-  const isFailed = isError || (!isCompleted && terminated);
-  const elapsed = useToolElapsed(isRunning ? execution?.startedAt : undefined);
+  const status: ConversationToolState["status"] = isCompleted
+    ? finalResult.isError
+      ? "error"
+      : "completed"
+    : isAborted || state?.status === "aborted"
+      ? "aborted"
+      : (state?.status ??
+        (execution?.status === "running" ? "running" : "unknown"));
+  const statusLabel = useToolStatusLabel(status);
+  const elapsed = useToolElapsed(
+    status === "running" ? execution?.startedAt : undefined,
+  );
   const durationDisplay = (
     <ToolDuration
       elapsed={finalResult?.durationMs ?? elapsed}
@@ -263,18 +249,9 @@ export function ToolCallCard({
       {/* 折叠卡片 */}
       <button
         type="button"
-        aria-label={t("conversation.toolDetails", { name })}
-        data-tool-state={
-          isRunning
-            ? "running"
-            : isUnknown
-              ? "unknown"
-              : terminated && !isCompleted
-                ? "aborted"
-                : isError
-                  ? "error"
-                  : "completed"
-        }
+        aria-label={`${t("conversation.toolDetails", { name })}: ${statusLabel}`}
+        title={statusLabel}
+        data-tool-state={status}
         onClick={() => setShowModal(true)}
         className={
           compact
@@ -282,9 +259,7 @@ export function ToolCallCard({
             : "w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-content bg-[var(--fill-card)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group select-none"
         }
       >
-        <span className="text-[var(--label-secondary)] group-hover:text-[var(--color-accent)] transition-colors">
-          {getToolIcon(name)}
-        </span>
+        <ToolStatusIndicator status={status} />
         <span className="text-[13px] font-medium text-[var(--label-primary)]">
           {name}
         </span>
@@ -294,40 +269,12 @@ export function ToolCallCard({
           </span>
         )}
         <span className="ml-auto flex items-center gap-2.5 flex-shrink-0">
-          {compact && (
-            <span className="hidden text-[11px] text-[var(--label-secondary)] sm:inline">
-              {t(
-                isRunning
-                  ? "entries.running"
-                  : isUnknown
-                    ? "conversation.toolUnknown"
-                    : terminated && !isCompleted
-                      ? "entries.aborted"
-                      : isError
-                        ? "conversation.toolFailed"
-                        : "conversation.toolCompleted",
-              )}
-            </span>
-          )}
           {durationDisplay}
-          {/* 右侧状态 icon：执行中 / 失败 / 完成 */}
-          <span className="flex-shrink-0">
-            {isRunning ? (
-              <Loader2
-                size={14}
-                className="text-[var(--label-tertiary)] animate-spin motion-reduce:animate-none"
-              />
-            ) : isUnknown ? (
-              <CircleHelp size={14} className="text-[var(--label-secondary)]" />
-            ) : isFailed ? (
-              <CircleX size={14} className="text-red-400" />
-            ) : (
-              <ChevronRight
-                size={14}
-                className="text-[var(--label-tertiary)] group-hover:text-[var(--label-secondary)] transition-colors"
-              />
-            )}
-          </span>
+          <ChevronRight
+            size={14}
+            aria-hidden="true"
+            className="text-[var(--label-tertiary)] group-hover:text-[var(--label-secondary)] transition-colors"
+          />
         </span>
       </button>
 
@@ -340,8 +287,7 @@ export function ToolCallCard({
             args={args}
             result={result}
             durationDisplay={durationDisplay}
-            isRunning={isRunning}
-            isAborted={terminated}
+            status={status}
             onClose={() => setShowModal(false)}
           />
         )}
@@ -359,8 +305,7 @@ interface DetailModalProps {
   args: Record<string, any>;
   result: ToolResult | null;
   durationDisplay: React.ReactNode;
-  isRunning: boolean;
-  isAborted: boolean;
+  status: ConversationToolState["status"];
   onClose: () => void;
 }
 
@@ -403,61 +348,36 @@ function ToolDuration({
   );
 }
 
-/** 执行中指示器 */
-function RunningIndicator() {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center gap-2 text-[12px] text-[var(--label-tertiary)]">
-      <Loader2 size={14} className="animate-spin motion-reduce:animate-none" />
-      <span>{t("entries.running")}</span>
-    </div>
-  );
-}
-
-/** 已终止指示器 */
-function AbortedIndicator() {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center gap-2 text-[12px] text-red-400">
-      <CircleX size={14} />
-      <span>{t("entries.aborted")}</span>
-    </div>
-  );
-}
-
-/** 缺少结果时展示已有的运行状态。 */
+/** 缺少结果时展示当前阶段与说明。 */
 function ToolPendingIndicator({
-  isRunning,
-  isAborted,
+  status,
 }: {
-  isRunning: boolean;
-  isAborted: boolean;
+  status: ConversationToolState["status"];
 }) {
   const { t } = useTranslation();
-  if (isAborted) return <AbortedIndicator />;
-  if (isRunning) return <RunningIndicator />;
+  const label = useToolStatusLabel(status);
   return (
-    <p className="text-[12px] text-[var(--label-secondary)]">
-      {t("conversation.toolUnknown")}
-    </p>
+    <div className="space-y-1 text-[12px] text-[var(--label-secondary)]">
+      <p>{label}</p>
+      {status === "unknown" && (
+        <p>{t("conversation.toolUnavailableDescription")}</p>
+      )}
+    </div>
   );
 }
 
-/** 工具弹窗标题（icon + name） */
+/** 工具详情沿用列表的状态与名称顺序。 */
 function ToolModalTitle({
   name,
-  isRunning = false,
+  status,
 }: {
   name: string;
-  isRunning?: boolean;
+  status: ConversationToolState["status"];
 }) {
   return (
     <>
-      <span className="text-[var(--label-secondary)] select-none">
-        {getToolIcon(name)}
-      </span>
+      <ToolStatusIndicator status={status} />
       {name}
-      {isRunning && <RunningIndicator />}
     </>
   );
 }
@@ -468,8 +388,7 @@ function ReadDetailModal({
   args,
   result,
   durationDisplay,
-  isRunning,
-  isAborted,
+  status,
   onClose,
 }: DetailModalProps) {
   const path = args.path ?? "";
@@ -494,9 +413,7 @@ function ReadDetailModal({
 
   return (
     <ModalShell
-      title={
-        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
-      }
+      title={<ToolModalTitle name={name} status={status} />}
       onClose={onClose}
       trailing={durationDisplay}
     >
@@ -518,7 +435,7 @@ function ReadDetailModal({
             <MarkdownRenderer content={codeBlock!} />
           )
         ) : (
-          <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
+          <ToolPendingIndicator status={status} />
         )}
       </div>
     </ModalShell>
@@ -531,8 +448,7 @@ function BashDetailModal({
   args,
   result,
   durationDisplay,
-  isRunning,
-  isAborted,
+  status,
   onClose,
 }: DetailModalProps) {
   const { t } = useTranslation();
@@ -549,9 +465,7 @@ function BashDetailModal({
 
   return (
     <ModalShell
-      title={
-        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
-      }
+      title={<ToolModalTitle name={name} status={status} />}
       onClose={onClose}
       trailing={durationDisplay}
     >
@@ -581,7 +495,7 @@ function BashDetailModal({
               <MarkdownRenderer content={resultBlock!} />
             )
           ) : (
-            <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
+            <ToolPendingIndicator status={status} />
           )}
         </div>
       </div>
@@ -595,8 +509,7 @@ function WriteDetailModal({
   args,
   result,
   durationDisplay,
-  isRunning,
-  isAborted,
+  status,
   onClose,
 }: DetailModalProps) {
   const { t } = useTranslation();
@@ -611,9 +524,7 @@ function WriteDetailModal({
   return (
     <ModalShell
       trailing={durationDisplay}
-      title={
-        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
-      }
+      title={<ToolModalTitle name={name} status={status} />}
       onClose={onClose}
     >
       {/* 地址栏 */}
@@ -640,9 +551,7 @@ function WriteDetailModal({
           </section>
         )}
 
-        {result === null && (
-          <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
-        )}
+        {result === null && <ToolPendingIndicator status={status} />}
       </div>
     </ModalShell>
   );
@@ -706,8 +615,7 @@ function EditDetailModal({
   args,
   result,
   durationDisplay,
-  isRunning,
-  isAborted,
+  status,
   onClose,
 }: DetailModalProps) {
   const path = args.path ?? "";
@@ -716,9 +624,7 @@ function EditDetailModal({
   return (
     <ModalShell
       trailing={durationDisplay}
-      title={
-        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
-      }
+      title={<ToolModalTitle name={name} status={status} />}
       onClose={onClose}
     >
       {/* 地址栏 */}
@@ -743,7 +649,7 @@ function EditDetailModal({
           )
         ) : (
           <div className="px-5">
-            <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
+            <ToolPendingIndicator status={status} />
           </div>
         )}
       </div>
@@ -757,16 +663,13 @@ function DefaultDetailModal({
   args,
   result,
   durationDisplay,
-  isRunning,
-  isAborted,
+  status,
   onClose,
 }: DetailModalProps) {
   const { t } = useTranslation();
   return (
     <ModalShell
-      title={
-        <ToolModalTitle name={name} isRunning={isRunning && result !== null} />
-      }
+      title={<ToolModalTitle name={name} status={status} />}
       onClose={onClose}
       trailing={durationDisplay}
     >
@@ -791,7 +694,7 @@ function DefaultDetailModal({
 
         {result === null && (
           <section>
-            <ToolPendingIndicator isRunning={isRunning} isAborted={isAborted} />
+            <ToolPendingIndicator status={status} />
           </section>
         )}
       </div>

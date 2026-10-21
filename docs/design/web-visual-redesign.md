@@ -34,7 +34,13 @@ Paimon 为多台服务器上的 Pi 实例提供统一的对话界面。页面以
 
 用户消息独立展示，其后的 assistant 内容组成回复。连续 thinking 与工具调用进入执行汇总，正文与系统事件分隔执行区域，保持工具汇总 A → 正文 A → 工具汇总 B → 正文 B 的顺序。
 
-回复、执行汇总和 thinking 分别提供展开入口，后续内容更新保留用户选择。工具详情支持参数、部分输出、最终结果、错误与已有耗时。时间与状态使用真实数据，缺少信息时保持明确的未知状态。
+回复、执行汇总和有正文的 thinking 分别提供展开入口，后续内容更新保留用户选择。空 thinking 省略条目，流式开始时由回复提供运行反馈。
+
+执行汇总通过状态图标与数量展示工具和有正文的 thinking，展开箭头提供详情入口。准备与执行中的工具合并为正在处理的数量，成功、失败、终止和不可用结果分别标识。工具条目与详情标题在开头固定展示状态图标和工具名称；条目末尾保留耗时与详情箭头。图标结合形状、颜色和可访问说明表达状态。
+
+工具详情支持参数、部分输出、最终结果、错误与已有耗时。时间与状态使用真实数据，缺少结果和执行记录时静态显示结果不可用。
+
+内容层次参考 Apple 官方 [Layout](https://developer.apple.com/design/human-interface-guidelines/layout)、[Progress indicators](https://developer.apple.com/design/human-interface-guidelines/progress-indicators)、[Icons](https://developer.apple.com/design/human-interface-guidelines/icons) 与 [Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)：重要状态放在阅读顺序的前端，通过逐步展开控制信息量，同类状态保持固定位置，并提供形状与文字说明。
 
 浏览历史时保持阅读位置，位于底部时跟随新内容。折叠、流式增长、历史追加和预览更新应保持阅读连续。数据规则见 [对话数据与展示原则](conversation-rendering.md)。
 

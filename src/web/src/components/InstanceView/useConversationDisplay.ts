@@ -17,13 +17,22 @@ export function useConversationDisplay(
   toolExecutions: ReadonlyMap<string, ToolExecutionState>,
   streamingEntry: SessionEntry | null,
   status?: InstanceStatus,
+  liveToolCallIds: ReadonlySet<string> = EMPTY_TOOL_CALL_IDS,
 ): ConversationItem[] {
   return useMemo(
     () =>
-      buildConversationItems(entries, toolExecutions, streamingEntry, status),
-    [entries, toolExecutions, streamingEntry, status],
+      buildConversationItems(
+        entries,
+        toolExecutions,
+        streamingEntry,
+        status,
+        liveToolCallIds,
+      ),
+    [entries, toolExecutions, streamingEntry, status, liveToolCallIds],
   );
 }
+
+const EMPTY_TOOL_CALL_IDS = new Set<string>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -34,7 +43,8 @@ function getToolState(
   entry: SessionEntry,
   results: ReadonlyMap<string, SessionEntry>,
   toolExecutions: ReadonlyMap<string, ToolExecutionState>,
-  status?: InstanceStatus,
+  status: InstanceStatus | undefined,
+  pending: boolean,
 ): ConversationToolState {
   const resultEntry = results.get(toolCallId);
   if (resultEntry?.message) {
@@ -65,6 +75,7 @@ function getToolState(
   if (execution?.status === "running" && status !== "idle") {
     return { status: "running", execution };
   }
+  if (pending && status !== "idle") return { status: "pending" };
   return { status: "unknown" };
 }
 
@@ -72,7 +83,8 @@ function buildConversationItems(
   entries: readonly SessionEntry[],
   toolExecutions: ReadonlyMap<string, ToolExecutionState>,
   streamingEntry: SessionEntry | null,
-  status?: InstanceStatus,
+  status: InstanceStatus | undefined,
+  liveToolCallIds: ReadonlySet<string>,
 ): ConversationItem[] {
   // 先索引结果，跨正文和系统事件的结果仍归属于原工具。
   const results = new Map<string, SessionEntry>();
@@ -114,7 +126,14 @@ function buildConversationItems(
         type: "execution",
         key: `execution:${source.key}`,
         items: [],
-        counts: { running: 0, completed: 0, error: 0, aborted: 0, unknown: 0 },
+        counts: {
+          pending: 0,
+          running: 0,
+          completed: 0,
+          error: 0,
+          aborted: 0,
+          unknown: 0,
+        },
       };
       ensureReply(source.entry).parts.push(execution);
     }
@@ -184,7 +203,9 @@ function buildConversationItems(
         block.type === "thinking" &&
         typeof block.thinking === "string"
       ) {
-        ensureExecution(source).items.push({
+        const group = ensureExecution(source);
+        if (!block.thinking.trim()) continue;
+        group.items.push({
           type: "thinking",
           key: source.key,
           source,
@@ -204,6 +225,7 @@ function buildConversationItems(
           results,
           toolExecutions,
           streamingEntry ? "streaming" : status,
+          entry === streamingEntry || liveToolCallIds.has(block.id),
         );
         group.items.push({
           type: "tool",
@@ -242,7 +264,7 @@ function buildConversationItems(
         for (const item of part.items) {
           if (
             item.type !== "tool" ||
-            (item.state.status !== "running" && item.state.status !== "unknown")
+            !["pending", "running", "unknown"].includes(item.state.status)
           )
             continue;
           part.counts[item.state.status] -= 1;
@@ -253,5 +275,12 @@ function buildConversationItems(
     }
   }
 
+  for (const item of items) {
+    if (item.type === "reply") {
+      item.parts = item.parts.filter(
+        (part) => part.type !== "execution" || part.items.length > 0,
+      );
+    }
+  }
   return items;
 }

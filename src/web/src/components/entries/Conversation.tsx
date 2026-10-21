@@ -1,14 +1,13 @@
 import { Button } from "../ui/Button";
 import { useId, useState } from "react";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
-import { Brain, ChevronRight, Loader2, Sparkles, Wrench } from "lucide-react";
+import { Brain, ChevronRight, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { InstanceStatus } from "../../../../protocol/types";
 import {
   type ConversationExecution,
   type ConversationItem,
   type ConversationReply,
-  type ConversationToolState,
   type SessionEntry,
 } from "../../stores/types";
 import { Collapsible } from "../ui/Collapsible";
@@ -17,6 +16,7 @@ import { MarkdownRenderer } from "./Markdown";
 import { MessageTime } from "./MessageTime";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
+import { ToolStatusIndicator } from "./ToolStatus";
 
 type ToolCounts = ConversationExecution["counts"];
 type BeforeToggle = (element: HTMLElement) => void;
@@ -122,6 +122,7 @@ function ReplyCard({
     (part): part is ConversationExecution => part.type === "execution",
   );
   const counts: ToolCounts = {
+    pending: 0,
     running: 0,
     completed: 0,
     error: 0,
@@ -133,8 +134,19 @@ function ReplyCard({
       counts[key] += group.counts[key];
   }
   const hasTools = Object.values(counts).some(Boolean);
+  const thinkingCount = groups.reduce(
+    (count, group) =>
+      count + group.items.filter((item) => item.type === "thinking").length,
+    0,
+  );
+  const thinkingStreaming = groups.some((group) =>
+    group.items.some(
+      (item) => item.type === "thinking" && item.source.streaming,
+    ),
+  );
   const activeGroup = groups.some(
     (group) =>
+      group.counts.pending > 0 ||
       group.counts.running > 0 ||
       group.items.some(
         (item) => item.type === "thinking" && item.source.streaming,
@@ -198,6 +210,12 @@ function ReplyCard({
               </span>
             )}
             {!expanded && hasTools && <ExecutionCounts counts={counts} />}
+            {!expanded && thinkingCount > 0 && (
+              <ThinkingIndicator
+                count={thinkingCount}
+                streaming={thinkingStreaming}
+              />
+            )}
             {!expanded && !hasTools && !error && preview?.type === "text" && (
               <span className="truncate">
                 {preview.content.replace(/\s+/g, " ").slice(0, 72)}
@@ -287,9 +305,6 @@ function ExecutionSummary({
   const contentId = useId();
   const thinking = execution.items.filter((item) => item.type === "thinking");
   const thinkingStreaming = thinking.some((item) => item.source.streaming);
-  const running = execution.counts.running > 0 || thinkingStreaming;
-  const hasTools = Object.values(execution.counts).some(Boolean);
-  const Icon = running ? Loader2 : hasTools ? Wrench : Brain;
 
   return (
     <section
@@ -313,22 +328,16 @@ function ExecutionSummary({
         }}
         className="conversation-execution-toggle flex w-full items-center gap-2 rounded-surface px-3 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
-        <Icon
-          size={14}
-          aria-hidden="true"
-          className={`shrink-0 text-[var(--label-secondary)] ${running ? "animate-spin motion-reduce:animate-none" : ""}`}
-        />
         <span
           id={`${contentId}-summary`}
           className="flex min-w-0 flex-1 flex-wrap gap-x-3 gap-y-1 text-[12px] text-[var(--label-secondary)]"
         >
           <ExecutionCounts counts={execution.counts} />
           {thinking.length > 0 && (
-            <span>
-              {thinkingStreaming
-                ? t("entries.thinkingStreaming")
-                : t("conversation.thinkingCount", { count: thinking.length })}
-            </span>
+            <ThinkingIndicator
+              count={thinking.length}
+              streaming={thinkingStreaming}
+            />
           )}
         </span>
         <ChevronRight
@@ -374,24 +383,62 @@ function ExecutionSummary({
 
 function ExecutionCounts({ counts }: { counts: ToolCounts }) {
   const { t } = useTranslation();
-  const keys: Record<ConversationToolState["status"], string> = {
-    running: "conversation.toolsRunning",
-    completed: "conversation.toolsCompleted",
-    error: "conversation.toolsFailed",
-    aborted: "conversation.toolsAborted",
-    unknown: "conversation.toolsUnknown",
-  };
+  const processing = counts.pending + counts.running;
+  const statuses = ["completed", "error", "aborted", "unknown"] as const;
   return (
     <>
-      {(Object.keys(keys) as (keyof ToolCounts)[]).map(
-        (status) =>
-          counts[status] > 0 && (
-            <span key={status} className="whitespace-nowrap">
-              {t(keys[status], { count: counts[status] })}
-            </span>
-          ),
+      {processing > 0 && (
+        <ToolStatusIndicator
+          status="running"
+          count={processing}
+          description={t("conversation.toolsProcessing", { count: processing })}
+        />
+      )}
+      {statuses.map((status) =>
+        counts[status] > 0 ? (
+          <ToolStatusIndicator
+            key={status}
+            status={status}
+            count={counts[status]}
+          />
+        ) : null,
       )}
     </>
+  );
+}
+
+function ThinkingIndicator({
+  count,
+  streaming,
+}: {
+  count: number;
+  streaming: boolean;
+}) {
+  const { t } = useTranslation();
+  const label = t(
+    streaming
+      ? "conversation.thinkingStreamingCount"
+      : "conversation.thinkingCount",
+    { count },
+  );
+  const Icon = streaming ? Loader2 : Brain;
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      data-thinking-status={streaming ? "streaming" : "completed"}
+      className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap tabular-nums text-[var(--label-secondary)]"
+    >
+      <Icon
+        size={14}
+        aria-hidden="true"
+        className={
+          streaming ? "animate-spin motion-reduce:animate-none" : undefined
+        }
+      />
+      <span aria-hidden="true">{count}</span>
+    </span>
   );
 }
 

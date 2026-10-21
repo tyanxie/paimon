@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act } from "react";
+import { MotionConfig } from "motion/react";
 import { createRoot, type Root } from "react-dom/client";
 import i18n from "../../i18n";
 import { ToolCallCard } from "./ToolCallCard";
@@ -22,13 +23,15 @@ async function renderCard(
   }
   await act(async () => {
     root!.render(
-      <ToolCallCard
-        name={name}
-        args={{ command: "echo hello" }}
-        toolCallId="call-1"
-        entries={entries}
-        execution={execution}
-      />,
+      <MotionConfig reducedMotion="always">
+        <ToolCallCard
+          name={name}
+          args={{ command: "echo hello" }}
+          toolCallId="call-1"
+          entries={entries}
+          execution={execution}
+        />
+      </MotionConfig>,
     );
   });
 }
@@ -48,7 +51,11 @@ describe("ToolCallCard lifecycle", () => {
     });
     await act(async () => container.querySelector("button")!.click());
     expect(container.textContent).toContain("first output");
-    expect(container.textContent).toContain("执行中");
+    expect(
+      container
+        .querySelector('.modal-header [data-tool-status="running"]')
+        ?.getAttribute("aria-label"),
+    ).toContain("执行中");
     await renderCard({
       status: "running",
       partialResult: { content: [{ type: "text", text: "latest output" }] },
@@ -321,6 +328,10 @@ describe("ToolCallCard lifecycle", () => {
     );
     await act(async () => container.querySelector("button")!.click());
     expect(container.textContent).toContain("progress update");
-    expect(container.textContent).toContain("执行中");
+    expect(
+      container
+        .querySelector('.modal-header [data-tool-status="running"]')
+        ?.getAttribute("aria-label"),
+    ).toContain("执行中");
   });
 });

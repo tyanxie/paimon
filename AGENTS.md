@@ -20,6 +20,7 @@ bun run scripts/prepare-npm-packages.ts     # 生成 npm 发布目录
 
 - 围绕当前需求修改相关代码，代码检查采用 `bunx tsc --noEmit`。
 - 保留重要业务逻辑测试，按改动范围选择运行相关用例。纯样式调整无需修改或运行测试。
+- 验证使用的临时目录环境变量仅作用于对应验证子进程。启动或重启 Hub、Edge 时清除验证专用的临时环境设置；验证结束后清理中间文件与目录。
 - DOM 测试通过 `bunfig.toml` preload 加载 happy-dom 环境；Motion 功能测试使用 `MotionConfig reducedMotion="always"`，检查操作、状态、焦点与资源释放。
 - 前端修改后执行 `bun run build && paimon hub restart`，Edge 按实际变更需要重启。
 - 页面观感、真实浏览器交互与性能由用户检查。除非用户明确要求，Agent 不主动启动或使用浏览器检查页面，也不将浏览器检查列为待办或补充验证事项。

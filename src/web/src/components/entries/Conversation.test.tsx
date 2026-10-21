@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act } from "react";
+import { MotionConfig } from "motion/react";
 import { createRoot, type Root } from "react-dom/client";
 import i18n from "../../i18n";
 import type { InstanceStatus } from "../../../../protocol/types";
@@ -83,15 +84,17 @@ async function render(
 ) {
   await act(async () =>
     root.render(
-      <Probe
-        entries={entries}
-        executions={options.executions ?? emptyExecutions}
-        status={options.status ?? "idle"}
-        streaming={options.streaming ?? null}
-        conversationKey={options.conversationKey ?? "instance:session"}
-        onReEdit={options.onReEdit}
-        onBeforeToggle={options.onBeforeToggle}
-      />,
+      <MotionConfig reducedMotion="always">
+        <Probe
+          entries={entries}
+          executions={options.executions ?? emptyExecutions}
+          status={options.status ?? "idle"}
+          streaming={options.streaming ?? null}
+          conversationKey={options.conversationKey ?? "instance:session"}
+          onReEdit={options.onReEdit}
+          onBeforeToggle={options.onBeforeToggle}
+        />
+      </MotionConfig>,
     ),
   );
 }
@@ -124,6 +127,52 @@ afterEach(async () => {
 });
 
 describe("回复与执行汇总", () => {
+  test("摘要展示工具状态与有效 thinking 数量，收起回复时汇总全部区域", async () => {
+    await render(
+      [
+        message("a1", "assistant", [
+          { type: "thinking", thinking: "plan" },
+          { type: "thinking", thinking: "" },
+          call("done"),
+          call("failed"),
+          call("running"),
+          text("body"),
+          { type: "thinking", thinking: "next plan" },
+        ]),
+        result("done"),
+        result("failed", "error", true),
+      ],
+      {
+        status: "streaming",
+        executions: new Map([["running", { status: "running" }]]),
+      },
+    );
+    const summary = executionButton();
+    for (const label of [
+      "1 个工具正在处理",
+      "1 个工具执行完成",
+      "1 个工具执行失败",
+      "1 段思考过程",
+    ]) {
+      expect(summary.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
+    }
+    expect(
+      summary.querySelector('[aria-label="1 段思考过程"]')?.textContent,
+    ).toBe("1");
+    expect(
+      executionButton(1).querySelector('[aria-label="1 段思考过程"]')
+        ?.textContent,
+    ).toBe("1");
+    await click(replyButton());
+    expect(
+      replyButton().querySelector('[aria-label="2 段思考过程"]')?.textContent,
+    ).toBe("2");
+    await act(async () => i18n.changeLanguage("en"));
+    expect(
+      replyButton().querySelector('[aria-label="2 thinking sections"]')
+        ?.textContent,
+    ).toBe("2");
+  });
   test("工具组与正文按原始顺序交替排列", async () => {
     await render([
       message("u1", "user", "question"),
@@ -140,7 +189,11 @@ describe("回复与执行汇总", () => {
 
     expect(replyButton().getAttribute("aria-expanded")).toBe("true");
     expect(container.querySelectorAll("[data-execution-key]")).toHaveLength(2);
-    expect(executionButton().textContent).toContain("1 个工具执行完成");
+    expect(
+      executionButton()
+        .querySelector('[data-tool-status="completed"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("1 个工具执行完成");
     expect(container.querySelector("[data-tool-state]")).toBeNull();
     const keys = Array.from(container.querySelectorAll("[data-entry-key]")).map(
       (element) => element.getAttribute("data-entry-key"),
@@ -169,7 +222,11 @@ describe("回复与执行汇总", () => {
       ]),
     });
     const summary = executionButton();
-    expect(summary.textContent).toContain("1 个工具执行中");
+    expect(
+      summary
+        .querySelector('[data-tool-status="running"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("1 个工具正在处理");
     await click(summary);
     const tool =
       container.querySelector<HTMLButtonElement>("[data-tool-state]")!;
@@ -231,7 +288,11 @@ describe("回复与执行汇总", () => {
     ]);
     expect(replyButton().getAttribute("aria-expanded")).toBe("false");
     expect(summary.getAttribute("aria-expanded")).toBe("false");
-    expect(replyButton().textContent).toContain("1 个工具执行完成");
+    expect(
+      replyButton()
+        .querySelector('[data-tool-status="completed"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("1 个工具执行完成");
     await click(replyButton());
     expect(summary.getAttribute("aria-expanded")).toBe("false");
   });
@@ -250,7 +311,11 @@ describe("回复与执行汇总", () => {
       { type: "thinking", thinking: "plan" },
     ]);
     await render([entry], { status: "streaming", streaming: entry });
-    expect(executionButton().textContent).toContain("思考中");
+    expect(
+      executionButton()
+        .querySelector('[data-thinking-status="streaming"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("1 段思考过程，思考中");
     expect(executionButton().textContent).not.toContain("个工具");
     await click(executionButton());
     const thinking = container.querySelector<HTMLButtonElement>(
@@ -333,14 +398,22 @@ describe("状态、系统事件与图片", () => {
     expect(container.querySelector(".animate-pulse")).toBeNull();
   });
 
-  test("失败、终止和未知状态准确显示，未知工具详情使用静态提示", async () => {
+  test("失败与不可用结果通过图标展示，详情保留静态说明", async () => {
     const entries = [
       message("a1", "assistant", [call("one"), call("two")]),
       result("two", "failed", true),
     ];
     await render(entries);
-    expect(executionButton().textContent).toContain("1 个工具执行失败");
-    expect(executionButton().textContent).toContain("1 个工具状态未知");
+    expect(
+      executionButton()
+        .querySelector('[data-tool-status="error"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("1 个工具执行失败");
+    expect(
+      executionButton()
+        .querySelector('[data-tool-status="unknown"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("1 个工具结果不可用");
     await click(executionButton());
     const unknown = container.querySelector<HTMLButtonElement>(
       '[data-tool-state="unknown"]',
@@ -348,7 +421,7 @@ describe("状态、系统事件与图片", () => {
     await click(unknown);
     expect(container.querySelector(".animate-spin")).toBeNull();
     expect(container.querySelector(".fixed-viewport")!.textContent).toContain(
-      "状态未知",
+      "未收到工具结果或执行记录。",
     );
   });
 
@@ -360,7 +433,7 @@ describe("状态、系统事件与图片", () => {
       await click(executionButton());
       await click(container.querySelector('[data-tool-state="unknown"]')!);
       expect(container.querySelector(".fixed-viewport")!.textContent).toContain(
-        "状态未知",
+        "结果不可用",
       );
       expect(container.querySelector(".animate-spin")).toBeNull();
     }
@@ -381,7 +454,11 @@ describe("状态、系统事件与图片", () => {
     expect(
       container.querySelector('[data-tool-state="unknown"]'),
     ).not.toBeNull();
-    expect(executionButton().textContent).toContain("状态未知");
+    expect(
+      executionButton()
+        .querySelector('[data-tool-status="unknown"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("1 个工具结果不可用");
   });
 
   test("整组收起后仍保留终止状态与重新编辑入口", async () => {
@@ -440,7 +517,11 @@ describe("状态、系统事件与图片", () => {
       result("one"),
       result("two"),
     ]);
-    expect(executionButton().textContent).toContain("2 tools completed");
+    expect(
+      executionButton()
+        .querySelector('[data-tool-status="completed"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("2 tools completed");
     expect(replyButton().getAttribute("aria-label")).toBe("Collapse reply");
   });
 });

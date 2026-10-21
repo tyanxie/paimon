@@ -10,22 +10,34 @@ import type {
   ToolExecutionState,
 } from "../../stores/types";
 import { useConversationDisplay } from "./useConversationDisplay";
+import type { InstanceStatus } from "../../../../protocol/types";
 
 let root: Root;
 let container: HTMLDivElement;
 let items: ConversationItem[];
 const noExecutions = new Map<string, ToolExecutionState>();
+const noLiveCalls = new Set<string>();
 
 function Probe({
   entries,
   executions,
   streaming,
+  status,
+  liveToolCallIds,
 }: {
   entries: readonly SessionEntry[];
   executions: ReadonlyMap<string, ToolExecutionState>;
   streaming: SessionEntry | null;
+  status?: InstanceStatus;
+  liveToolCallIds: ReadonlySet<string>;
 }) {
-  items = useConversationDisplay(entries, executions, streaming);
+  items = useConversationDisplay(
+    entries,
+    executions,
+    streaming,
+    status,
+    liveToolCallIds,
+  );
   return null;
 }
 
@@ -33,10 +45,18 @@ async function display(
   entries: readonly SessionEntry[],
   executions: ReadonlyMap<string, ToolExecutionState> = noExecutions,
   streaming: SessionEntry | null = null,
+  status?: InstanceStatus,
+  liveToolCallIds: ReadonlySet<string> = noLiveCalls,
 ) {
   await act(async () =>
     root.render(
-      <Probe entries={entries} executions={executions} streaming={streaming} />,
+      <Probe
+        entries={entries}
+        executions={executions}
+        streaming={streaming}
+        status={status}
+        liveToolCallIds={liveToolCallIds}
+      />,
     ),
   );
 }
@@ -257,24 +277,37 @@ describe("连续执行区域", () => {
     ).toBe(1);
   });
 
-  test("只有 thinking 和初始空 thinking 也有稳定执行区域", async () => {
-    const entry = message("a1", "assistant", [thinking("")]);
+  test("空 thinking 保留原始数据，补充文字后保持执行区域身份", async () => {
+    const blocks = [
+      thinking(""),
+      thinking(" \n\t"),
+      { type: "thinking", thinking: "", thinkingSignature: "signature" },
+    ];
+    const entry = message("a1", "assistant", blocks);
     await display([entry], noExecutions, entry);
+    expect(executions()).toHaveLength(0);
+    expect(replies()[0]!.entries[0]).toBe(entry);
+    const withTool = {
+      ...entry,
+      message: { role: "assistant", content: [...blocks, call("one")] },
+    };
+    await display([withTool], noExecutions, withTool);
+    expect(executions()[0]!.items.map((item) => item.type)).toEqual(["tool"]);
     const key = executions()[0]!.key;
-    expect(executions()[0]!.counts).toEqual({
-      running: 0,
-      completed: 0,
-      error: 0,
-      aborted: 0,
-      unknown: 0,
-    });
     const updated = {
       ...entry,
-      message: { role: "assistant", content: [thinking("plan")] },
+      message: {
+        role: "assistant",
+        content: [thinking("plan"), ...blocks.slice(1), call("one")],
+      },
     };
     await display([updated], noExecutions, updated);
     expect(executions()[0]!.key).toBe(key);
-    expect(executions()[0]!.items[0]?.source.streaming).toBe(true);
+    expect(executions()[0]!.items.map((item) => item.type)).toEqual([
+      "thinking",
+      "tool",
+    ]);
+    expect(entry.message!.content).toBe(blocks);
   });
 
   test("空白 text 保留连续执行关系，未知内容保持安全", async () => {
@@ -357,11 +390,16 @@ describe("工具状态与结果", () => {
           call("done"),
           call("failed"),
           call("missing"),
+          call("pending"),
         ]),
       ],
       live,
+      null,
+      "streaming",
+      new Set(["pending"]),
     );
     expect(executions()[0]!.counts).toEqual({
+      pending: 1,
       running: 1,
       completed: 1,
       error: 1,
@@ -378,6 +416,14 @@ describe("工具状态与结果", () => {
     expect(running.state.execution).toBe(runningExecution);
     const done = tools().find((tool) => tool.toolCallId === "done")!;
     expect(done.state.status === "completed" && done.state.durationMs).toBe(15);
+    await display(
+      [message("a1", "assistant", [call("pending")])],
+      noExecutions,
+      null,
+      "idle",
+      new Set(["pending"]),
+    );
+    expect(tools()[0]!.state).toEqual({ status: "unknown" });
   });
 
   test("历史结果优先于实时状态，保留输出、details 与 durationMs", async () => {
@@ -439,22 +485,32 @@ describe("工具状态与结果", () => {
     aborted.message!.stopReason = "aborted";
     await display(
       [
-        message("a1", "assistant", [call("one"), call("two")]),
+        message("a1", "assistant", [call("one"), call("two"), call("pending")]),
         result("two"),
         aborted,
       ],
       new Map([["one", { status: "running", startedAt: 10 }]]),
+      null,
+      "streaming",
+      new Set(["pending"]),
     );
     expect(tools().map((tool) => tool.state.status)).toEqual([
       "aborted",
       "completed",
+      "aborted",
     ]);
     expect(executions()[0]!.counts.running).toBe(0);
-    expect(executions()[0]!.counts.aborted).toBe(1);
+    expect(executions()[0]!.counts.pending).toBe(0);
+    expect(executions()[0]!.counts.aborted).toBe(2);
   });
 
   test("缺少结果与执行事件的历史工具保持未知，不构造耗时", async () => {
-    await display([message("a1", "assistant", [call("one")])]);
+    await display(
+      [message("a1", "assistant", [call("one")])],
+      noExecutions,
+      null,
+      "streaming",
+    );
     expect(tools()[0]!.state).toEqual({ status: "unknown" });
   });
 });

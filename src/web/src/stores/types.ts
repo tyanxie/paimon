@@ -68,7 +68,7 @@ export type ConversationToolState =
       resultEntry?: SessionEntry;
       durationMs?: number;
     }
-  | { status: "aborted" | "unknown" };
+  | { status: "pending" | "aborted" | "unknown" };
 
 export interface ConversationTool {
   type: "tool";
