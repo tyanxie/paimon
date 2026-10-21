@@ -36,7 +36,7 @@ export function MobileNavBar({
         type="button"
         onClick={() => navigate(backTo)}
         aria-label={t("navigation.backToInstances")}
-        className="flex shrink-0 select-none items-center justify-center rounded-full bg-[var(--material-thin)] text-[var(--label-secondary)] active:opacity-60 transition-opacity focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+        className="flex shrink-0 select-none items-center justify-center text-[var(--label-secondary)] active:bg-[var(--fill-tertiary)] transition-opacity focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
         <ChevronLeft size={20} />
       </Button>

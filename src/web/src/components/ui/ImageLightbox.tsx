@@ -72,7 +72,7 @@ function LightboxContent({
   const placeholderContent = (
     <div
       onClick={(event) => event.stopPropagation()}
-      className="max-w-full max-h-full overflow-auto rounded-lg bg-[var(--btn-solid)] text-[var(--label-primary)] shadow-2xl"
+      className="max-w-full max-h-full overflow-auto rounded-content bg-[var(--btn-solid)] text-[var(--label-primary)] shadow-2xl"
     >
       {placeholder}
     </div>
@@ -124,7 +124,7 @@ function LightboxContent({
           event.stopPropagation();
           requestClose();
         }}
-        className={`absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-10 flex items-center justify-center select-none transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${zoomable ? "glass-panel text-[var(--label-primary)] hover:text-[var(--color-accent)]" : "rounded-full bg-[var(--badge-bg)] hover:bg-[var(--badge-bg-hover)] text-[var(--badge-text)]"}`}
+        className={`absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-10 flex items-center justify-center select-none transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${zoomable ? "glass-panel text-[var(--label-primary)] hover:text-[var(--color-accent)]" : "bg-[var(--badge-bg)] hover:bg-[var(--badge-bg-hover)] text-[var(--badge-text)]"}`}
         aria-label={t("imagePreview.close")}
       >
         <X size={18} />
@@ -158,7 +158,7 @@ function LightboxContent({
                     }
                   }}
                   onClick={(event) => event.stopPropagation()}
-                  className={`block shrink-0 rounded-lg bg-[var(--btn-solid)] shadow-2xl select-none ${actualSize ? "max-w-none max-h-none" : "max-w-full max-h-full object-contain"}`}
+                  className={`block shrink-0 rounded-content bg-[var(--btn-solid)] shadow-2xl select-none ${actualSize ? "max-w-none max-h-none" : "max-w-full max-h-full object-contain"}`}
                   draggable={false}
                 />
               ) : (
@@ -184,7 +184,7 @@ function LightboxContent({
           src={src}
           alt={alt ?? t("imagePreview.title")}
           onClick={(event) => event.stopPropagation()}
-          className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl select-none"
+          className="max-w-[90vw] max-h-[90vh] object-contain rounded-content shadow-2xl select-none"
           draggable={false}
         />
       ) : (

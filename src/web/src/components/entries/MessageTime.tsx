@@ -72,7 +72,7 @@ export function MessageTime({
         onFocus={show}
         onBlur={() => setPosition(null)}
         onClick={show}
-        className="conversation-time inline-flex shrink-0 items-center justify-center rounded-full text-[var(--label-secondary)] opacity-100 transition-opacity hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 motion-reduce:transition-none"
+        className="conversation-time inline-flex shrink-0 items-center justify-center text-[var(--label-secondary)] opacity-100 transition-opacity hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 motion-reduce:transition-none"
       >
         <Clock size={13} aria-hidden="true" />
       </Button>

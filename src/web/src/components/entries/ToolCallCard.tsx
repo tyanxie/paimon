@@ -278,8 +278,8 @@ export function ToolCallCard({
         onClick={() => setShowModal(true)}
         className={
           compact
-            ? "conversation-tool-row flex w-full items-center gap-2 rounded-[10px] px-3 py-1 text-left group select-none hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
-            : "w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group select-none"
+            ? "conversation-tool-row flex w-full items-center gap-2 rounded-control px-3 py-1 text-left group select-none hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+            : "w-full max-w-[640px] flex items-center gap-2.5 px-3 py-2 rounded-content bg-[var(--fill-card)] border border-[var(--separator)] hover:bg-[var(--fill-tertiary)] transition-colors text-left group select-none"
         }
       >
         <span className="text-[var(--label-secondary)] group-hover:text-[var(--color-accent)] transition-colors">
@@ -660,7 +660,7 @@ function DiffView({ diff }: { diff: string }) {
             return (
               <div
                 key={i}
-                className="px-3 rounded-[2px]"
+                className="px-3 rounded-inline"
                 style={{
                   backgroundColor: "var(--diff-add-bg)",
                   color: "var(--diff-add-text)",
@@ -674,7 +674,7 @@ function DiffView({ diff }: { diff: string }) {
             return (
               <div
                 key={i}
-                className="px-3 rounded-[2px]"
+                className="px-3 rounded-inline"
                 style={{
                   backgroundColor: "var(--diff-del-bg)",
                   color: "var(--diff-del-text)",

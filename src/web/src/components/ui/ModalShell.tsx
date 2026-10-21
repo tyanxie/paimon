@@ -218,7 +218,7 @@ function ModalContent({
                   type="button"
                   onClick={requestClose}
                   aria-label={t("common.close")}
-                  className="modal-close select-none flex items-center justify-center rounded-full text-[var(--label-secondary)] transition-colors hover:bg-[var(--fill-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none"
+                  className="modal-close select-none flex items-center justify-center text-[var(--label-secondary)] transition-colors hover:bg-[var(--fill-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none"
                 >
                   <X size={18} aria-hidden="true" />
                 </Button>

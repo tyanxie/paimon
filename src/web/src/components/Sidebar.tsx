@@ -181,7 +181,7 @@ export function Sidebar({
             onClick={onNewInstance}
             title={t("sidebar.newInstance")}
             aria-label={t("sidebar.newInstance")}
-            className="navigation-create shrink-0 rounded-full"
+            className="navigation-create shrink-0"
           >
             <Plus size={18} aria-hidden="true" />
           </Button>
@@ -211,7 +211,7 @@ export function Sidebar({
                   onClick={() => handleCopyEdgeId(edgeId)}
                   title={t("navigation.copyEdge", { edgeId })}
                   aria-label={t("navigation.copyEdge", { edgeId })}
-                  className="flex max-w-full items-center gap-2 rounded-[8px] px-2 text-[11px] font-semibold text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)]"
+                  className="flex max-w-full items-center gap-2 px-2 text-[11px] font-semibold text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)]"
                 >
                   <Server size={12} className="shrink-0" aria-hidden="true" />
                   <span className="truncate">{edgeId}</span>
@@ -270,7 +270,7 @@ export function Sidebar({
                           onTouchEnd={cancelLongPress}
                           onTouchMove={cancelLongPress}
                           onTouchCancel={cancelLongPress}
-                          className="instance-item w-full rounded-[12px] border border-transparent px-3 py-1.5 text-left"
+                          className="instance-item w-full rounded-control border border-transparent px-3 py-1.5 text-left"
                         >
                           <div className="instance-item-text flex min-w-0 items-center gap-2.5">
                             <span
@@ -318,7 +318,7 @@ export function Sidebar({
                           type="button"
                           aria-label={t("navigation.instanceActions", { name })}
                           title={t("navigation.instanceActions", { name })}
-                          className="absolute right-2 top-0.5 flex items-center justify-center rounded-full text-[var(--label-secondary)] hover:bg-[var(--fill-secondary)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100"
+                          className="absolute right-2 top-0.5 flex items-center justify-center text-[var(--label-secondary)] hover:bg-[var(--fill-secondary)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100"
                           onClick={(event) => {
                             const rect =
                               event.currentTarget.getBoundingClientRect();

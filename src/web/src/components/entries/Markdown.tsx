@@ -173,7 +173,7 @@ const components: Components = {
     // 行内代码
     return (
       <code
-        className="px-1.5 py-0.5 rounded-[4px] bg-[var(--fill-secondary)] text-[13px] font-mono break-words"
+        className="px-1.5 py-0.5 rounded-inline bg-[var(--fill-secondary)] text-[13px] font-mono break-words"
         {...props}
       >
         {children}

@@ -154,7 +154,7 @@ function ReplyCard({
 
   return (
     <article
-      className="conversation-reply rounded-[24px] border border-[var(--separator)] bg-[var(--fill-quaternary)] shadow-[0_2px_12px_rgba(0,0,0,0.035)]"
+      className="conversation-reply rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] shadow-[0_2px_12px_rgba(0,0,0,0.035)]"
       data-reply-key={reply.key}
     >
       <div
@@ -175,9 +175,9 @@ function ReplyCard({
             onBeforeToggle?.(event.currentTarget);
             setExpanded(!expanded);
           }}
-          className="conversation-reply-toggle flex min-w-0 flex-1 items-center gap-2 rounded-[12px] text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+          className="conversation-reply-toggle flex min-w-0 flex-1 items-center gap-2 rounded-control text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
         >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] bg-[var(--fill-card)] text-[var(--label-secondary)]">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control bg-[var(--fill-card)] text-[var(--label-secondary)]">
             <Sparkles size={15} aria-hidden="true" />
           </span>
           <span className="shrink-0 text-[14px] font-semibold text-[var(--label-primary)]">
@@ -215,7 +215,7 @@ function ReplyCard({
             size="compact"
             type="button"
             onClick={onReEdit}
-            className="shrink-0 rounded-full px-2 py-1.5 text-[12px] text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+            className="shrink-0 px-2 py-1.5 text-[12px] text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
           >
             {t("reEdit.button")}
           </Button>
@@ -293,7 +293,7 @@ function ExecutionSummary({
 
   return (
     <section
-      className="conversation-execution rounded-[14px] border border-[var(--separator)] bg-[var(--fill-quaternary)]"
+      className="conversation-execution rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)]"
       data-execution-key={execution.key}
     >
       <button
@@ -311,7 +311,7 @@ function ExecutionSummary({
           setVisited(true);
           setExpanded(!expanded);
         }}
-        className="conversation-execution-toggle flex w-full items-center gap-2 rounded-[14px] px-3 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+        className="conversation-execution-toggle flex w-full items-center gap-2 rounded-surface px-3 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
         <Icon
           size={14}

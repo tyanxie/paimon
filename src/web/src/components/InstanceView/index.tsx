@@ -413,12 +413,12 @@ function RefreshingConversationSkeleton() {
       {[0, 1, 2, 3].map((item) => (
         <div
           key={item}
-          className="space-y-4 rounded-[24px] border border-[var(--separator)] bg-[var(--fill-quaternary)] px-4 py-4 animate-pulse"
+          className="space-y-4 rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] px-4 py-4 animate-pulse"
         >
-          <div className="h-4 w-28 rounded-full bg-[var(--fill-tertiary)]" />
+          <div className="h-4 w-28 rounded-inline bg-[var(--fill-tertiary)]" />
           <div className="space-y-2.5">
-            <div className="h-3 w-[82%] rounded-full bg-[var(--fill-secondary)]" />
-            <div className="h-3 w-[64%] rounded-full bg-[var(--fill-tertiary)]" />
+            <div className="h-3 w-[82%] rounded-inline bg-[var(--fill-secondary)]" />
+            <div className="h-3 w-[64%] rounded-inline bg-[var(--fill-tertiary)]" />
           </div>
         </div>
       ))}

@@ -245,7 +245,7 @@ export function Composer({
                   type="button"
                   aria-label={t("composer.previewImage", { count: index + 1 })}
                   onClick={() => onImageLightbox(img.previewUrl)}
-                  className="block overflow-hidden rounded-[12px] border border-[var(--separator)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+                  className="block overflow-hidden rounded-content border border-[var(--separator)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
                 >
                   <img
                     src={img.previewUrl}
@@ -258,7 +258,7 @@ export function Composer({
                   size="badge"
                   type="button"
                   onClick={() => handleRemoveImage(img.id)}
-                  className="absolute -right-1.5 -top-1.5 rounded-full bg-[var(--badge-bg)] text-[var(--badge-text)] hover:bg-[var(--badge-bg-hover)]"
+                  className="absolute -right-1.5 -top-1.5 bg-[var(--badge-bg)] text-[var(--badge-text)] hover:bg-[var(--badge-bg-hover)]"
                   aria-label={t("composer.removeImage", { count: index + 1 })}
                 >
                   <X size={12} aria-hidden="true" />

@@ -101,7 +101,7 @@ export function SessionPopover({
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? id : undefined}
-          className={`flex items-center justify-center rounded-[10px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
+          className={`flex items-center justify-center transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
             open
               ? "bg-[var(--fill-secondary)]"
               : "hover:bg-[var(--fill-tertiary)]"
@@ -139,7 +139,8 @@ export function SessionPopover({
             </span>
             <Button
               size="compact"
-              variant="secondary"
+              variant="ghost"
+              className="active:bg-[var(--fill-tertiary)]"
               onClick={() => {
                 onNewSession();
                 close();

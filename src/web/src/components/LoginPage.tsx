@@ -120,7 +120,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
             i18nKey="login.tokenHint"
             components={{
               1: (
-                <code className="px-1 py-0.5 rounded bg-[var(--fill-secondary)] text-[var(--label-secondary)]" />
+                <code className="px-1 py-0.5 rounded-inline bg-[var(--fill-secondary)] text-[var(--label-secondary)]" />
               ),
             }}
           />

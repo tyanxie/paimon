@@ -39,7 +39,7 @@ export function UserBubble({
           {t("conversation.you")}
           <MessageTime timestamps={[timestamp]} />
         </div>
-        <div className="max-w-[90%] rounded-[20px] rounded-br-[6px] bg-[var(--color-accent)] text-white md:max-w-[80%]">
+        <div className="max-w-[90%] rounded-surface bg-[var(--color-accent)] text-white md:max-w-[80%]">
           {images.length > 0 && (
             <div className="flex flex-wrap gap-1.5 p-2 pb-0">
               {images.map((image, index) => {
@@ -53,7 +53,7 @@ export function UserBubble({
                     type="button"
                     aria-label={label}
                     onClick={() => setLightboxSrc(src)}
-                    className="block overflow-hidden rounded-[10px] transition-opacity hover:opacity-90 motion-reduce:transition-none"
+                    className="block overflow-hidden rounded-inline transition-opacity hover:opacity-90 motion-reduce:transition-none"
                   >
                     <img
                       src={src}
@@ -105,7 +105,7 @@ export function MetaEntry({
   const Icon = type === "compaction" ? Layers : GitBranch;
   return (
     <>
-      <div className="group conversation-system flex items-start gap-2 rounded-[14px] border border-[var(--separator)] bg-[var(--fill-quaternary)] px-3 py-2">
+      <div className="group conversation-system flex items-start gap-2 rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] px-3 py-2">
         <button
           type="button"
           disabled={!summary}
@@ -184,7 +184,7 @@ export function ErrorCard({
   const isLong = detail.length > 200;
   return (
     <>
-      <div className="rounded-[12px] border border-[rgba(255,66,69,0.3)] bg-[rgba(255,66,69,0.06)] px-3.5 py-2.5">
+      <div className="rounded-content border border-[rgba(255,66,69,0.3)] bg-[rgba(255,66,69,0.06)] px-3.5 py-2.5">
         <div className="flex items-start gap-2">
           <AlertCircle
             size={14}
@@ -211,7 +211,7 @@ export function ErrorCard({
                     type="button"
                     aria-label={t("error.title")}
                     onClick={() => setShowModal(true)}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)]"
+                    className="inline-flex h-8 w-8 items-center justify-center text-[var(--label-secondary)]"
                   >
                     <ChevronRight size={14} />
                   </Button>
@@ -235,14 +235,14 @@ export function ErrorCard({
           >
             <div className="flex-1 overflow-y-auto px-5 py-6 scrollbar-auto">
               <div className="mb-5 flex flex-col items-center text-center">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,66,69,0.1)]">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-content bg-[rgba(255,66,69,0.1)]">
                   <AlertCircle size={20} className="text-[#ff4245]" />
                 </div>
                 <p className="text-[15px] font-semibold text-[#ff4245]">
                   {brief}
                 </p>
               </div>
-              <div className="space-y-3 rounded-[10px] bg-[var(--fill-card)] p-4">
+              <div className="space-y-3 rounded-content bg-[var(--fill-card)] p-4">
                 <ErrorDetailRow label={t("error.message")} value={detail} />
                 {errorType && (
                   <ErrorDetailRow label={t("error.type")} value={errorType} />

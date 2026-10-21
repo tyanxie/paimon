@@ -23,7 +23,8 @@ bun run scripts/prepare-npm-packages.ts     # 生成 npm 发布目录
 - DOM 测试通过 `bunfig.toml` preload 加载 happy-dom 环境；Motion 功能测试使用 `MotionConfig reducedMotion="always"`，检查操作、状态、焦点与资源释放。
 - 前端修改后执行 `bun run build && paimon hub restart`，Edge 按实际变更需要重启。
 - 页面观感、真实浏览器交互与性能由用户检查。除非用户明确要求，Agent 不主动启动或使用浏览器检查页面，也不将浏览器检查列为待办或补充验证事项。
-- 文档记录目标、架构、交互原则和重要决策，具体视觉参数与实现信息从源码获取。功能、使用方式或重要设计发生变化时更新相关文档。
+- 项目文档记录目标、架构、交互原则和重要决策，具体视觉参数与实现信息从源码获取。功能、使用方式或重要设计发生变化时，仅更新描述该项目行为的相关文档。
+- 外部设计指导、规范摘录、参考数据与第三方资料保持其记录对象和来源内容，例如 `docs/design/macos-26-tokens.md`。项目实现变化不得用于改写这些参考资料；仅在用户明确要求更新资料本身时修改。项目采用的设计与决策记录在项目设计文档中。
 
 ## 项目入口
 
@@ -66,7 +67,7 @@ bun run scripts/prepare-npm-packages.ts     # 生成 npm 发布目录
 
 - 采用 macOS 26 Liquid Glass 风格，颜色、材质、字体和控件的设计参考见 [macOS 26 Design Tokens](docs/design/macos-26-tokens.md)。保留亮暗主题及 `mist`、`aurora`、`ember` 颜色组。玻璃材质用于导航与控制区域，正文优先保证可读性。
 - 对话按用户消息组织回复，正文分隔连续工具执行区域；保留工具、thinking、系统事件与正文的原始顺序。展开状态与阅读位置保持用户选择。
-- 公共控件统一同类操作与状态，桌面保持紧凑，触摸设备提供充分操作范围；兼顾键盘、Safe Area 和 reduced motion。
+- 公共控件统一同类操作与状态，桌面保持紧凑，触摸设备提供充分操作范围；兼顾键盘、Safe Area 和 reduced motion。已有容器内的辅助按钮默认透明，交互时显示反馈；主要操作、选中状态与独立悬浮按钮按需保留背景。
 - Mermaid 使用严格安全配置与 DOMPurify 清理 SVG，保留源码局部样式。渲染串行执行，异步更新保留预览状态与阅读位置。
 - 体积较大的图表与交互依赖按需加载，构建配置位于 `vite.config.ts`。
 - 设计方向见 [Web 设计指导](docs/design/web-visual-redesign.md)，数据规则见 [对话数据与展示原则](docs/design/conversation-rendering.md)，图表方向见 [Mermaid 设计指导](docs/design/mermaid-theme.md)。

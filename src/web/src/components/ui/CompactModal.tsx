@@ -27,7 +27,10 @@ export function CompactModal({ onClose, onConfirm }: CompactModalProps) {
       size="form"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button
+            onClick={onClose}
+            className="active:bg-[var(--fill-tertiary)]"
+          >
             {t("common.cancel")}
           </Button>
           <Button variant="primary" onClick={handleConfirm}>

@@ -11,14 +11,14 @@
 
 /* highlight.js 不使用第三方主题，用 CSS 变量自定义配色，跟随主题切换 */
 
-/* macOS 26 Design Tokens */
+/* Paimon 主题 */
 @theme {
-  /* 圆角 */
-  --radius-window: 26px;
-  --radius-panel: 18px;
-  --radius-item: 8px;
-  --radius-control: 9px;
-  --radius-pill: 1000px;
+  /* 圆角按元素用途统一，圆形保留给发送、停止与状态标记。 */
+  --radius-inline: 4px;
+  --radius-control: 6px;
+  --radius-content: 8px;
+  --radius-surface: 12px;
+  --radius-panel: 16px;
 
   /* 模糊 */
   --blur-material: 30px;
@@ -469,7 +469,7 @@ button,
   background: var(--panel-bg);
   -webkit-backdrop-filter: blur(30px);
   backdrop-filter: blur(30px);
-  border-radius: 18px;
+  border-radius: var(--radius-panel);
   border: 0.5px solid var(--panel-border);
   box-shadow: var(--panel-shadow);
   transition:
@@ -481,7 +481,7 @@ button,
   background: var(--panel-bg);
   -webkit-backdrop-filter: blur(30px);
   backdrop-filter: blur(30px);
-  border-radius: 14px;
+  border-radius: var(--radius-surface);
   border: 0.5px solid var(--panel-border);
   box-shadow: var(--panel-shadow);
 }
@@ -497,7 +497,7 @@ button,
     justify-content: center;
     gap: 8px;
     padding: 0 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-control);
     color: var(--label-secondary);
     font-size: 13px;
     font-weight: 500;
@@ -530,7 +530,6 @@ button,
   .ui-button--primary {
     background: var(--color-accent);
     color: white;
-    border-radius: var(--radius-pill);
   }
   .ui-button--primary:hover:not(:disabled) {
     background: var(--color-accent);
@@ -540,7 +539,6 @@ button,
   .ui-button--secondary {
     background: var(--fill-secondary);
     color: var(--label-primary);
-    border-radius: var(--radius-pill);
   }
   .ui-button--secondary:hover:not(:disabled) {
     background: var(--fill-primary);
@@ -558,13 +556,11 @@ button,
     min-width: 32px;
     min-height: 32px;
     flex-shrink: 0;
-    border-radius: 50%;
   }
   .ui-button--compact {
     min-height: 28px;
     min-width: 28px;
     padding: 0 8px;
-    border-radius: 8px;
     font-size: 12px;
   }
   .ui-button--badge {
@@ -573,14 +569,13 @@ button,
     min-width: 24px;
     min-height: 24px;
     padding: 0;
-    border-radius: 50%;
     flex-shrink: 0;
   }
   .ui-button--inline {
     min-height: 24px;
     min-width: 0;
     padding: 0 4px;
-    border-radius: 6px;
+    border-radius: var(--radius-inline);
     font-size: inherit;
     font-weight: inherit;
     line-height: inherit;
@@ -614,7 +609,7 @@ button,
     min-height: 36px;
     padding: 6px 10px;
     border: 0.5px solid var(--separator);
-    border-radius: 10px;
+    border-radius: var(--radius-control);
     background: var(--fill-tertiary);
     color: var(--label-primary);
     font-size: 16px;
@@ -706,7 +701,7 @@ button,
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    border-radius: 9px;
+    border-radius: var(--radius-control);
     color: var(--label-primary);
     text-align: left;
     font-size: 13px;
@@ -744,7 +739,7 @@ button,
   display: flex;
   flex-direction: column;
   overscroll-behavior: contain;
-  border-radius: 18px;
+  border-radius: var(--radius-surface);
   transform-origin: center;
 }
 .ui-floating > div {
@@ -792,7 +787,7 @@ button,
     justify-content: center;
     gap: 10px;
     padding: 16px 12px;
-    border-radius: 18px;
+    border-radius: var(--radius-surface);
     color: var(--label-secondary);
     font-size: 14px;
     line-height: 22px;
@@ -821,7 +816,7 @@ button,
   min-width: 0;
   overflow: hidden;
   border: 0.5px solid var(--separator);
-  border-radius: 14px;
+  border-radius: var(--radius-content);
   background: var(--fill-card);
 }
 .content-toolbar {
@@ -839,7 +834,7 @@ button,
 }
 .tool-result {
   padding: 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-content);
   background: var(--fill-tertiary);
   color: var(--label-secondary);
 }
@@ -863,15 +858,15 @@ button,
 .ui-segmented {
   display: flex;
   gap: 2px;
-  padding: 3px;
-  border-radius: 12px;
+  padding: 2px;
+  border-radius: var(--radius-content);
   background: var(--fill-secondary);
 }
 .ui-segment {
   flex: 1;
   min-height: 28px;
   padding: 0 10px;
-  border-radius: 9px;
+  border-radius: var(--radius-control);
   color: var(--label-secondary);
   font-size: 13px;
   line-height: 20px;
@@ -930,7 +925,7 @@ button,
   max-width: min(520px, 100%);
   padding: 10px 14px;
   border: 0.5px solid var(--panel-border);
-  border-radius: 18px;
+  border-radius: var(--radius-surface);
   background: var(--material-modal);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
@@ -969,7 +964,7 @@ button,
 }
 
 .header-material {
-  border-radius: 18px;
+  border-radius: var(--radius-surface);
 }
 
 .navigation-item,
@@ -988,17 +983,17 @@ button,
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  border-radius: var(--radius-control);
 }
 
 .navigation-create {
-  background: var(--fill-tertiary);
   min-width: 32px;
   min-height: 32px;
 }
 
 .navigation-item:hover,
-.navigation-create:hover {
+.navigation-create:hover:not(:disabled),
+.navigation-create:active:not(:disabled) {
   color: var(--label-primary);
   background: var(--fill-secondary);
 }
@@ -1046,7 +1041,7 @@ button,
 
 .composer-surface {
   container: composer / inline-size;
-  border-radius: 24px;
+  border-radius: var(--radius-panel);
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease;
@@ -1059,7 +1054,7 @@ button,
   margin: 4px 16px 0;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   cursor: row-resize;
   touch-action: none;
   user-select: none;
@@ -1067,7 +1062,7 @@ button,
 .composer-resize-handle > span {
   width: 32px;
   height: 3px;
-  border-radius: 4px;
+  border-radius: var(--radius-inline);
   background: var(--fill-secondary);
 }
 .composer-resize-handle:hover,
@@ -1094,23 +1089,18 @@ button,
   min-width: 0;
   gap: 4px;
   padding: 3px 6px;
-  border-radius: 4px;
-  background: var(--fill-quaternary);
+  border-radius: var(--radius-inline);
+  background: transparent;
   white-space: nowrap;
   font-size: 11px;
   line-height: 16px;
 }
-.composer-control:hover:not(:disabled) {
+.composer-control:hover:not(:disabled),
+.composer-control:active:not(:disabled) {
   background: var(--fill-tertiary);
 }
 .composer-control:disabled {
   opacity: 0.5;
-}
-.composer-context {
-  background: transparent;
-}
-.composer-context:active:not(:disabled) {
-  background: var(--fill-tertiary);
 }
 .composer-control .composer-model-name {
   max-width: clamp(40px, 16cqw, 140px);
@@ -1233,7 +1223,7 @@ button,
 .modal-panel {
   width: min(640px, calc(100% - 32px));
   max-height: 80%;
-  border-radius: 26px;
+  border-radius: var(--radius-panel);
   background: var(--material-modal);
   -webkit-backdrop-filter: blur(30px);
   backdrop-filter: blur(30px);
@@ -1249,7 +1239,7 @@ button,
   width: 100%;
   height: calc(100% - max(12px, env(safe-area-inset-top)));
   max-height: calc(100% - max(12px, env(safe-area-inset-top)));
-  border-radius: 26px 26px 0 0;
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
 }
 
 .modal-content {
@@ -1271,6 +1261,10 @@ button,
   min-height: 24px;
   touch-action: none;
   cursor: grab;
+}
+
+.image-lightbox .ui-button {
+  border-radius: var(--radius-control);
 }
 
 .modal-close,
@@ -1335,7 +1329,7 @@ button,
 
 .scrollbar-auto::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-inline);
 }
 
 .scrollbar-auto:hover::-webkit-scrollbar-thumb {

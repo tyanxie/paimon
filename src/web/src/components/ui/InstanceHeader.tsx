@@ -114,7 +114,7 @@ function CopyableInfo({
       type="button"
       onClick={handleClick}
       title={title ?? copyText}
-      className="inline-flex min-h-[18px] min-w-0 items-center gap-1 rounded-[6px] px-1 -mx-1 transition-colors hover:bg-[var(--fill-tertiary)] active:bg-[var(--fill-secondary)] cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+      className="inline-flex min-h-[18px] min-w-0 items-center gap-1 px-1 -mx-1 transition-colors hover:bg-[var(--fill-tertiary)] active:bg-[var(--fill-secondary)] cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
     >
       <span className="shrink-0 opacity-70">
         {copied ? (

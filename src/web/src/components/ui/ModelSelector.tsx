@@ -55,7 +55,7 @@ export function ModelSelector({
           aria-expanded={canSelect ? open : undefined}
           aria-controls={open ? id : undefined}
           title={currentModel.name || currentModel.id}
-          className={`inline-flex max-w-full items-center gap-1.5 px-2 rounded-[9px] text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
+          className={`inline-flex max-w-full items-center gap-1.5 px-2 text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
             canSelect
               ? "hover:bg-[var(--fill-secondary)] hover:text-[var(--label-primary)] cursor-pointer"
               : "cursor-default"

@@ -97,7 +97,7 @@ export function ThinkingSelector({
           aria-haspopup={canSelect ? "dialog" : undefined}
           aria-expanded={canSelect ? open : undefined}
           aria-controls={open ? id : undefined}
-          className={`inline-flex items-center gap-1.5 px-2 rounded-[9px] text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${canSelect ? "hover:bg-[var(--fill-secondary)] cursor-pointer" : "cursor-default"} text-[var(--label-secondary)] ${className}`}
+          className={`inline-flex items-center gap-1.5 px-2 text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${canSelect ? "hover:bg-[var(--fill-secondary)] cursor-pointer" : "cursor-default"} text-[var(--label-secondary)] ${className}`}
         >
           {showLabel && (
             <>

@@ -253,7 +253,7 @@ function PathAutocomplete({
       {showSuggestions && (
         <div
           ref={listRef}
-          className="max-h-[200px] overflow-y-auto rounded-[14px] border border-[var(--separator)] bg-[var(--fill-quaternary)] p-1.5 scrollbar-auto"
+          className="max-h-[200px] overflow-y-auto rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] p-1.5 scrollbar-auto"
         >
           {suggestions.map((entry, i) => (
             <MenuItem
@@ -387,7 +387,11 @@ export function NewInstanceModal({
       size="form"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>
+          <Button
+            onClick={onClose}
+            disabled={submitting}
+            className="active:bg-[var(--fill-tertiary)]"
+          >
             {t("common.cancel")}
           </Button>
           <Button
