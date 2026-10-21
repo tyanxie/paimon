@@ -57,14 +57,11 @@ export function useToolStatusLabel(status: ToolStatus, count?: number) {
 export function ToolStatusIndicator({
   status,
   count,
-  description,
 }: {
   status: ToolStatus;
   count?: number;
-  description?: string;
 }) {
-  const statusLabel = useToolStatusLabel(status, count);
-  const label = description ?? statusLabel;
+  const label = useToolStatusLabel(status, count);
   const Icon = icons[status];
   const processing = status === "pending" || status === "running";
   return (

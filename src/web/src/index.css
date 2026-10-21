@@ -1126,7 +1126,17 @@ button,
   min-height: 28px;
 }
 
-.conversation-reply-toggle,
+.conversation-tool-name {
+  flex-shrink: 0;
+  padding: 2px 4px;
+  border-radius: var(--radius-inline);
+  background: var(--fill-tertiary);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
 .conversation-execution-toggle,
 .conversation-tool-row,
 .conversation-thinking-toggle {
@@ -1136,7 +1146,6 @@ button,
 @media (pointer: coarse) {
   .navigation-item,
   .navigation-create,
-  .conversation-reply-toggle,
   .conversation-execution-toggle,
   .conversation-tool-row,
   .conversation-thinking-toggle {
@@ -1144,12 +1153,6 @@ button,
   }
   .instance-item-text {
     padding-right: 48px;
-  }
-  .conversation-part {
-    min-height: 44px;
-  }
-  .conversation-time {
-    margin-inline: 10px;
   }
   .navigation-item,
   .navigation-create {
@@ -1161,7 +1164,7 @@ button,
   display: none;
 }
 
-@container composer (max-width: 400px) {
+@container composer (max-width: 640px) {
   .composer-toolbar {
     flex-wrap: wrap;
   }
@@ -1169,7 +1172,11 @@ button,
     flex-basis: 100%;
   }
   .composer-actions {
-    margin-left: auto;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .composer-agent-status {
+    margin-right: auto;
   }
 }
 

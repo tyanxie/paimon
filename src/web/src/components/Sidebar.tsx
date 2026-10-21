@@ -15,6 +15,10 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import type { InstanceInfo, InstanceId } from "../../../protocol/types";
+import {
+  getInstanceStatusDotClass,
+  getInstanceStatusKey,
+} from "../utils/status";
 import { useLogoSrc } from "../hooks/useLogoSrc";
 import { ConnectionIndicator } from "./ui/ConnectionIndicator";
 import {
@@ -234,12 +238,7 @@ export function Sidebar({
                     const name =
                       instance.cwd.split("/").filter(Boolean).pop() ||
                       instance.cwd;
-                    const statusKey =
-                      instance.status === "streaming"
-                        ? "sidebar.statusStreaming"
-                        : instance.status === "compacting"
-                          ? "sidebar.statusCompacting"
-                          : "sidebar.statusIdle";
+                    const statusKey = getInstanceStatusKey(instance.status);
                     const percent = instance.contextUsage?.percent;
                     return (
                       <li
@@ -274,7 +273,7 @@ export function Sidebar({
                         >
                           <div className="instance-item-text flex min-w-0 items-center gap-2.5">
                             <span
-                              className={`h-2 w-2 shrink-0 rounded-full ${instance.status === "streaming" ? "bg-[var(--color-accent)] animate-pulse motion-reduce:animate-none" : instance.status === "compacting" ? "bg-[var(--toast-icon-warning)] animate-pulse motion-reduce:animate-none" : "bg-[var(--toast-icon-success)]"}`}
+                              className={`h-2 w-2 shrink-0 rounded-full ${getInstanceStatusDotClass(instance.status)}`}
                               title={t(statusKey)}
                             />
                             <span className="truncate text-[14px] font-medium leading-[20px] text-[var(--label-primary)]">

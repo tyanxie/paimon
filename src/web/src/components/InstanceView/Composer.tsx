@@ -16,7 +16,11 @@ import type {
   ThinkingLevel,
 } from "../../../../protocol/types";
 import type { InputDraft, InputDraftUpdater } from "../../stores/useDrafts";
-import { isBusy } from "../../utils/status";
+import {
+  getInstanceStatusDotClass,
+  getInstanceStatusKey,
+  isBusy,
+} from "../../utils/status";
 import { processImageFile, getImagesFromClipboard } from "../../utils/image";
 import { showToast } from "../ui/Toast";
 import { ModelSelector } from "../ui/ModelSelector";
@@ -338,7 +342,17 @@ export function Composer({
               <span>{t("composer.compact")}</span>
             </Button>
           </div>
-          <div className="composer-actions flex shrink-0 items-center gap-1.5">
+          <div className="composer-actions flex shrink-0 items-center gap-2">
+            <span
+              role="status"
+              className="composer-agent-status inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] text-[var(--label-secondary)]"
+            >
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 shrink-0 rounded-full ${getInstanceStatusDotClass(instanceStatus)}`}
+              />
+              {t(getInstanceStatusKey(instanceStatus))}
+            </span>
             {contextUsage && <ContextIndicator contextUsage={contextUsage} />}
             {buttonMode === "stop" ? (
               <Button

@@ -154,6 +154,44 @@ async function key(options: KeyboardEventInit) {
 }
 
 describe("输入工具栏交互", () => {
+  test("实例状态持续可见，活动状态与侧栏采用相同名称和颜色", async () => {
+    for (const status of ["streaming", "compacting"] as const) {
+      await render({ instance: { ...instance, status } });
+      const actions = container.querySelector(".composer-actions")!;
+      expect(actions.querySelector('[role="status"]')!.textContent).toContain(
+        status === "compacting" ? "压缩中" : "执行中",
+      );
+      expect(actions.querySelector(".animate-pulse")).not.toBeNull();
+      expect(actions.querySelector(".animate-spin")).toBeNull();
+      expect(
+        actions.querySelector(".composer-agent-status > span")!.className,
+      ).toContain(
+        status === "compacting" ? "toast-icon-warning" : "color-accent",
+      );
+      expect(button("停止", actions)).toBeDefined();
+      expect(
+        container.querySelector(".composer-actions .composer-context"),
+      ).not.toBeNull();
+    }
+    await render();
+    expect(container.querySelector(".composer-agent-status")!.textContent).toBe(
+      "空闲",
+    );
+    expect(
+      container.querySelector(".composer-agent-status > span")!.className,
+    ).toContain("toast-icon-success");
+    expect(
+      container.querySelector(".composer-agent-status .animate-pulse"),
+    ).toBeNull();
+    await render({ instance: undefined });
+    expect(container.querySelector(".composer-agent-status")!.textContent).toBe(
+      "状态等待更新",
+    );
+    expect(
+      container.querySelector(".composer-agent-status .animate-pulse"),
+    ).toBeNull();
+  });
+
   test("输入更新草稿，发送读取最新内容并开始底部跟随", async () => {
     await render();
     await change(container.querySelector("textarea")!, " next message ");

@@ -105,12 +105,13 @@ function buildConversationItems(
   let userEntryKey: string | undefined;
   let reply: ConversationReply | undefined;
   let execution: ConversationExecution | undefined;
+  let replyBoundary: string | undefined;
 
   function ensureReply(entry: SessionEntry): ConversationReply {
     if (!reply) {
       reply = {
         type: "reply",
-        key: `reply:${userEntryKey ?? getSessionEntryRenderKey(entry)}`,
+        key: `reply:${replyBoundary ?? userEntryKey ?? getSessionEntryRenderKey(entry)}`,
         userEntryKey,
         entries: [],
         parts: [],
@@ -147,12 +148,9 @@ function buildConversationItems(
         key: getSessionEntryRenderKey(entry),
         entry,
       };
-      if (reply) {
-        reply.entries.push(entry);
-        reply.parts.push(event);
-      } else {
-        items.push(event);
-      }
+      items.push(event);
+      replyBoundary = event.key;
+      reply = undefined;
       execution = undefined;
       continue;
     }
@@ -162,6 +160,7 @@ function buildConversationItems(
       userEntryKey = getSessionEntryRenderKey(entry);
       items.push({ type: "user", key: userEntryKey, entry });
       reply = undefined;
+      replyBoundary = undefined;
       execution = undefined;
       continue;
     }

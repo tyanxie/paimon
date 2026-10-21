@@ -158,7 +158,7 @@ describe("回复分组", () => {
     await display([system, message("a1", "assistant", [text("continued")])]);
     expect(items.map((item) => item.type)).toEqual(["system", "reply"]);
     expect(items[0]?.type === "system" && items[0].entry).toBe(system);
-    expect(replies()[0]!.key).toBe("reply:a1");
+    expect(replies()[0]!.key).toBe("reply:s1");
     expect(replies()[0]!.userEntryKey).toBeUndefined();
   });
 
@@ -233,13 +233,23 @@ describe("连续执行区域", () => {
         result("one"),
         message("a2", "assistant", [call("two")]),
       ]);
-      const parts = replies()[0]!.parts;
-      expect(parts.map((part) => part.type)).toEqual([
-        "execution",
+      expect(items.map((item) => item.type)).toEqual([
+        "reply",
         "system",
+        "reply",
+      ]);
+      expect(replies().map((reply) => reply.key)).toEqual([
+        "reply:a1",
+        "reply:s1",
+      ]);
+      expect(items[1]?.type === "system" && items[1].entry).toBe(system);
+      expect(replies()[0]!.parts.map((part) => part.type)).toEqual([
         "execution",
       ]);
-      expect(parts[1]?.type === "system" && parts[1].entry).toBe(system);
+      expect(replies()[1]!.parts.map((part) => part.type)).toEqual([
+        "execution",
+      ]);
+      expect(replies()[0]!.entries).not.toContain(system);
       expect(tools()[0]!.state.status).toBe("completed");
     }
   });

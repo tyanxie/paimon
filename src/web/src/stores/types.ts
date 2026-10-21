@@ -102,7 +102,6 @@ interface ConversationSystemEvent {
 
 type ConversationPart =
   | ConversationExecution
-  | ConversationSystemEvent
   | {
       type: "text";
       key: string;

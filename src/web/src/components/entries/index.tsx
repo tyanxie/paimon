@@ -34,11 +34,10 @@ export function UserBubble({
 
   return (
     <>
-      <div className="group flex flex-col items-end gap-1 px-1 py-1 md:px-2">
-        <div className="flex items-center gap-1 text-[11px] font-medium text-[var(--label-secondary)] select-none">
-          {t("conversation.you")}
-          <MessageTime timestamps={[timestamp]} />
-        </div>
+      <div
+        className="flex flex-col items-end gap-1 px-1 py-1 md:px-2"
+        aria-label={t("conversation.you")}
+      >
         <div className="max-w-[90%] rounded-surface bg-[var(--color-accent)] text-white md:max-w-[80%]">
           {images.length > 0 && (
             <div className="flex flex-wrap gap-1.5 p-2 pb-0">
@@ -73,6 +72,7 @@ export function UserBubble({
           )}
           {!text && images.length > 0 && <div className="h-2" />}
         </div>
+        <MessageTime timestamps={[timestamp]} />
       </div>
       <AnimatePresence>
         {lightboxSrc && (
@@ -105,7 +105,7 @@ export function MetaEntry({
   const Icon = type === "compaction" ? Layers : GitBranch;
   return (
     <>
-      <div className="group conversation-system flex items-start gap-2 rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] px-3 py-2">
+      <div className="conversation-system flex flex-wrap items-start gap-2 border-y border-[var(--separator)] px-3 py-2">
         <button
           type="button"
           disabled={!summary}

@@ -1,7 +1,7 @@
 import { Button } from "../ui/Button";
-import { useId, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
-import { Brain, ChevronRight, Loader2, Sparkles } from "lucide-react";
+import { Brain, ChevronRight, Layers, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { InstanceStatus } from "../../../../protocol/types";
 import {
@@ -38,13 +38,15 @@ export function ConversationList({
   onReEdit?: () => void;
   onBeforeToggle?: BeforeToggle;
 }) {
-  const busy = status === "streaming" || status === "compacting" || isStreaming;
+  const { t } = useTranslation();
+  const busy =
+    status !== "compacting" && (status === "streaming" || isStreaming);
   const last = items.at(-1);
   const pending: ConversationReply | null =
     busy && last?.type !== "reply"
       ? {
           type: "reply",
-          key: `reply:${last?.type === "user" ? last.key : "pending"}`,
+          key: `reply:${last?.key ?? "pending"}`,
           userEntryKey: last?.type === "user" ? last.key : undefined,
           entries: [],
           parts: [],
@@ -86,14 +88,28 @@ export function ConversationList({
                 reply={item}
                 entries={entries}
                 active={busy && item.key === latestReplyKey}
-                compacting={
-                  status === "compacting" && item.key === latestReplyKey
-                }
+                settled={status === "idle" && !isStreaming}
                 onReEdit={item.key === latestReplyKey ? onReEdit : undefined}
                 onBeforeToggle={onBeforeToggle}
               />
             );
           })}
+          {status === "compacting" && (
+            <div
+              className="conversation-system flex items-center gap-2 border-y border-[var(--separator)] px-3 py-3 text-[12px] text-[var(--label-secondary)]"
+              data-system-state="compacting"
+            >
+              <Layers size={14} aria-hidden="true" />
+              <span role="status" className="inline-flex items-center gap-2">
+                <Loader2
+                  size={14}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+                {t("conversation.compactingContext")}
+              </span>
+            </div>
+          )}
         </div>
       </MotionConfig>
     </LazyMotion>
@@ -104,175 +120,74 @@ function ReplyCard({
   reply,
   entries,
   active,
-  compacting,
+  settled,
   onReEdit,
   onBeforeToggle,
 }: {
   reply: ConversationReply;
   entries: SessionEntry[];
   active: boolean;
-  compacting: boolean;
+  settled: boolean;
   onReEdit?: () => void;
   onBeforeToggle?: BeforeToggle;
 }) {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(true);
-  const contentId = useId();
-  const groups = reply.parts.filter(
-    (part): part is ConversationExecution => part.type === "execution",
-  );
-  const counts: ToolCounts = {
-    pending: 0,
-    running: 0,
-    completed: 0,
-    error: 0,
-    aborted: 0,
-    unknown: 0,
-  };
-  for (const group of groups) {
-    for (const key of Object.keys(counts) as (keyof ToolCounts)[])
-      counts[key] += group.counts[key];
-  }
-  const hasTools = Object.values(counts).some(Boolean);
-  const thinkingCount = groups.reduce(
-    (count, group) =>
-      count + group.items.filter((item) => item.type === "thinking").length,
-    0,
-  );
-  const thinkingStreaming = groups.some((group) =>
-    group.items.some(
-      (item) => item.type === "thinking" && item.source.streaming,
-    ),
-  );
-  const activeGroup = groups.some(
-    (group) =>
-      group.counts.pending > 0 ||
-      group.counts.running > 0 ||
-      group.items.some(
-        (item) => item.type === "thinking" && item.source.streaming,
-      ),
-  );
-  const error = reply.parts
-    .slice()
-    .reverse()
-    .find((part) => part.type === "error");
   const lastMessage = reply.entries
     .slice()
     .reverse()
     .find((entry) => entry.message?.role === "assistant")?.message;
   const stopped = lastMessage?.stopReason === "aborted";
   const failed = lastMessage?.stopReason === "error";
-  const preview = reply.parts.find((part) => part.type === "text");
 
   return (
-    <article
-      className="conversation-reply rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] shadow-[0_2px_12px_rgba(0,0,0,0.035)]"
-      data-reply-key={reply.key}
-    >
-      <div
-        data-entry-key={reply.key}
-        className="group flex items-center gap-1 px-3 py-1.5 md:px-4"
+    <div className="conversation-reply-group space-y-1">
+      <article
+        className="conversation-reply rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] shadow-[0_2px_12px_rgba(0,0,0,0.035)]"
+        data-reply-key={reply.key}
       >
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls={contentId}
-          aria-describedby={`${contentId}-summary`}
-          aria-label={t(
-            expanded
-              ? "conversation.collapseReply"
-              : "conversation.expandReply",
-          )}
-          onClick={(event) => {
-            onBeforeToggle?.(event.currentTarget);
-            setExpanded(!expanded);
-          }}
-          className="conversation-reply-toggle flex min-w-0 flex-1 items-center gap-2 rounded-control text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+        <div
+          data-entry-key={reply.key}
+          className="flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 md:px-4"
         >
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control bg-[var(--fill-card)] text-[var(--label-secondary)]">
             <Sparkles size={15} aria-hidden="true" />
           </span>
-          <span className="shrink-0 text-[14px] font-semibold text-[var(--label-primary)]">
+          <span className="text-[14px] font-semibold text-[var(--label-primary)]">
             {t("conversation.agentName")}
           </span>
-          <span
-            id={`${contentId}-summary`}
-            className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--label-secondary)]"
-          >
-            {compacting ? (
-              <RunningStatus compacting />
-            ) : active && (!expanded || !activeGroup) ? (
-              <RunningStatus />
-            ) : null}
-            {!active && (failed || stopped) && (
-              <span>
-                {t(failed ? "conversation.replyFailed" : "entries.aborted")}
-              </span>
+          {!active && (failed || stopped) && (
+            <span className="text-[11px] text-[var(--label-secondary)]">
+              {t(failed ? "conversation.replyFailed" : "entries.aborted")}
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            {onReEdit && (
+              <Button
+                size="compact"
+                type="button"
+                onClick={onReEdit}
+                className="shrink-0 px-2 py-1.5 text-[12px] text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+              >
+                {t("reEdit.button")}
+              </Button>
             )}
-            {!expanded && hasTools && <ExecutionCounts counts={counts} />}
-            {!expanded && thinkingCount > 0 && (
-              <ThinkingIndicator
-                count={thinkingCount}
-                streaming={thinkingStreaming}
-              />
-            )}
-            {!expanded && !hasTools && !error && preview?.type === "text" && (
-              <span className="truncate">
-                {preview.content.replace(/\s+/g, " ").slice(0, 72)}
-              </span>
-            )}
-          </span>
-          <ChevronRight
-            size={15}
-            aria-hidden="true"
-            className={`shrink-0 text-[var(--label-secondary)] transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`}
-          />
-        </button>
-        {onReEdit && (
-          <Button
-            size="compact"
-            type="button"
-            onClick={onReEdit}
-            className="shrink-0 px-2 py-1.5 text-[12px] text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
-          >
-            {t("reEdit.button")}
-          </Button>
-        )}
-        <MessageTime
-          timestamps={reply.entries.map((entry) => entry.timestamp)}
-        />
-      </div>
-      <Collapsible id={contentId} expanded={expanded}>
-        <div className="space-y-2 px-4 pb-3 md:px-5 md:pb-4">
-          {reply.parts.map((part) => {
-            const anchor = expanded ? part.key : undefined;
-            if (part.type === "execution")
-              return (
-                <div key={part.key} data-entry-key={anchor}>
+          </div>
+        </div>
+        {reply.parts.length > 0 && (
+          <div className="space-y-2 px-4 pb-3 md:px-5 md:pb-4">
+            {reply.parts.map((part) => (
+              <div
+                key={part.key}
+                data-entry-key={part.key}
+                className="conversation-part min-w-0"
+              >
+                {part.type === "execution" ? (
                   <ExecutionSummary
                     execution={part}
                     entries={entries}
                     onBeforeToggle={onBeforeToggle}
                   />
-                </div>
-              );
-            if (part.type === "system")
-              return (
-                <div key={part.key} data-entry-key={anchor}>
-                  <MetaEntry
-                    type={part.entry.type}
-                    summary={part.entry.summary ?? ""}
-                    timestamp={part.entry.timestamp}
-                  />
-                </div>
-              );
-            return (
-              <div
-                key={part.key}
-                data-entry-key={anchor}
-                className="conversation-part group grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-1"
-              >
-                {part.type === "text" ? (
+                ) : part.type === "text" ? (
                   <MarkdownRenderer
                     content={part.content}
                     streaming={part.source.streaming}
@@ -280,13 +195,19 @@ function ReplyCard({
                 ) : (
                   <ErrorCard message={part.content} />
                 )}
-                <MessageTime timestamps={[part.source.entry.timestamp]} />
               </div>
-            );
-          })}
-        </div>
-      </Collapsible>
-    </article>
+            ))}
+          </div>
+        )}
+      </article>
+      <div className="conversation-reply-time px-1 md:px-2">
+        <MessageTime
+          timestamps={reply.entries.map((entry) => entry.timestamp)}
+          showRange
+          showDuration={settled}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -305,6 +226,16 @@ function ExecutionSummary({
   const contentId = useId();
   const thinking = execution.items.filter((item) => item.type === "thinking");
   const thinkingStreaming = thinking.some((item) => item.source.streaming);
+  const toolNames = useMemo(
+    () => [
+      ...new Set(
+        execution.items.flatMap((item) =>
+          item.type === "tool" ? [item.name] : [],
+        ),
+      ),
+    ],
+    [execution.items],
+  );
 
   return (
     <section
@@ -328,23 +259,26 @@ function ExecutionSummary({
         }}
         className="conversation-execution-toggle flex w-full items-center gap-2 rounded-surface px-3 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
-        <span
-          id={`${contentId}-summary`}
-          className="flex min-w-0 flex-1 flex-wrap gap-x-3 gap-y-1 text-[12px] text-[var(--label-secondary)]"
-        >
-          <ExecutionCounts counts={execution.counts} />
-          {thinking.length > 0 && (
-            <ThinkingIndicator
-              count={thinking.length}
-              streaming={thinkingStreaming}
-            />
-          )}
-        </span>
         <ChevronRight
           size={14}
           aria-hidden="true"
           className={`shrink-0 text-[var(--label-secondary)] transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`}
         />
+        <span
+          id={`${contentId}-summary`}
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--label-secondary)]"
+        >
+          <span className="conversation-execution-counts inline-flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <ExecutionCounts counts={execution.counts} />
+            {thinking.length > 0 && (
+              <ThinkingIndicator
+                count={thinking.length}
+                streaming={thinkingStreaming}
+              />
+            )}
+          </span>
+          {toolNames.length > 0 && <ToolNames names={toolNames} />}
+        </span>
       </button>
       <Collapsible id={contentId} expanded={expanded}>
         {visited && (
@@ -381,19 +315,110 @@ function ExecutionSummary({
   );
 }
 
-function ExecutionCounts({ counts }: { counts: ToolCounts }) {
+function ToolNames({ names }: { names: string[] }) {
   const { t } = useTranslation();
-  const processing = counts.pending + counts.running;
-  const statuses = ["completed", "error", "aborted", "unknown"] as const;
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const measurementRef = useRef<HTMLSpanElement>(null);
+  const [visibleCount, setVisibleCount] = useState(names.length);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const measurement = measurementRef.current;
+    if (!container || !measurement) return;
+    let active = true;
+    const measure = () => {
+      if (!active) return;
+      const available = container.getBoundingClientRect().width;
+      if (available <= 0) return;
+      const nameWidths = Array.from(
+        measurement.querySelectorAll<HTMLElement>("[data-measure-name]"),
+      ).map((element) => element.getBoundingClientRect().width);
+      const overflowWidths = Array.from(
+        measurement.querySelectorAll<HTMLElement>("[data-measure-overflow]"),
+      ).map((element) => element.getBoundingClientRect().width);
+      const gap = parseFloat(getComputedStyle(container).columnGap) || 0;
+      let used = 0;
+      let count = 0;
+      for (const [index, width] of nameWidths.entries()) {
+        used += width + (index > 0 ? gap : 0);
+        const remaining = names.length - index - 1;
+        const required =
+          used +
+          (remaining > 0 ? gap + (overflowWidths[remaining - 1] ?? 0) : 0);
+        if (required <= available) count = index + 1;
+      }
+      setVisibleCount(count);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    observer.observe(measurement);
+    document.fonts?.ready.then(measure);
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
+  }, [names]);
+
+  const count = Math.min(visibleCount, names.length);
+  const remaining = names.length - count;
+  return (
+    <span
+      ref={containerRef}
+      className="conversation-tool-names relative flex min-w-0 flex-1 items-center gap-1 overflow-hidden"
+    >
+      {names.slice(0, count).map((name) => (
+        <span
+          key={name}
+          data-tool-name={name}
+          className="conversation-tool-name"
+        >
+          {name}
+        </span>
+      ))}
+      {remaining > 0 && (
+        <span
+          className="conversation-tool-overflow shrink-0 text-[11px] tabular-nums"
+          aria-label={t("conversation.moreToolTypes", { count: remaining })}
+        >
+          +{remaining}
+        </span>
+      )}
+      <span
+        ref={measurementRef}
+        aria-hidden="true"
+        className="conversation-tool-measure pointer-events-none invisible absolute left-0 top-0 flex w-max items-center gap-1"
+      >
+        {names.map((name) => (
+          <span key={name} data-measure-name className="conversation-tool-name">
+            {name}
+          </span>
+        ))}
+        {names.map((_, index) => (
+          <span
+            key={index}
+            data-measure-overflow
+            className="shrink-0 text-[11px] tabular-nums"
+          >
+            +{index + 1}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function ExecutionCounts({ counts }: { counts: ToolCounts }) {
+  const statuses = [
+    "pending",
+    "running",
+    "completed",
+    "error",
+    "aborted",
+    "unknown",
+  ] as const;
   return (
     <>
-      {processing > 0 && (
-        <ToolStatusIndicator
-          status="running"
-          count={processing}
-          description={t("conversation.toolsProcessing", { count: processing })}
-        />
-      )}
       {statuses.map((status) =>
         counts[status] > 0 ? (
           <ToolStatusIndicator
@@ -438,26 +463,6 @@ function ThinkingIndicator({
         }
       />
       <span aria-hidden="true">{count}</span>
-    </span>
-  );
-}
-
-function RunningStatus({ compacting = false }: { compacting?: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <span
-      role="status"
-      className="inline-flex items-center gap-1.5 whitespace-nowrap"
-    >
-      <span
-        className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)] animate-pulse motion-reduce:animate-none"
-        aria-hidden="true"
-      />
-      {t(
-        compacting
-          ? "eventStream.statusCompacting"
-          : "eventStream.statusRunning",
-      )}
     </span>
   );
 }

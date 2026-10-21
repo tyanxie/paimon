@@ -30,15 +30,15 @@ export function ThinkingBlock({
         }}
         className="conversation-thinking-toggle flex w-full items-center gap-2 rounded-content px-3 text-left text-[12px] text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
+        <ChevronRight
+          size={14}
+          aria-hidden="true"
+          className={`shrink-0 transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`}
+        />
         <Brain size={14} aria-hidden="true" />
         <span className="flex-1">
           {streaming ? t("entries.thinkingStreaming") : t("entries.thinking")}
         </span>
-        <ChevronRight
-          size={13}
-          aria-hidden="true"
-          className={`transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`}
-        />
       </button>
       <Collapsible id={contentId} expanded={expanded}>
         {visited && (
