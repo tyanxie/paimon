@@ -1079,24 +1079,26 @@ button,
   outline-offset: 2px;
 }
 .composer-editor {
+  --composer-default-lines: 2;
   min-height: 0;
   padding: 6px 16px;
 }
 @media (min-width: 768px) {
   .composer-editor {
+    --composer-default-lines: 3;
     padding-inline: 20px;
   }
 }
 .composer-control {
   max-width: 100%;
   min-width: 0;
-  gap: 6px;
-  padding: 0 8px;
-  border-radius: 8px;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 4px;
   background: var(--fill-quaternary);
   white-space: nowrap;
-  font-size: 12px;
-  line-height: 20px;
+  font-size: 11px;
+  line-height: 16px;
 }
 .composer-control:hover:not(:disabled) {
   background: var(--fill-tertiary);
@@ -1104,21 +1106,34 @@ button,
 .composer-control:disabled {
   opacity: 0.5;
 }
+.composer-context {
+  background: transparent;
+}
+.composer-context:active:not(:disabled) {
+  background: var(--fill-tertiary);
+}
 .composer-control .composer-model-name {
   max-width: clamp(40px, 16cqw, 140px);
 }
+.composer-control svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
 .composer-toolbar button {
-  height: 32px;
-  min-height: 32px;
+  min-width: 0;
 }
 
-.composer-controls button {
-  height: 26px;
-  min-height: 26px;
+.composer-toolbar .ui-button--compact {
+  height: 22px;
+  min-height: 22px;
 }
 
-.composer-toolbar button:not([aria-haspopup]) {
-  min-width: 32px;
+.composer-toolbar .ui-button--icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
 }
 
 .conversation-reply-toggle,
@@ -1131,8 +1146,6 @@ button,
 @media (pointer: coarse) {
   .navigation-item,
   .navigation-create,
-  .composer-toolbar button,
-  .composer-controls button,
   .conversation-reply-toggle,
   .conversation-execution-toggle,
   .conversation-tool-row,
@@ -1148,25 +1161,8 @@ button,
   .conversation-time {
     margin-inline: 10px;
   }
-  .composer-toolbar button,
-  .composer-controls button {
-    height: 44px;
-  }
-  .composer-resize-handle {
-    height: 32px;
-  }
-  .composer-resize-handle::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 72px;
-    height: 44px;
-    transform: translate(-50%, -50%);
-  }
   .navigation-item,
-  .navigation-create,
-  .composer-toolbar button:not([aria-haspopup]) {
+  .navigation-create {
     min-width: 44px;
   }
 }

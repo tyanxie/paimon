@@ -16,10 +16,10 @@ export function useComposerHeight(
   const [limits, setLimits] = useState<HeightLimits>({
     minimum: 36,
     maximum: 320,
-    defaultHeight: 36,
+    defaultHeight: 60,
   });
   const [manualHeight, setManualHeight] = useState<number | null>(null);
-  const [height, setHeight] = useState(36);
+  const [height, setHeight] = useState(60);
   const [dragging, setDragging] = useState(false);
   const heightRef = useRef(height);
   const limitsRef = useRef(limits);
@@ -58,7 +58,17 @@ export function useComposerHeight(
           Math.min(320, viewportHeight * 0.45, viewportHeight - overhead - 80),
         ),
       );
-      const defaultHeight = 36;
+      const style = textarea ? getComputedStyle(textarea) : null;
+      const lineHeight = Number.parseFloat(style?.lineHeight ?? "") || 24;
+      const paddingTop = Number.parseFloat(style?.paddingTop ?? "") || 6;
+      const paddingBottom = Number.parseFloat(style?.paddingBottom ?? "") || 6;
+      const defaultLines =
+        Number.parseFloat(
+          style?.getPropertyValue("--composer-default-lines") ?? "",
+        ) || 2;
+      const defaultHeight = Math.ceil(
+        lineHeight * defaultLines + paddingTop + paddingBottom,
+      );
       setLimits((previous) =>
         previous.maximum === maximum && previous.defaultHeight === defaultHeight
           ? previous

@@ -124,6 +124,19 @@ async function text(value: string) {
 }
 
 describe("输入区高度调节", () => {
+  test("可见视口不足时限制自动高度，恢复后还原默认高度", async () => {
+    await render();
+    const initial = Number.parseFloat(editor().style.height);
+    viewportHeight = 100;
+    await act(async () => window.dispatchEvent(new Event("resize")));
+    const maximum = Number(handle().getAttribute("aria-valuemax"));
+    expect(maximum).toBeLessThan(initial);
+    expect(Number.parseFloat(editor().style.height)).toBe(maximum);
+    viewportHeight = 800;
+    await act(async () => window.dispatchEvent(new Event("resize")));
+    expect(Number.parseFloat(editor().style.height)).toBe(initial);
+  });
+
   test("自动高度随内容增长，达到上限后内部滚动", async () => {
     await render();
     const initial = Number.parseFloat(editor().style.height);

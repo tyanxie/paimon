@@ -270,7 +270,7 @@ export function Composer({
         <textarea
           id={textareaId}
           ref={textareaRef}
-          rows={1}
+          rows={2}
           aria-label={t("eventStream.sendPlaceholder")}
           placeholder={t("eventStream.sendPlaceholder")}
           value={draft.text}
@@ -421,7 +421,7 @@ function ContextIndicator({
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? id : undefined}
-          className="flex shrink-0 items-center gap-1.5 rounded-[10px] px-2 text-[11px] tabular-nums hover:bg-[var(--fill-tertiary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+          className="composer-control composer-context shrink-0 tabular-nums focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
           style={{ color }}
         >
           <Gauge size={14} aria-hidden="true" />
