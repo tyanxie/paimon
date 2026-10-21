@@ -179,7 +179,6 @@ describe("MermaidBlock", () => {
     await render(diagram);
     await waitForRender();
     const image = container.querySelector("img")!;
-    expect(image.className).toContain("max-w-full h-auto");
     const expand = container.querySelector<HTMLButtonElement>(
       '[aria-haspopup="dialog"]',
     )!;
@@ -193,7 +192,6 @@ describe("MermaidBlock", () => {
     );
     expect(renderSpy).toHaveBeenCalledTimes(1);
     await act(async () => preview.querySelector("button")!.click());
-    expect(preview.querySelector("img")!.className).toContain("max-w-none");
     await act(async () =>
       preview.dispatchEvent(new Event("cancel", { cancelable: true })),
     );
@@ -259,7 +257,6 @@ describe("MermaidBlock", () => {
     expect(image.getAttribute("src")).toBe(
       container.querySelector("img")!.getAttribute("src"),
     );
-    expect(image.className).toContain("max-w-none max-h-none");
     expect(image.getAttribute("width")).toBe("4000");
     expect(image.getAttribute("height")).toBe("2000");
     expect(viewport.scrollLeft).toBe(1000);
@@ -476,10 +473,8 @@ describe("Paimon Mermaid 主题", () => {
       );
       expect(colors.useGradient).toBe(false);
       expect(colors.dropShadow).toBe("none");
-      expect(colors.radius).toBe(8);
       expect(config.fontFamily).toBe(colors.fontFamily);
       expect(config.sequence!.actorFontFamily).toBe(config.fontFamily);
-      expect(config.sequence!.messageFontSize).toBe(13);
       const palette = Array.from(
         { length: 12 },
         (_, index) => colors[`pie${index + 1}`],

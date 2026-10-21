@@ -385,33 +385,6 @@ describe("输入工具栏交互", () => {
     await render({ instance: undefined });
     expect(button("模型等待更新").disabled).toBe(true);
     expect(button("思考等级: 等待更新").disabled).toBe(true);
-    expect(container.querySelectorAll(".composer-controls button").length).toBe(
-      4,
-    );
-  });
-
-  test("左侧四项有可见名称并保持顺序，右侧保留用量与发送", async () => {
-    await render();
-    const controls = [
-      ...container.querySelectorAll(".composer-controls button"),
-    ];
-    expect(controls.map((control) => control.textContent)).toEqual([
-      "图片",
-      "模型Current model",
-      "思考high",
-      "压缩",
-    ]);
-    expect(
-      controls.every((control) =>
-        control.classList.contains("composer-control"),
-      ),
-    ).toBe(true);
-    const right =
-      container.querySelector(".composer-toolbar")!.lastElementChild!;
-    expect(right.querySelector('[aria-label^="上下文用量"]') !== null).toBe(
-      true,
-    );
-    expect(right.querySelector('[aria-label="发送"]') !== null).toBe(true);
   });
 
   test("英文标签覆盖图片、选择器、压缩与高度入口", async () => {

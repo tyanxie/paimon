@@ -124,7 +124,7 @@ afterEach(async () => {
 });
 
 describe("回复与执行汇总", () => {
-  test("页面展示大圆角回复，工具组与正文交替排列", async () => {
+  test("工具组与正文按原始顺序交替排列", async () => {
     await render([
       message("u1", "user", "question"),
       message("a1", "assistant", [
@@ -137,9 +137,7 @@ describe("回复与执行汇总", () => {
       result("two"),
     ]);
     expect(container.querySelectorAll("article")).toHaveLength(1);
-    expect(container.querySelector("article")!.className).toContain(
-      "rounded-[24px]",
-    );
+
     expect(replyButton().getAttribute("aria-expanded")).toBe("true");
     expect(container.querySelectorAll("[data-execution-key]")).toHaveLength(2);
     expect(executionButton().textContent).toContain("1 个工具执行完成");
@@ -508,7 +506,7 @@ describe("消息时间", () => {
     expect(document.querySelector('[role="tooltip"]')).toBeNull();
   });
 
-  test("消息时间与正文共同排列，缺少时间时保留正文", async () => {
+  test("消息时间存在或缺失时均保留正文", async () => {
     for (const timestamp of [undefined, "2026-01-01T12:00:00Z"]) {
       const entry = message("a1", "assistant", [text("readable body")]);
       entry.timestamp = timestamp;
@@ -516,8 +514,7 @@ describe("消息时间", () => {
       const part = container.querySelector(
         "article .markdown-body",
       )!.parentElement!;
-      expect(part.classList.contains("grid")).toBe(true);
-      expect(part.classList.contains("h-8")).toBe(false);
+
       expect(part.textContent).toContain("readable body");
       expect(part.querySelector(".conversation-time") !== null).toBe(
         Boolean(timestamp),

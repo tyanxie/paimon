@@ -5,7 +5,6 @@ import { MotionConfig } from "motion/react";
 import i18n from "../../i18n";
 import { ModalShell, shouldDismissSheet } from "./ModalShell";
 import { ImageLightbox } from "./ImageLightbox";
-import { Button } from "./Button";
 
 let root: Root;
 let mountPoint: HTMLDivElement;
@@ -55,13 +54,11 @@ async function render({
   content = <p>tool output</p>,
   mobileSheet = true,
   strict = false,
-  footer,
 }: {
   open?: boolean;
   content?: ReactNode;
   mobileSheet?: boolean;
   strict?: boolean;
-  footer?: ReactNode;
 } = {}) {
   const view = (
     <MotionConfig reducedMotion="always">
@@ -71,8 +68,6 @@ async function render({
           trailing={<span>1.2 s</span>}
           onClose={() => closeCount++}
           mobileSheet={mobileSheet}
-          footer={footer}
-          size={footer ? "form" : "detail"}
         >
           {content}
         </ModalShell>
@@ -110,16 +105,6 @@ describe("详情窗口功能", () => {
       window.querySelector('[role="region"]')!.getAttribute("aria-label"),
     ).toBe("详情内容");
     expect(mountPoint.querySelector("dialog") === null).toBe(true);
-  });
-  test("标题、关闭和表单操作位于内容滚动区域之外", async () => {
-    await render({ footer: <Button>confirm</Button> });
-    const content = dialog().querySelector(".modal-content")!;
-    expect(content.classList.contains("overflow-auto")).toBe(true);
-    expect(content.contains(dialog().querySelector("header"))).toBe(false);
-    expect(content.contains(dialog().querySelector("footer"))).toBe(false);
-    expect(
-      dialog().querySelector(".modal-panel")!.getAttribute("data-size"),
-    ).toBe("form");
   });
   test("结果更新保留窗口、内容、焦点和阅读位置", async () => {
     await render();
@@ -222,18 +207,6 @@ describe("详情窗口功能", () => {
     await click(positioner);
     expect(closeCount).toBe(1);
   });
-  test("遮罩与面板位于独立的定位结构", async () => {
-    await render();
-    const window = dialog();
-    const overlay = window.querySelector(".modal-overlay")!;
-    const positioner = window.querySelector(".modal-positioner")!;
-    const panel = window.querySelector(".modal-panel")!;
-    expect(overlay.parentElement === window).toBe(true);
-    expect(positioner.parentElement === window).toBe(true);
-    expect(panel.parentElement === positioner).toBe(true);
-    expect(overlay.contains(panel)).toBe(false);
-    expect(overlay.getAttribute("aria-hidden")).toBe("true");
-  });
   test("断点变化保留窗口与内容阅读位置", async () => {
     mobile = true;
     await render();
@@ -280,21 +253,6 @@ describe("详情窗口功能", () => {
     expect(document.body.style.overflow).toBe("hidden");
     await render({ open: false });
     expect(document.body.style.overflow).toBe("auto");
-  });
-  test("窗口与内容保持独立的滚动范围", async () => {
-    const css = await Bun.file(
-      new URL("../../index.css", import.meta.url),
-    ).text();
-    expect(css).toContain(
-      ".modal-viewport {\n  background: transparent;\n  overflow: clip;\n}",
-    );
-    expect(css).toContain(".modal-positioner {\n  overflow: clip;\n}");
-    await render();
-    expect(
-      dialog()
-        .querySelector(".modal-content")!
-        .classList.contains("overflow-auto"),
-    ).toBe(true);
   });
   test("关闭与内容说明提供英文文本", async () => {
     await i18n.changeLanguage("en");

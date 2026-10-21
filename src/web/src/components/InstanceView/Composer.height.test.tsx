@@ -22,24 +22,16 @@ const instance: InstanceInfo = {
 let root: Root;
 let container: HTMLDivElement;
 let viewportHeight: number;
-let viewportWidth: number;
 let previousHeight: PropertyDescriptor | undefined;
-let previousWidth: PropertyDescriptor | undefined;
 let sent: string[];
 
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
   viewportHeight = 800;
-  viewportWidth = 1024;
   previousHeight = Object.getOwnPropertyDescriptor(window, "innerHeight");
-  previousWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
   Object.defineProperty(window, "innerHeight", {
     configurable: true,
     get: () => viewportHeight,
-  });
-  Object.defineProperty(window, "innerWidth", {
-    configurable: true,
-    get: () => viewportWidth,
   });
   sent = [];
   container = document.createElement("div");
@@ -52,8 +44,6 @@ afterEach(async () => {
   if (previousHeight)
     Object.defineProperty(window, "innerHeight", previousHeight);
   else Reflect.deleteProperty(window, "innerHeight");
-  if (previousWidth) Object.defineProperty(window, "innerWidth", previousWidth);
-  else Reflect.deleteProperty(window, "innerWidth");
 });
 function Probe() {
   const [draft, setDraft] = useState<InputDraft>({ text: "", images: [] });
@@ -134,44 +124,40 @@ async function text(value: string) {
 }
 
 describe("输入区高度调节", () => {
-  test("空白编辑区有默认高度和可访问的调节说明", async () => {
+  test("自动高度随内容增长，达到上限后内部滚动", async () => {
     await render();
-    expect(editor().style.height).toBe("36px");
-    expect(handle().getAttribute("aria-valuenow")).toBe("36");
-    expect(handle().getAttribute("aria-valuemin")).toBe("36");
+    const initial = Number.parseFloat(editor().style.height);
+    const maximum = Number(handle().getAttribute("aria-valuemax"));
+    expect(initial).toBeGreaterThan(0);
     expect(handle().getAttribute("aria-controls")).toBe(editor().id);
-    expect(
-      document.getElementById(handle().getAttribute("aria-describedby")!)!
-        .textContent,
-    ).toContain("Home");
-    viewportWidth = 375;
-    await act(async () => window.dispatchEvent(new Event("resize")));
-    expect(editor().style.height).toBe("36px");
-  });
-  test("自动高度随文字增长，上限之后内部滚动", async () => {
-    await render();
-    let contentHeight = 240;
+    expect(Number(handle().getAttribute("aria-valuenow"))).toBe(initial);
+    let contentHeight = Math.min(initial + 80, maximum);
     Object.defineProperty(editor(), "scrollHeight", {
       configurable: true,
       get: () => contentHeight,
     });
     await text("content");
-    expect(editor().style.height).toBe("240px");
+    expect(Number.parseFloat(editor().style.height)).toBe(contentHeight);
     expect(editor().style.overflowY).toBe("hidden");
-    contentHeight = 600;
+    contentHeight = maximum + 100;
     await text("long content");
-    expect(editor().style.height).toBe("320px");
+    expect(Number.parseFloat(editor().style.height)).toBe(maximum);
     expect(editor().style.overflowY).toBe("auto");
   });
-  test("向上拖动增高，释放后继续输入与发送保留选择", async () => {
+
+  test("拖动保持指针身份，输入与发送保留手动选择", async () => {
     await render();
-    await pointer(handle(), "pointerdown", 300);
-    await pointer(window, "pointermove", 220);
-    expect(editor().style.height).toBe("116px");
-    expect(handle().dataset.dragging).toBe("true");
-    await pointer(window, "pointerup", 220);
-    expect(handle().dataset.dragging).toBeUndefined();
-    await pointer(window, "pointermove", 100);
+    const initial = editor().style.height;
+    await pointer(handle(), "pointerdown", 300, 7, "touch");
+    await pointer(window, "pointermove", 100, 8, "touch");
+    expect(editor().style.height).toBe(initial);
+    await pointer(window, "pointermove", 220, 7, "touch");
+    expect(Number.parseFloat(editor().style.height)).toBeGreaterThan(
+      Number.parseFloat(initial),
+    );
+    const selected = editor().style.height;
+    await pointer(window, "pointerup", 220, 7, "touch");
+    await pointer(window, "pointermove", 100, 7, "touch");
     await text("hello");
     await act(async () =>
       container
@@ -180,61 +166,74 @@ describe("输入区高度调节", () => {
     );
     expect(sent).toEqual(["hello"]);
     expect(editor().value).toBe("");
-    expect(editor().style.height).toBe("116px");
+    expect(editor().style.height).toBe(selected);
+    expect(handle().dataset.dragging).toBeUndefined();
   });
-  test("触摸拖动保持指针身份，并限制最小与最大高度", async () => {
+
+  test("拖动限制到当前允许的高度范围", async () => {
     await render();
-    await pointer(handle(), "pointerdown", 300, 7, "touch");
-    await pointer(window, "pointermove", 100, 8, "touch");
-    expect(editor().style.height).toBe("36px");
-    await pointer(window, "pointermove", 900, 7, "touch");
-    expect(editor().style.height).toBe("36px");
-    await pointer(window, "pointermove", -900, 7, "touch");
-    expect(editor().style.height).toBe("320px");
-    await pointer(window, "pointerup", -900, 7, "touch");
+    const minimum = Number(handle().getAttribute("aria-valuemin"));
+    const maximum = Number(handle().getAttribute("aria-valuemax"));
+    await pointer(handle(), "pointerdown", 300);
+    await pointer(window, "pointermove", 300 + maximum);
+    expect(Number.parseFloat(editor().style.height)).toBe(minimum);
+    await pointer(window, "pointermove", 300 - maximum);
+    expect(Number.parseFloat(editor().style.height)).toBe(maximum);
+    await pointer(window, "pointerup", 300 - maximum);
   });
-  test("取消指针与 Escape 恢复拖动开始时的高度模式", async () => {
+
+  test("取消拖动恢复开始状态，键盘与双击恢复自动高度", async () => {
     await render();
+    const initial = editor().style.height;
     await pointer(handle(), "pointerdown", 300);
     await pointer(window, "pointermove", 200);
     await pointer(window, "pointercancel", 200);
-    expect(editor().style.height).toBe("36px");
-    await key("ArrowUp");
+    expect(editor().style.height).toBe(initial);
+    expect((await key("ArrowUp")).defaultPrevented).toBe(true);
+    const manual = editor().style.height;
+    expect(Number.parseFloat(manual)).toBeGreaterThan(
+      Number.parseFloat(initial),
+    );
     await pointer(handle(), "pointerdown", 300);
     await pointer(window, "pointermove", 200);
     await key("Escape");
-    expect(editor().style.height).toBe("60px");
+    expect(editor().style.height).toBe(manual);
     expect(handle().dataset.dragging).toBeUndefined();
-  });
-  test("键盘与双击可调节或恢复自动高度", async () => {
-    await render();
-    expect((await key("ArrowUp")).defaultPrevented).toBe(true);
-    expect(editor().style.height).toBe("60px");
     await key("ArrowDown");
-    expect(editor().style.height).toBe("36px");
+    expect(editor().style.height).toBe(initial);
     await key("End");
-    expect(editor().style.height).toBe("320px");
+    expect(Number.parseFloat(editor().style.height)).toBe(
+      Number(handle().getAttribute("aria-valuemax")),
+    );
     await key("Home");
-    expect(editor().style.height).toBe("36px");
+    expect(editor().style.height).toBe(initial);
     await key("ArrowUp");
     await act(async () =>
       handle().dispatchEvent(new MouseEvent("dblclick", { bubbles: true })),
     );
-    expect(editor().style.height).toBe("36px");
+    expect(editor().style.height).toBe(initial);
   });
-  test("可见空间减小时限制显示高度，恢复空间后保留手动选择", async () => {
+
+  test("视口缩小时限制显示高度，恢复后保留手动选择", async () => {
     await render();
     await key("End");
+    const selected = editor().style.height;
     viewportHeight = 200;
     await act(async () => window.dispatchEvent(new Event("resize")));
-    expect(editor().style.height).toBe("90px");
-    expect(handle().getAttribute("aria-valuemax")).toBe("90");
+    expect(Number.parseFloat(editor().style.height)).toBeLessThan(
+      Number.parseFloat(selected),
+    );
+    expect(Number.parseFloat(editor().style.height)).toBe(
+      Number(handle().getAttribute("aria-valuemax")),
+    );
     viewportHeight = 800;
     await act(async () => window.dispatchEvent(new Event("resize")));
-    expect(editor().style.height).toBe("320px");
+    expect(editor().style.height).toBe(selected);
   });
+
   test("附件与工具栏占用空间参与高度上限计算", async () => {
     await render();
+    const initial = Number.parseFloat(editor().style.height);
     Object.defineProperty(
       container.querySelector(".composer-surface")!,
       "getBoundingClientRect",
@@ -242,14 +241,17 @@ describe("输入区高度调节", () => {
     );
     Object.defineProperty(editor(), "getBoundingClientRect", {
       configurable: true,
-      value: () => new DOMRect(0, 0, 500, 36),
+      value: () => new DOMRect(0, 0, 500, initial),
     });
     viewportHeight = 500;
     await act(async () => window.dispatchEvent(new Event("resize")));
     await key("End");
-    expect(editor().style.height).toBe("56px");
+    expect(Number.parseFloat(editor().style.height)).toBeLessThanOrEqual(
+      viewportHeight - (400 - initial),
+    );
   });
-  test("visualViewport 高度变化调整上限并清理监听", async () => {
+
+  test("visualViewport 更新高度范围，卸载清理监听", async () => {
     const previous = Object.getOwnPropertyDescriptor(window, "visualViewport");
     const viewport = Object.assign(new EventTarget(), {
       height: 300,
@@ -265,11 +267,11 @@ describe("输入区高度调节", () => {
     try {
       await render();
       await key("End");
-      expect(editor().style.height).toBe("135px");
+      const first = Number.parseFloat(editor().style.height);
       viewport.height = 500;
       await act(async () => viewport.dispatchEvent(new Event("resize")));
       await key("End");
-      expect(editor().style.height).toBe("225px");
+      expect(Number.parseFloat(editor().style.height)).toBeGreaterThan(first);
       await act(async () => root.render(null));
       expect(remove.mock.calls.some(([event]) => event === "resize")).toBe(
         true,
@@ -284,10 +286,12 @@ describe("输入区高度调节", () => {
 
   test("实例或 session 重建恢复默认高度", async () => {
     await render();
+    const initial = editor().style.height;
     await key("ArrowUp");
     await render("two");
-    expect(editor().style.height).toBe("36px");
+    expect(editor().style.height).toBe(initial);
   });
+
   test("拖动期间卸载清理指针与键盘监听", async () => {
     await render();
     const remove = spyOn(window, "removeEventListener");

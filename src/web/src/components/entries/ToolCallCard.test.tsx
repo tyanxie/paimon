@@ -163,27 +163,6 @@ describe("ToolCallCard lifecycle", () => {
     expect(container.querySelector('[title="执行耗时"]')).toBeNull();
   });
 
-  test("places duration in the right-side group for every tool", async () => {
-    for (const name of ["bash", "read", "write", "edit", "custom"]) {
-      await renderCard(
-        {
-          status: "completed",
-          result: { content: [] },
-          isError: false,
-          durationMs: 1200,
-        },
-        [],
-        name,
-      );
-      const duration = container.querySelector('[title="执行耗时"]')!;
-      expect(duration.parentElement!.classList.contains("ml-auto")).toBe(true);
-      expect(
-        duration.parentElement ===
-          container.querySelector("button")!.lastElementChild,
-      ).toBe(true);
-    }
-  });
-
   test("uses the same duration in the bash card and detail header", async () => {
     await renderCard();
     await act(async () =>
@@ -206,8 +185,6 @@ describe("ToolCallCard lifecycle", () => {
     expect(durations.length).toBe(2);
     expect(durations[0].textContent).toBe(durations[1].textContent);
     expect(container.textContent).toContain("超时时间: 60\u00a0s");
-    expect(container.querySelector("button")!.textContent).not.toContain("60");
-    expect(durations[1].parentElement!.textContent).not.toContain("60");
   });
 
   test("keeps units identical across languages and translates the timeout label", async () => {

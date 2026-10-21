@@ -31,17 +31,11 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 - 🔔 **Task Notifications** — Sends a system notification after retries, compaction recovery, and queued messages have all finished
 - 📱 **Responsive Design** — Desktop/mobile adaptive, iOS Safe Area support
 
-After a refresh or reconnection during tool execution, subsequent update or end events resume the live display. Final results are also available through history. Running tools show call elapsed time measured with a monotonic clock; completed tools show the execution duration reported by Pi. The card's right side and detail header share one elapsed-time value and the same duration display, using `s` and `ms` with a non-breaking space between the number and unit. Bash details show the supplied timeout in the command area.
+Replies, execution summaries, and thinking sections expand independently and retain your choices during live updates. Message timestamps are available on hover, focus, or click, with running and compaction feedback beside the current reply.
 
-Reply, execution summary, and thinking sections retain your chosen expanded state and reset when switching instances or sessions. Collapse transitions use Motion and respect reduced-motion preferences. Message timestamps are available on hover, focus, or click. Running and compaction feedback appears beside the reply.
+Tool details are centered on desktops and use a bottom sheet on phones, with swipe-down dismissal and independently scrolling content. Images and Mermaid diagrams support enlarged previews.
 
-Tool details are centered on desktops and wide tablets, and use a nearly full-screen bottom sheet on phones. Swipe down from the top drag area to dismiss; the header stays visible while the content scrolls independently. The backdrop and panel animate independently. Focus returns to the opener after the exit animation. Image and Mermaid previews retain their size mode and reading position.
-
-A continuous, translucent header spans the conversation area, containing instance information and session actions. Conversation content retains its own reading width.
-
-Forms, menus, settings, and content actions share controls with consistent focus, disabled, loading, and selected states. Theme, background, language, and notification settings share compact segmented controls. Desktop buttons, fields, and lists use compact sizes and spacing; touch devices retain hit regions of at least 44px. Image removal and message timestamps use 24px visible controls with separate touch regions. Instance creation and compaction keep their action footer visible; menus adapt their position and scrolling to the visual viewport, and settings rows adapt to the available content width. Notices support long messages and reduced motion, using the native Popover API when available to appear while a detail dialog is open.
-
-The editor starts at a single-line height of 36px, with 6px top and bottom padding. Drag the top handle to resize, double-click or press Home for automatic height, use arrow keys to adjust, and End for the current maximum. Sending preserves the manual height; switching instances or sessions resets it. Desktop left-side labeled buttons are 26px tall, with 32px controls on the right and vertically centered groups; touch controls remain 44px tall. The height limit adapts to the visible viewport. Drafts, IME input, image uploads, and pasting remain available. Open the context readout to inspect full usage; missing token counts after compaction show an awaiting-update state. Model and thinking controls use the instance's available options.
+The editor grows automatically and supports resizing with its top handle. Double-click or press Home to restore automatic height, use arrow keys to adjust, and End for the maximum. Sending preserves your manual height; switching instances or sessions resets it. Drafts, IME input, image uploads, and pasting remain available. The context readout opens full usage information, and model and thinking controls use the instance's available options.
 
 ## 📋 Prerequisites
 
@@ -142,13 +136,15 @@ proxy_set_header Authorization "Bearer <access-token>";
 
 ## Development
 
-See [Conversation Data and Display Model](docs/design/conversation-rendering.md) for data and pagination rules, [Web Visual Redesign](docs/design/web-visual-redesign.md) for implementation scope, and [Web Validation](docs/design/web-validation.md) for automated coverage and the browser checklist.
+See [Web Design Guide](docs/design/web-visual-redesign.md) for the visual direction, [Conversation Data and Display Principles](docs/design/conversation-rendering.md) for data rules, and [Mermaid Design Guide](docs/design/mermaid-theme.md) for diagrams. Implementation details and visual parameters are available in the source.
 
-After completing local changes, tests, and documentation, build and restart the services before checking the result in your browser:
+Use `bunx tsc --noEmit` for code checks and select business tests based on the changes. After frontend changes, build and restart Hub before checking the result in your browser:
 
 ```bash
-bun run build && paimon hub restart && paimon edge restart
+bun run build && paimon hub restart
 ```
+
+Restart Edge when the changes require it.
 
 ## 📄 License
 
