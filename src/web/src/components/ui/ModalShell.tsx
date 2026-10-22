@@ -62,7 +62,7 @@ function ModalContent({
   const { t } = useTranslation();
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const backdropPress = useRef<boolean | null>(null);
   const present = useIsPresent();
@@ -74,7 +74,7 @@ function ModalContent({
     () => window.matchMedia("(max-width: 767px)").matches,
   );
   const sheet = mobileSheet && mobile;
-  useNativeDialog(dialogRef, closeRef);
+  useNativeDialog(dialogRef, titleRef);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 767px)");
@@ -206,7 +206,9 @@ function ModalContent({
             <header className="modal-header flex shrink-0 items-center justify-between gap-3 border-b border-[var(--separator)] px-4 py-1.5">
               <div
                 id={titleId}
-                className="flex min-w-0 flex-wrap items-center gap-2 text-[15px] font-semibold text-[var(--label-primary)] select-text"
+                ref={titleRef}
+                tabIndex={-1}
+                className="outline-none flex min-w-0 flex-wrap items-center gap-2 text-[15px] font-semibold text-[var(--label-primary)] select-text"
               >
                 {title}
               </div>
@@ -214,7 +216,6 @@ function ModalContent({
                 {trailing}
                 <Button
                   size="icon"
-                  ref={closeRef}
                   type="button"
                   onClick={requestClose}
                   aria-label={t("common.close")}

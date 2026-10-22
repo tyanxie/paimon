@@ -17,6 +17,9 @@ Paimon 为多台服务器上的 Pi 实例提供统一的对话界面。页面以
 - 玻璃材质集中用于导航、顶部栏和输入区。正文、代码与图表优先保证可读性，渐变背景保持可见。
 - 中性色表达内容层次，强调色用于主要操作与重要状态；同类控件保持一致的反馈。
 - 桌面保持紧凑，触摸设备提供充分操作范围，布局根据实际可用空间调整。
+- 设置选项使用等宽分段，短标签保持单行完整显示。控件获得充分宽度，空间不足时标签与控件上下排列。
+
+设置布局参考 Apple 官方 [Segmented controls](https://developer.apple.com/design/human-interface-guidelines/segmented-controls) 与 [Layout](https://developer.apple.com/design/human-interface-guidelines/layout)。
 
 侧栏的两层分组、展开选择与持续选中反馈参考 Apple 官方 [Sidebars](https://developer.apple.com/design/human-interface-guidelines/sidebars)、[Outline views](https://developer.apple.com/design/human-interface-guidelines/outline-views) 与 [Lists and tables](https://developer.apple.com/design/human-interface-guidelines/lists-and-tables)。
 
@@ -59,13 +62,17 @@ Pi 回复正文保持可见，执行汇总和有正文的 thinking 提供展开�
 - 编辑空间随内容增长，并支持手动调整高度；视口变化与手机键盘出现时保留可用的编辑和阅读空间。
 - 模型、思考等级与上下文来自实例数据，等待更新和不可用状态具有清晰说明。模型选择按钮与菜单条目根据模型 identifier 自动展示品牌图标，优先使用品牌提供的彩色版本；常用品牌随页面加载，其他模型按需加载完整匹配组件，无法识别或加载失败时使用 Cpu 图标。入口展示当前模型名称，思考入口保留“思考”提示与当前等级。
 - 跳到底部采用输入区上方居中的圆形悬浮图标按钮，玻璃背景保持与正文的清晰区别，悬停提示和可访问说明表达操作用途；位于底部时隐藏，浏览历史时显示。
-- 新建实例与压缩表单提供明确字段、错误反馈和持续可见的确认操作。
+- 新建实例与压缩表单提供明确字段、错误反馈和持续可见的确认操作。底部同组操作保持相同高度，桌面采用紧凑尺寸，触摸设备保留充分操作范围，主要操作通过强调色表达。
+
+按钮尺寸与操作层次参考 Apple 官方 [Buttons](https://developer.apple.com/design/human-interface-guidelines/buttons) 与 [Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)。
+
 - Agent 状态常驻输入区任务控制区域，与侧栏统一使用空闲、执行中和压缩中。空闲使用静态绿色圆点，执行与压缩使用相应颜色的呼吸灯，实例信息缺失时静态显示状态等待更新。压缩进行状态与完成摘要独立展示在对话中，连接信息保留在导航区域。
 
 ## 弹层与动画
 
 - 桌面详情居中展示，手机详情采用接近全屏的底部 sheet；正文独立滚动，保留内容选择和横向代码滚动。
-- 弹窗支持 Esc、焦点管理与关闭后恢复入口焦点。手机关闭手势与正文滚动分别处理。
+- session 选择浮层设置独立高度上限，并根据可用视口收缩；标题与搜索保持可见，历史列表独立滚动。尺寸原则参考 Apple 官方 [Popovers](https://developer.apple.com/design/human-interface-guidelines/popovers)。
+- 弹窗支持 Esc、焦点管理与关闭后恢复入口焦点。详情打开时聚焦标题，图片预览聚焦内容说明；键盘操作通过 Tab 进入控件并显示局部焦点提示。触摸设备打开新建实例表单时聚焦标题，工作目录输入由用户选择。手机关闭手势与正文滚动分别处理。
 - 状态、折叠和弹层使用短暂、可中断的反馈，异步结果更新保留已打开内容与阅读位置。
 - reduced motion 下保留完整操作与状态信息。
 - 兼顾亮暗主题、窄屏、长文本、Safe Area 与不同输入方式。真实观感、手势和性能由用户检查。

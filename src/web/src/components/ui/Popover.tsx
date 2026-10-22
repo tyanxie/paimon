@@ -27,6 +27,8 @@ interface PopoverProps {
   label?: string;
   /** 面板宽度（px） */
   width?: number;
+  /** 面板高度上限（px），同时受可用视口空间限制。 */
+  maxHeight?: number;
   /** 面板内容，接收 close 回调 */
   children: (close: () => void) => ReactNode;
   /** 禁用弹出 */
@@ -89,6 +91,7 @@ export function Popover({
   trigger,
   label,
   width = 200,
+  maxHeight = Infinity,
   children,
   disabled = false,
   placement = "top",
@@ -142,13 +145,16 @@ export function Popover({
         : below
           ? { top: Math.max(bounds.top + 12, anchorBottom + 8) }
           : { bottom: Math.max(12, window.innerHeight - anchorTop + 8) }),
-      maxHeight: compactViewport
-        ? Math.max(0, bounds.height - 24)
-        : below
-          ? availableBelow
-          : availableAbove,
+      maxHeight: Math.min(
+        maxHeight,
+        compactViewport
+          ? Math.max(0, bounds.height - 24)
+          : below
+            ? availableBelow
+            : availableAbove,
+      ),
     });
-  }, [open, bounds, width, placement, align]);
+  }, [open, bounds, width, maxHeight, placement, align]);
 
   useEffect(() => {
     if (disabled) setOpen(false);

@@ -50,13 +50,13 @@ function LightboxContent({
     height: number;
   } | null>(null);
   const overlayRef = useRef<HTMLDialogElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const initialFocusRef = useRef<HTMLSpanElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
   const present = useIsPresent();
   const motionPolicy = useContext(MotionConfigContext).reducedMotion;
   const reducedMotion = useReducedMotion() || motionPolicy === "always";
-  useNativeDialog(overlayRef, closeRef);
+  useNativeDialog(overlayRef, initialFocusRef);
   function requestClose() {
     if (present) onClose();
   }
@@ -99,6 +99,13 @@ function LightboxContent({
         requestClose();
       }}
     >
+      <span
+        ref={initialFocusRef}
+        tabIndex={-1}
+        className="sr-only outline-none"
+      >
+        {alt ?? t("imagePreview.title")}
+      </span>
       {/* 浮动工具栏与关闭按钮保持在滚动内容之外 */}
       {zoomable && (
         <Button
@@ -118,7 +125,6 @@ function LightboxContent({
       )}
       <Button
         size="icon"
-        ref={closeRef}
         type="button"
         onClick={(event) => {
           event.stopPropagation();

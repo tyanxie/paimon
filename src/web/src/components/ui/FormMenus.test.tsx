@@ -104,6 +104,29 @@ describe("表单功能", () => {
         .contains(dialog.querySelector("footer")),
     ).toBe(false);
   });
+  test("触摸设备打开新建表单时保留标题焦点", async () => {
+    const original = window.matchMedia.bind(window);
+    const mediaSpy = spyOn(window, "matchMedia").mockImplementation((query) => {
+      const result = original(query);
+      if (query === "(pointer: coarse)") {
+        Object.defineProperty(result, "matches", {
+          configurable: true,
+          value: true,
+        });
+      }
+      return result;
+    });
+    try {
+      await newInstance();
+      const dialog = document.querySelector("dialog")!;
+      expect(
+        document.activeElement ===
+          document.getElementById(dialog.getAttribute("aria-labelledby")!),
+      ).toBe(true);
+    } finally {
+      mediaSpy.mockRestore();
+    }
+  });
   test("创建提交原始 Edge ID 与去除首尾空白的目录", async () => {
     const created: string[] = [];
     let payload: unknown;
@@ -238,6 +261,25 @@ describe("Session 菜单功能", () => {
     );
     await click(button("Sessions"));
   }
+  test("Session 浮层高度同时受内容上限与可用视口限制", async () => {
+    await sessions();
+    const panel = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(Number.parseFloat(panel.style.maxHeight)).toBe(420);
+    const original = window.innerHeight;
+    try {
+      await act(async () => root.render(null));
+      window.innerHeight = 240;
+      await sessions();
+      const compactPanel =
+        document.querySelector<HTMLElement>('[role="dialog"]')!;
+      expect(Number.parseFloat(compactPanel.style.maxHeight)).toBeLessThan(240);
+      expect(Number.parseFloat(compactPanel.style.maxHeight)).toBeGreaterThan(
+        0,
+      );
+    } finally {
+      window.innerHeight = original;
+    }
+  });
   test("当前 Session 保持选中，切换提交原始路径", async () => {
     const switched: string[] = [];
     await sessions({ onSwitch: (path) => switched.push(path) });

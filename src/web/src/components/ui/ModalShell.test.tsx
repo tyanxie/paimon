@@ -86,7 +86,7 @@ async function click(element: HTMLElement) {
 }
 
 describe("详情窗口功能", () => {
-  test("Portal 打开命名的原生 dialog，并聚焦关闭入口", async () => {
+  test("Portal 打开命名的原生 dialog，并聚焦标题", async () => {
     await render();
     const window = dialog();
     expect(window.parentElement === document.body).toBe(true);
@@ -98,13 +98,68 @@ describe("详情窗口功能", () => {
         .textContent,
     ).toBe("bash");
     expect(
-      document.activeElement === window.querySelector(".modal-close"),
+      document.activeElement ===
+        document.getElementById(window.getAttribute("aria-labelledby")!),
     ).toBe(true);
     expect(window.querySelector("header")!.textContent).toContain("1.2 s");
     expect(
       window.querySelector('[role="region"]')!.getAttribute("aria-label"),
     ).toBe("详情内容");
     expect(mountPoint.querySelector("dialog") === null).toBe(true);
+  });
+  test("手机详情与居中弹窗使用标题作为初始焦点", async () => {
+    mobile = true;
+    for (const mobileSheet of [true, false]) {
+      await render({ open: false });
+      await render({ mobileSheet });
+      const title = document.getElementById(
+        dialog().getAttribute("aria-labelledby")!,
+      )!;
+      expect(document.activeElement === title).toBe(true);
+      expect(title.tabIndex).toBe(-1);
+    }
+  });
+  test("标题焦点通过 Tab 与 Shift+Tab 进入窗口控件", async () => {
+    await render({ content: <button data-last>copy</button> });
+    const title = document.activeElement as HTMLElement;
+    const first = dialog().querySelector<HTMLButtonElement>(".modal-close")!;
+    const last = dialog().querySelector<HTMLButtonElement>("[data-last]")!;
+    for (const shiftKey of [false, true]) {
+      title.focus();
+      title.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Tab",
+          shiftKey,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      expect(document.activeElement === (shiftKey ? last : first)).toBe(true);
+    }
+  });
+  test("图片预览聚焦说明并支持键盘进入关闭入口", async () => {
+    await act(async () =>
+      root.render(
+        <MotionConfig reducedMotion="always">
+          <ImageLightbox src="data:image/png;base64,AA==" onClose={() => {}} />
+        </MotionConfig>,
+      ),
+    );
+    const preview = document.querySelector<HTMLDialogElement>(
+      "dialog.image-lightbox",
+    )!;
+    const description = preview.querySelector("span[tabindex='-1']")!;
+    expect(document.activeElement === description).toBe(true);
+    description.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    expect(document.activeElement === preview.querySelector("button")).toBe(
+      true,
+    );
   });
   test("结果更新保留窗口、内容、焦点和阅读位置", async () => {
     await render();

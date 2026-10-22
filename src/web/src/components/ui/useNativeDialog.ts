@@ -55,7 +55,14 @@ export function cycleDialogFocus(event: KeyboardEvent<HTMLDialogElement>) {
   const first = controls[0];
   const last = controls.at(-1);
   if (!first || !last) return;
-  if (event.shiftKey && document.activeElement === first) {
+  const activeElement = document.activeElement;
+  if (
+    activeElement instanceof HTMLElement &&
+    !controls.includes(activeElement)
+  ) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus({ preventScroll: true });
+  } else if (event.shiftKey && activeElement === first) {
     event.preventDefault();
     last.focus({ preventScroll: true });
   } else if (!event.shiftKey && document.activeElement === last) {

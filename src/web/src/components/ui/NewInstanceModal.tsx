@@ -75,7 +75,9 @@ function PathAutocomplete({
 
   // 自动聚焦
   useEffect(() => {
-    if (autoFocus) inputRef.current?.focus();
+    if (autoFocus && !window.matchMedia("(pointer: coarse)").matches) {
+      inputRef.current?.focus();
+    }
   }, [autoFocus]);
 
   // 请求目录补全

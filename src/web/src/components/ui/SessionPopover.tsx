@@ -122,6 +122,7 @@ export function SessionPopover({
         </Button>
       )}
       width={320}
+      maxHeight={420}
       disabled={disabled}
       placement="bottom"
     >
