@@ -1252,7 +1252,8 @@ button,
   opacity: 0.5;
 }
 .composer-control .composer-model-name {
-  max-width: clamp(40px, 16cqw, 140px);
+  max-width: none;
+  min-width: 0;
 }
 .composer-control > svg {
   width: 14px;
@@ -1328,19 +1329,64 @@ button,
   display: none;
 }
 
-@container composer (max-width: 640px) {
-  .composer-toolbar {
-    flex-wrap: wrap;
+.adaptive-toolbar {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+.adaptive-toolbar-item,
+.adaptive-toolbar-more {
+  flex: none;
+  width: max-content;
+}
+.adaptive-toolbar-flexible {
+  width: var(--toolbar-item-width, max-content);
+}
+.adaptive-toolbar-flexible > div,
+.adaptive-toolbar-flexible button {
+  width: 100%;
+}
+.adaptive-toolbar-flexible [data-toolbar-label] {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.adaptive-toolbar-flexible [data-toolbar-label-content] {
+  display: inline-block;
+}
+.adaptive-toolbar-hidden {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+.adaptive-toolbar-page-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  font-size: 13px;
+  color: var(--label-primary);
+}
+
+@media (pointer: coarse) {
+  .composer-toolbar .ui-button--compact,
+  .composer-toolbar .ui-button--icon {
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
   }
-  .composer-controls {
-    flex-basis: 100%;
+  .composer-toolbar .ui-button--icon {
+    width: 44px;
+  }
+  .composer-toolbar {
+    gap: 6px;
+    padding-inline: 8px;
   }
   .composer-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-  .composer-agent-status {
-    margin-right: auto;
+    gap: 4px;
   }
 }
 

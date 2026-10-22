@@ -15,6 +15,65 @@ interface ModelSelectorProps {
   onSelect?: (provider: string, id: string) => void;
 }
 
+export function ModelOptions({
+  currentModel,
+  availableModels,
+  onSelect,
+  onDone,
+}: ModelSelectorProps & { onDone: () => void }) {
+  const groups = new Map<string, ModelInfo[]>();
+  for (const model of availableModels ?? []) {
+    const group = groups.get(model.provider) ?? [];
+    group.push(model);
+    groups.set(model.provider, group);
+  }
+  return (
+    <div
+      className="ui-menu-scroll scrollbar-auto"
+      style={{ maxHeight: "inherit" }}
+    >
+      {Array.from(groups.entries()).map(([provider, models], gi) => (
+        <div key={provider}>
+          {gi > 0 && <div className="mx-1 my-1 h-px bg-[var(--separator)]" />}
+          <div className="ui-menu-section">{provider}</div>
+          {models.map((model) => {
+            const active =
+              model.provider === currentModel.provider &&
+              model.id === currentModel.id;
+            return (
+              <MenuItem
+                selected={active}
+                key={`${model.provider}/${model.id}`}
+                aria-pressed={active}
+                onClick={() => {
+                  if (!active) onSelect?.(model.provider, model.id);
+                  onDone();
+                }}
+              >
+                <ModelBrandIcon model={model.id} size={18} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] text-[var(--label-primary)] truncate select-text">
+                    {model.name || model.id}
+                  </div>
+                  <div className="text-[12px] text-[var(--label-secondary)] truncate select-text">
+                    {model.id}
+                  </div>
+                </div>
+                {active && (
+                  <Check
+                    size={14}
+                    className="text-[var(--color-accent)] flex-shrink-0"
+                  />
+                )}
+              </MenuItem>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ModelSelector({
   currentModel,
   availableModels,
@@ -24,19 +83,6 @@ export function ModelSelector({
   const { t } = useTranslation();
   const hasModels = availableModels && availableModels.length > 0;
   const canSelect = hasModels && onSelect;
-
-  // 按 provider 分组
-  const groups = new Map<string, ModelInfo[]>();
-  if (availableModels) {
-    for (const m of availableModels) {
-      const list = groups.get(m.provider) ?? [];
-      list.push(m);
-      groups.set(m.provider, list);
-    }
-  }
-
-  const isCurrent = (m: ModelInfo) =>
-    m.provider === currentModel.provider && m.id === currentModel.id;
 
   return (
     <Popover
@@ -61,8 +107,13 @@ export function ModelSelector({
           } text-[var(--label-secondary)] ${className}`}
         >
           <ModelBrandIcon model={currentModel.id} />
-          <span className="composer-model-name max-w-[140px] truncate select-text">
-            {currentModel.name || currentModel.id}
+          <span
+            data-toolbar-label
+            className="composer-model-name truncate select-text"
+          >
+            <span data-toolbar-label-content>
+              {currentModel.name || currentModel.id}
+            </span>
           </span>
           {canSelect && (
             <ChevronDown
@@ -75,50 +126,12 @@ export function ModelSelector({
       )}
     >
       {(close) => (
-        <div
-          className="ui-menu-scroll scrollbar-auto"
-          style={{ maxHeight: "inherit" }}
-        >
-          {Array.from(groups.entries()).map(([provider, models], gi) => (
-            <div key={provider}>
-              {gi > 0 && (
-                <div className="mx-1 my-1 h-px bg-[var(--separator)]" />
-              )}
-              <div className="ui-menu-section">{provider}</div>
-              {models.map((m) => {
-                const active = isCurrent(m);
-                return (
-                  <MenuItem
-                    selected={active}
-                    type="button"
-                    key={`${m.provider}/${m.id}`}
-                    aria-pressed={active}
-                    onClick={() => {
-                      if (!active) onSelect?.(m.provider, m.id);
-                      close();
-                    }}
-                  >
-                    <ModelBrandIcon model={m.id} size={18} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] text-[var(--label-primary)] truncate select-text">
-                        {m.name || m.id}
-                      </div>
-                      <div className="text-[12px] text-[var(--label-secondary)] truncate select-text">
-                        {m.id}
-                      </div>
-                    </div>
-                    {active && (
-                      <Check
-                        size={14}
-                        className="text-[var(--color-accent)] flex-shrink-0"
-                      />
-                    )}
-                  </MenuItem>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+        <ModelOptions
+          currentModel={currentModel}
+          availableModels={availableModels}
+          onSelect={onSelect}
+          onDone={close}
+        />
       )}
     </Popover>
   );

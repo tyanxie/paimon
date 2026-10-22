@@ -137,7 +137,7 @@ export function Sidebar({
           <img
             src={logoSrc}
             alt=""
-            className="h-7 w-7 shrink-0 object-contain"
+            className="h-[34px] w-[34px] shrink-0 object-contain"
           />
           <span className="min-w-0">
             <span className="block truncate text-[14px] font-semibold leading-[20px] text-[var(--label-primary)]">

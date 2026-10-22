@@ -62,6 +62,8 @@ const en: LocaleResource = {
 
   composer: {
     options: "Input options",
+    more: "More input options",
+    backToOptions: "Back to input options",
     images: "Images",
     modelWaiting: "Awaiting model",
     thinkingLabel: "Thinking",

@@ -6,9 +6,20 @@ import {
   useCallback,
   useState,
   useId,
+  useMemo,
   useImperativeHandle,
 } from "react";
-import { ArrowUp, Square, Minimize2, ImagePlus, X, Gauge } from "lucide-react";
+import {
+  ArrowUp,
+  Square,
+  Minimize2,
+  ImagePlus,
+  X,
+  Gauge,
+  Brain,
+  Cpu,
+  ChevronRight,
+} from "lucide-react";
 import type {
   InstanceInfo,
   ImagePayload,
@@ -23,8 +34,13 @@ import {
 } from "../../utils/status";
 import { processImageFile, getImagesFromClipboard } from "../../utils/image";
 import { showToast } from "../ui/Toast";
-import { ModelSelector } from "../ui/ModelSelector";
-import { ThinkingSelector } from "../ui/ThinkingSelector";
+import { ModelSelector, ModelOptions } from "../ui/ModelSelector";
+import { ThinkingSelector, ThinkingOptions } from "../ui/ThinkingSelector";
+import {
+  AdaptiveToolbar,
+  type AdaptiveToolbarItem,
+} from "../ui/AdaptiveToolbar";
+import { MenuItem } from "../ui/MenuItem";
 import { Button } from "../ui/Button";
 import { useComposerHeight } from "./useComposerHeight";
 import { Popover } from "../ui/Popover";
@@ -213,6 +229,167 @@ export function Composer({
     [onDraftChange],
   );
 
+  const toolbarItems = useMemo<AdaptiveToolbarItem[]>(
+    () => [
+      {
+        id: "images",
+        priority: 2,
+        control: (
+          <Button
+            size="compact"
+            onClick={() => fileInputRef.current?.click()}
+            className="composer-control shrink-0"
+            title={t("eventStream.attachImage")}
+            aria-label={t("eventStream.attachImage")}
+          >
+            <ImagePlus size={14} aria-hidden="true" />
+            <span>{t("composer.images")}</span>
+          </Button>
+        ),
+        menu: (close) => (
+          <MenuItem
+            onClick={() => {
+              close();
+              fileInputRef.current?.click();
+            }}
+          >
+            <ImagePlus size={16} aria-hidden="true" />
+            <span>{t("eventStream.attachImage")}</span>
+          </MenuItem>
+        ),
+      },
+      {
+        id: "model",
+        priority: 3,
+        flexible: true,
+        minimumLabelWidth: 80,
+        pageLabel: t("composer.model"),
+        control: instanceModel ? (
+          <ModelSelector
+            currentModel={instanceModel}
+            availableModels={availableModels}
+            onSelect={onSetModel}
+            className="composer-control"
+          />
+        ) : (
+          <Button size="compact" disabled className="composer-control">
+            {t("composer.modelWaiting")}
+          </Button>
+        ),
+        menu: (_close, showPage) => (
+          <MenuItem
+            disabled={!instanceModel || !availableModels?.length}
+            onClick={() => showPage("model")}
+          >
+            <Cpu size={16} aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="block">{t("composer.model")}</span>
+              <span className="block truncate text-[11px] text-[var(--label-secondary)]">
+                {instanceModel?.name ||
+                  instanceModel?.id ||
+                  t("composer.modelWaiting")}
+              </span>
+            </span>
+            <ChevronRight size={14} aria-hidden="true" />
+          </MenuItem>
+        ),
+        page: (close) =>
+          instanceModel && (
+            <ModelOptions
+              currentModel={instanceModel}
+              availableModels={availableModels}
+              onSelect={onSetModel}
+              onDone={close}
+            />
+          ),
+      },
+      {
+        id: "thinking",
+        priority: 1,
+        pageLabel: t("composer.thinkingLevel"),
+        control: (
+          <ThinkingSelector
+            currentLevel={thinkingLevel}
+            pending={!instance}
+            availableLevels={availableThinkingLevels ?? []}
+            onSelect={onSetThinkingLevel}
+            showLabel
+            className="composer-control"
+          />
+        ),
+        menu: (_close, showPage) => (
+          <MenuItem
+            disabled={thinkingLevel == null}
+            onClick={() => showPage("thinking")}
+          >
+            <Brain size={16} aria-hidden="true" />
+            <span className="flex-1">{t("composer.thinkingLabel")}</span>
+            <span className="text-[11px] text-[var(--label-secondary)]">
+              {thinkingLevel ??
+                t(
+                  !instance
+                    ? "composer.pendingThinking"
+                    : "composer.unsupportedThinking",
+                )}
+            </span>
+            <ChevronRight size={14} aria-hidden="true" />
+          </MenuItem>
+        ),
+        page: (close) =>
+          thinkingLevel != null && (
+            <ThinkingOptions
+              currentLevel={thinkingLevel}
+              availableLevels={availableThinkingLevels ?? []}
+              onSelect={onSetThinkingLevel}
+              onDone={close}
+            />
+          ),
+      },
+      {
+        id: "compact",
+        priority: 0,
+        control: (
+          <Button
+            size="compact"
+            disabled={!canCompact}
+            aria-label={t("eventStream.compactContext")}
+            title={compactDescription}
+            onClick={() => setShowCompactModal(true)}
+            className="composer-control shrink-0"
+          >
+            <Minimize2 size={14} aria-hidden="true" />
+            <span>{t("composer.compact")}</span>
+          </Button>
+        ),
+        menu: (close) => (
+          <MenuItem
+            disabled={!canCompact}
+            title={compactDescription}
+            onClick={() => {
+              close();
+              setShowCompactModal(true);
+            }}
+          >
+            <Minimize2 size={16} aria-hidden="true" />
+            <span>{t("eventStream.compactContext")}</span>
+          </MenuItem>
+        ),
+      },
+    ],
+    [
+      t,
+      instanceModel,
+      availableModels,
+      thinkingLevel,
+      instance,
+      availableThinkingLevels,
+      onSetModel,
+      onSetThinkingLevel,
+      canCompact,
+      compactDescription,
+    ],
+  );
+
   return (
     <>
       <div ref={surfaceRef} className="composer-surface">
@@ -288,59 +465,15 @@ export function Composer({
           role="group"
           aria-label={t("composer.options")}
         >
-          <div className="composer-controls flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-            <Button
-              size="compact"
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="composer-control shrink-0"
-              title={t("eventStream.attachImage")}
-              aria-label={t("eventStream.attachImage")}
-            >
-              <ImagePlus size={14} aria-hidden="true" />
-              <span>{t("composer.images")}</span>
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            {instanceModel ? (
-              <ModelSelector
-                currentModel={instanceModel}
-                availableModels={availableModels}
-                onSelect={onSetModel}
-                className="composer-control"
-              />
-            ) : (
-              <Button size="compact" disabled className="composer-control">
-                {t("composer.modelWaiting")}
-              </Button>
-            )}
-            <ThinkingSelector
-              currentLevel={thinkingLevel}
-              pending={!instance}
-              availableLevels={availableThinkingLevels ?? []}
-              onSelect={onSetThinkingLevel}
-              showLabel
-              className="composer-control"
-            />
-            <Button
-              size="compact"
-              type="button"
-              disabled={!canCompact}
-              aria-label={t("eventStream.compactContext")}
-              title={compactDescription}
-              onClick={() => setShowCompactModal(true)}
-              className="composer-control shrink-0"
-            >
-              <Minimize2 size={14} aria-hidden="true" />
-              <span>{t("composer.compact")}</span>
-            </Button>
-          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <AdaptiveToolbar items={toolbarItems} />
           <div className="composer-actions flex shrink-0 items-center gap-2">
             <span
               role="status"

@@ -21,6 +21,7 @@ type PopoverPlacement = "top" | "bottom";
 type PopoverAlign = "left" | "right";
 
 interface PopoverProps {
+  onOpenChange?: (open: boolean) => void;
   /** 渲染触发按钮，接收 open 状态 */
   trigger: (props: { open: boolean; id: string }) => ReactNode;
   /** 弹层的可访问名称 */
@@ -96,8 +97,14 @@ export function Popover({
   disabled = false,
   placement = "top",
   align = "right",
+  onOpenChange,
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
+  useLayoutEffect(() => {
+    onOpenChangeRef.current?.(open);
+  }, [open]);
   const [position, setPosition] = useState<CSSProperties | null>(null);
   const bounds = useFloatingViewport(open);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -179,23 +186,25 @@ export function Popover({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, !!position, close]);
 
-  // 点击外部关闭
+  // 在菜单内容更新前判定点击位置，保留切换页面的点击路径。
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      const target = e.target as Node;
+      const path = e.composedPath();
+      const anchor = containerRef.current;
+      const panel = popoverRef.current;
       if (
-        !containerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
+        !(anchor && path.includes(anchor)) &&
+        !(panel && path.includes(panel))
       ) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("click", handleClick);
+    document.addEventListener("mousedown", handleClick, true);
+    document.addEventListener("click", handleClick, true);
     return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("click", handleClick);
+      document.removeEventListener("mousedown", handleClick, true);
+      document.removeEventListener("click", handleClick, true);
     };
   }, [open]);
 

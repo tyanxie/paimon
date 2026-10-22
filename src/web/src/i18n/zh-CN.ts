@@ -60,6 +60,8 @@ const zhCN = {
 
   composer: {
     options: "输入选项",
+    more: "更多输入选项",
+    backToOptions: "返回输入选项",
     images: "图片",
     modelWaiting: "模型等待更新",
     thinkingLabel: "思考",

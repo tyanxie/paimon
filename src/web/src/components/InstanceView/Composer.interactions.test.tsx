@@ -154,6 +154,59 @@ async function key(options: KeyboardEventInit) {
 }
 
 describe("输入工具栏交互", () => {
+  test("More 内的模型与思考选择使用同一浮层，保留操作结果和入口焦点", async () => {
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    const rect = spyOn(
+      HTMLElement.prototype,
+      "getBoundingClientRect",
+    ).mockImplementation(function (this: HTMLElement) {
+      const value = original.call(this);
+      if (this.classList.contains("adaptive-toolbar"))
+        return { ...value, width: 44, toJSON() {} };
+      if (this.hasAttribute("data-toolbar-item"))
+        return { ...value, width: 100, toJSON() {} };
+      if (this.classList.contains("adaptive-toolbar-more"))
+        return { ...value, width: 44, toJSON() {} };
+      return value;
+    });
+    try {
+      await render();
+      const more = button("更多输入选项");
+      await click(more);
+      let panel = document.querySelector('[role="dialog"]')!;
+      const modelEntry = [...panel.querySelectorAll("button")].find((entry) =>
+        entry.textContent?.includes("Current model"),
+      )!;
+      await click(modelEntry);
+      expect(document.querySelectorAll('[role="dialog"]').length).toBe(1);
+      panel = document.querySelector('[role="dialog"]')!;
+      await click(
+        [...panel.querySelectorAll("button")].find((entry) =>
+          entry.textContent?.includes("Next model"),
+        )!,
+      );
+      expect(models).toEqual([["other", "next"]]);
+      expect(document.activeElement).toBe(more);
+      await click(more);
+      panel = document.querySelector('[role="dialog"]')!;
+      await click(
+        [...panel.querySelectorAll("button")].find((entry) =>
+          entry.textContent?.includes("思考"),
+        )!,
+      );
+      panel = document.querySelector('[role="dialog"]')!;
+      await click(button("off", panel));
+      expect(levels).toEqual(["off"]);
+      expect(document.activeElement).toBe(more);
+      await click(more);
+      panel = document.querySelector('[role="dialog"]')!;
+      await click(button("压缩上下文", panel));
+      expect(document.querySelector("dialog[open]")).not.toBeNull();
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
   test("常用品牌首次渲染直接显示图标，入口保持名称与尺寸", () => {
     const models = [
       ["openai/gpt-5", "OpenAI"],
