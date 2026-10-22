@@ -215,7 +215,7 @@ export function Composer({
 
   return (
     <>
-      <div ref={surfaceRef} className="composer-surface glass-panel-input">
+      <div ref={surfaceRef} className="composer-surface">
         <div
           role="separator"
           tabIndex={0}

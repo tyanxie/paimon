@@ -2,10 +2,17 @@
 
 import { AnimatePresence } from "motion/react";
 import { Button } from "./ui/Button";
-import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import {
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useId,
+} from "react";
 import {
   Settings as SettingsIcon,
-  Home,
+  ChevronRight,
   LogOut,
   Plus,
   Check,
@@ -20,7 +27,10 @@ import {
   getInstanceStatusKey,
 } from "../utils/status";
 import { useLogoSrc } from "../hooks/useLogoSrc";
-import { ConnectionIndicator } from "./ui/ConnectionIndicator";
+import { useSidebar } from "../stores/useSidebar";
+import { useWebSocket } from "../stores/useWebSocket";
+import { Popover } from "./ui/Popover";
+import { MenuItem } from "./ui/MenuItem";
 import {
   ContextMenu,
   ContextMenuItem,
@@ -49,6 +59,10 @@ export function Sidebar({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const logoSrc = useLogoSrc();
+  const sidebarId = useId();
+  const collapsedEdges = useSidebar((s) => s.collapsedEdges);
+  const toggleEdge = useSidebar((s) => s.toggleEdge);
+  const connectionState = useWebSocket((s) => s.connectionState);
   const [contextMenu, setContextMenu] = useState<{
     position: ContextMenuPosition;
     instanceId: InstanceId;
@@ -69,18 +83,6 @@ export function Sidebar({
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     },
     [cancelLongPress],
-  );
-
-  const handleContextMenu = useCallback(
-    (event: React.MouseEvent, instanceId: InstanceId) => {
-      event.preventDefault();
-      event.stopPropagation();
-      setContextMenu({
-        position: { x: event.clientX, y: event.clientY },
-        instanceId,
-      });
-    },
-    [],
   );
 
   const handleTouchStart = useCallback(
@@ -123,26 +125,49 @@ export function Sidebar({
 
   return (
     <aside className="sidebar-layout select-none glass-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden md:w-[240px] md:flex-none lg:w-[260px]">
-      <header className="sidebar-header flex shrink-0 items-center justify-between gap-3 px-3 pb-1 pt-3">
-        <img
-          src={logoSrc}
-          alt={t("navigation.brand")}
-          className="h-7 w-7 shrink-0 object-contain"
-        />
+      <header className="sidebar-header flex min-h-[60px] shrink-0 items-center gap-2 px-3 py-2">
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          title={t("navigation.home")}
+          aria-label={t("navigation.home")}
+          aria-current={pathname === "/" ? "page" : undefined}
+          className="sidebar-brand flex min-w-0 flex-1 items-center gap-2 rounded-control text-left"
+        >
+          <img
+            src={logoSrc}
+            alt=""
+            className="h-7 w-7 shrink-0 object-contain"
+          />
+          <span className="min-w-0">
+            <span className="block truncate text-[14px] font-semibold leading-[20px] text-[var(--label-primary)]">
+              {t("navigation.brand")}
+            </span>
+            <span className="block text-[10px] leading-[14px] text-[var(--label-secondary)]">
+              {t(
+                connectionState === "connected"
+                  ? "sidebar.hubConnected"
+                  : connectionState === "connecting"
+                    ? "sidebar.hubConnecting"
+                    : "sidebar.hubDisconnected",
+              )}
+            </span>
+          </span>
+        </button>
         <nav
           className="sidebar-navigation flex shrink-0 items-center gap-1"
           aria-label={t("navigation.main")}
         >
-          <button
+          <Button
+            size="icon"
             type="button"
-            onClick={() => navigate("/")}
-            title={t("navigation.home")}
-            aria-label={t("navigation.home")}
-            aria-current={pathname === "/" ? "page" : undefined}
-            className="navigation-item"
+            onClick={onNewInstance}
+            title={t("sidebar.newInstance")}
+            aria-label={t("sidebar.newInstance")}
+            className="navigation-create"
           >
-            <Home size={19} aria-hidden="true" />
-          </button>
+            <Plus size={18} aria-hidden="true" />
+          </Button>
           <button
             type="button"
             onClick={() => navigate("/settings")}
@@ -151,7 +176,7 @@ export function Sidebar({
             aria-current={pathname === "/settings" ? "page" : undefined}
             className="navigation-item"
           >
-            <SettingsIcon size={19} aria-hidden="true" />
+            <SettingsIcon size={18} aria-hidden="true" />
           </button>
         </nav>
       </header>
@@ -160,38 +185,7 @@ export function Sidebar({
         className="instance-list flex min-h-0 min-w-0 flex-1 flex-col"
         aria-label={t("navigation.instances")}
       >
-        <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-1.5">
-          <div className="min-w-0">
-            <h1 className="text-[18px] font-semibold leading-[24px] text-[var(--label-primary)]">
-              {t("navigation.instances")}
-            </h1>
-            <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] leading-[14px] text-[var(--label-secondary)]">
-              <span className="truncate">
-                {t("sidebar.machine", { count: edgeGroups.length })}
-                {" · "}
-                {t("sidebar.instance", { count: instances.length })}
-              </span>
-              <span
-                className="flex shrink-0 items-center"
-                aria-label={t("navigation.connection")}
-              >
-                <ConnectionIndicator />
-              </span>
-            </div>
-          </div>
-          <Button
-            size="icon"
-            type="button"
-            onClick={onNewInstance}
-            title={t("sidebar.newInstance")}
-            aria-label={t("sidebar.newInstance")}
-            className="navigation-create shrink-0"
-          >
-            <Plus size={18} aria-hidden="true" />
-          </Button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 scrollbar-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2 scrollbar-auto">
           {instances.length === 0 ? (
             <div className="px-4 py-12 text-center text-[13px] leading-[20px] text-[var(--label-secondary)]">
               <Server
@@ -209,31 +203,68 @@ export function Sidebar({
                 data-edge-id={edgeId}
                 aria-label={edgeId}
               >
-                <Button
-                  size="compact"
-                  type="button"
-                  onClick={() => handleCopyEdgeId(edgeId)}
-                  title={t("navigation.copyEdge", { edgeId })}
-                  aria-label={t("navigation.copyEdge", { edgeId })}
-                  className="flex max-w-full items-center gap-2 px-2 text-[11px] font-semibold text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)]"
+                <div className="sidebar-edge-header flex items-center gap-1">
+                  <button
+                    type="button"
+                    aria-expanded={!collapsedEdges[edgeId]}
+                    aria-controls={`${sidebarId}-edge-${encodeURIComponent(edgeId)}`}
+                    aria-label={t("sidebar.toggleMachine", { edgeId })}
+                    title={edgeId}
+                    onClick={() => toggleEdge(edgeId)}
+                    className="sidebar-edge-toggle flex min-w-0 flex-1 items-center gap-1.5 rounded-control px-2 py-1.5 text-left text-[11px] leading-[16px] text-[var(--label-secondary)]"
+                  >
+                    <ChevronRight
+                      size={12}
+                      className={`shrink-0 ${collapsedEdges[edgeId] ? "" : "rotate-90"}`}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{edgeId}</span>
+                    <span className="shrink-0 tabular-nums">
+                      ({groupInstances.length})
+                    </span>
+                  </button>
+                  <Popover
+                    label={t("sidebar.machineActions", { edgeId })}
+                    placement="bottom"
+                    trigger={({ open, id }) => (
+                      <Button
+                        size="icon"
+                        type="button"
+                        className="sidebar-edge-actions"
+                        aria-label={t("sidebar.machineActions", { edgeId })}
+                        title={t("sidebar.machineActions", { edgeId })}
+                        aria-haspopup="dialog"
+                        aria-expanded={open}
+                        aria-controls={open ? id : undefined}
+                      >
+                        {copiedEdgeId === edgeId ? (
+                          <Check size={14} aria-hidden="true" />
+                        ) : (
+                          <MoreHorizontal size={14} aria-hidden="true" />
+                        )}
+                      </Button>
+                    )}
+                  >
+                    {(close) => (
+                      <div className="p-2">
+                        <MenuItem
+                          onClick={() => {
+                            handleCopyEdgeId(edgeId);
+                            close();
+                          }}
+                        >
+                          <Copy size={14} aria-hidden="true" />
+                          {t("sidebar.copyMachineId")}
+                        </MenuItem>
+                      </div>
+                    )}
+                  </Popover>
+                </div>
+                <ul
+                  id={`${sidebarId}-edge-${encodeURIComponent(edgeId)}`}
+                  hidden={!!collapsedEdges[edgeId]}
+                  className="space-y-1"
                 >
-                  <Server size={12} className="shrink-0" aria-hidden="true" />
-                  <span className="truncate">{edgeId}</span>
-                  {copiedEdgeId === edgeId ? (
-                    <Check
-                      size={11}
-                      className="shrink-0 text-[var(--toast-icon-success)]"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Copy
-                      size={11}
-                      className="shrink-0 opacity-50"
-                      aria-hidden="true"
-                    />
-                  )}
-                </Button>
-                <ul className="space-y-0.5">
                   {groupInstances.map((instance) => {
                     const name =
                       instance.cwd.split("/").filter(Boolean).pop() ||
@@ -244,7 +275,8 @@ export function Sidebar({
                       <li
                         key={instance.id}
                         data-instance-id={instance.id}
-                        className="group relative"
+                        className="instance-row relative"
+                        data-selected={selectedId === instance.id || undefined}
                       >
                         <button
                           type="button"
@@ -260,64 +292,62 @@ export function Sidebar({
                             }
                             onSelect(instance.id);
                           }}
-                          onContextMenu={(event) =>
-                            handleContextMenu(event, instance.id)
-                          }
                           onTouchStart={(event) =>
                             handleTouchStart(event, instance.id)
                           }
                           onTouchEnd={cancelLongPress}
                           onTouchMove={cancelLongPress}
                           onTouchCancel={cancelLongPress}
-                          className="instance-item w-full rounded-control border border-transparent px-3 py-1.5 text-left"
+                          className="instance-item w-full rounded-control text-left"
                         >
-                          <div className="instance-item-text flex min-w-0 items-center gap-2.5">
-                            <span
-                              className={`h-2 w-2 shrink-0 rounded-full ${getInstanceStatusDotClass(instance.status)}`}
-                              title={t(statusKey)}
-                            />
-                            <span className="truncate text-[14px] font-medium leading-[20px] text-[var(--label-primary)]">
+                          <span
+                            className={`instance-status h-2 w-2 rounded-full ${getInstanceStatusDotClass(instance.status)}`}
+                            title={t(statusKey)}
+                            aria-hidden="true"
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate text-[14px] font-medium leading-[20px] text-[var(--label-primary)]">
                               {name}
-                            </span>
-                            <span className="sr-only">{t(statusKey)}</span>
-                          </div>
-                          <div className="instance-item-text ml-4.5 mt-0.5 truncate text-[11px] leading-[14px] text-[var(--label-secondary)]">
-                            {instance.model.name ||
-                              `${instance.model.provider}/${instance.model.id}`}
-                          </div>
-                          {percent != null && percent > 0 && (
-                            <div
-                              className="instance-progress-track mt-1 h-[3px] overflow-hidden rounded-full bg-[var(--fill-quaternary)]"
-                              role="progressbar"
-                              aria-label={t("composer.contextUsage")}
-                              aria-valuemin={0}
-                              aria-valuemax={100}
-                              aria-valuenow={Math.min(
-                                100,
-                                Math.max(0, percent),
-                              )}
-                            >
-                              <div
-                                className="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
-                                style={{
-                                  width: `${Math.max(2, Math.min(100, percent))}%`,
-                                  backgroundColor:
-                                    percent >= 90
-                                      ? "var(--toast-icon-error)"
-                                      : percent >= 60
-                                        ? "var(--toast-icon-warning)"
-                                        : "var(--toast-icon-success)",
-                                }}
-                              />
                             </div>
-                          )}
+                            <span className="sr-only">{t(statusKey)}</span>
+                            <div className="mt-0.5 truncate text-[11px] leading-[14px] text-[var(--label-secondary)]">
+                              {instance.model.name ||
+                                `${instance.model.provider}/${instance.model.id}`}
+                            </div>
+                            {percent != null && percent > 0 && (
+                              <div
+                                className="instance-progress-track mt-1.5 h-[3px] overflow-hidden rounded-full bg-[var(--fill-quaternary)]"
+                                role="progressbar"
+                                aria-label={t("composer.contextUsage")}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-valuenow={Math.min(
+                                  100,
+                                  Math.max(0, percent),
+                                )}
+                              >
+                                <div
+                                  className="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+                                  style={{
+                                    width: `${Math.max(2, Math.min(100, percent))}%`,
+                                    backgroundColor:
+                                      percent >= 90
+                                        ? "var(--toast-icon-error)"
+                                        : percent >= 60
+                                          ? "var(--toast-icon-warning)"
+                                          : "var(--toast-icon-success)",
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </button>
                         <Button
                           size="icon"
                           type="button"
                           aria-label={t("navigation.instanceActions", { name })}
                           title={t("navigation.instanceActions", { name })}
-                          className="absolute right-2 top-0.5 flex items-center justify-center text-[var(--label-secondary)] hover:bg-[var(--fill-secondary)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100"
+                          className="instance-actions absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center text-[var(--label-secondary)]"
                           onClick={(event) => {
                             const rect =
                               event.currentTarget.getBoundingClientRect();

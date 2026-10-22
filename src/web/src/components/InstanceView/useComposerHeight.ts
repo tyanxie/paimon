@@ -107,7 +107,6 @@ export function useComposerHeight(
     if (!event.isPrimary || event.button !== 0) return;
     event.preventDefault();
     cleanupRef.current?.();
-    event.currentTarget.focus({ preventScroll: true });
     const pointerId = event.pointerId;
     const startY = event.clientY;
     const startHeight = heightRef.current;

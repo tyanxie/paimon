@@ -948,7 +948,30 @@ button,
   }
 }
 
-.glass-panel-input:focus-within {
+/* 滚动边缘覆盖整条正文区域，随悬浮控件高度变化。 */
+.conversation-scroll {
+  --conversation-edge-mask: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent max(0px, calc(var(--conversation-top-edge) - 16px)),
+    black calc(var(--conversation-top-edge) + 12px),
+    black
+      max(
+        calc(var(--conversation-top-edge) + 12px),
+        calc(100% - var(--conversation-bottom-edge) - 12px)
+      ),
+    transparent
+      max(
+        calc(var(--conversation-top-edge) + 12px),
+        calc(100% - var(--conversation-bottom-edge) + 16px)
+      ),
+    transparent 100%
+  );
+  -webkit-mask-image: var(--conversation-edge-mask);
+  mask-image: var(--conversation-edge-mask);
+}
+
+.composer-surface:has(.composer-editor:focus) {
   border-color: var(--color-accent);
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
@@ -1010,33 +1033,88 @@ button,
 
 .navigation-item:focus-visible,
 .navigation-create:focus-visible,
+.sidebar-brand:focus-visible,
+.sidebar-edge-toggle:focus-visible,
 .instance-item:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-.instance-item-text {
-  padding-right: 36px;
+.sidebar-brand {
+  padding: 4px;
+  margin-left: -4px;
 }
-
+.sidebar-brand:hover {
+  background: var(--fill-quaternary);
+}
+.sidebar-brand:active {
+  background: var(--fill-tertiary);
+}
+.sidebar-edge-header {
+  margin-bottom: 4px;
+  border-radius: var(--radius-control);
+}
+.sidebar-edge-toggle {
+  background: transparent;
+}
+.sidebar-edge-header:hover,
+.sidebar-edge-header:has(.sidebar-edge-actions[aria-expanded="true"]),
+.instance-row:hover {
+  background: var(--fill-quaternary);
+}
+.sidebar-edge-header:has(button:active),
+.instance-row:has(button:active) {
+  background: var(--fill-tertiary);
+}
+.instance-row {
+  border-radius: var(--radius-control);
+  transition: background-color 150ms ease;
+}
+.instance-row[data-selected] {
+  background: var(--fill-secondary);
+}
+.sidebar-edge-actions.ui-button--icon {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+.sidebar-edge-actions.ui-button,
+.instance-actions.ui-button,
+.sidebar-edge-actions.ui-button:hover:not(:disabled),
+.instance-actions.ui-button:hover:not(:disabled) {
+  background: transparent;
+}
+.sidebar-edge-actions.ui-button:hover:not(:disabled),
+.instance-actions.ui-button:hover:not(:disabled) {
+  color: var(--label-primary);
+}
+.instance-item {
+  background: transparent;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  column-gap: 8px;
+  padding: 8px 36px 8px 10px;
+}
+.instance-status {
+  margin-top: 6px;
+}
 .instance-progress-track {
   width: 100%;
 }
-
-.instance-item {
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease;
-}
-
-.instance-item:hover {
-  background: var(--fill-quaternary);
-}
-
-.instance-item[aria-current="page"] {
-  background: var(--fill-secondary);
-  border-color: var(--separator);
+@media (hover: hover) and (pointer: fine) {
+  .instance-actions,
+  .sidebar-edge-actions {
+    opacity: 0;
+  }
+  .instance-row:hover .instance-actions,
+  .instance-row:focus-within .instance-actions,
+  .instance-row[data-selected] .instance-actions,
+  .sidebar-edge-header:hover .sidebar-edge-actions,
+  .sidebar-edge-header:focus-within .sidebar-edge-actions,
+  .sidebar-edge-actions[aria-expanded="true"] {
+    opacity: 1;
+  }
 }
 
 .composer-surface {
@@ -1207,8 +1285,19 @@ button,
   .conversation-thinking-toggle {
     min-height: 44px;
   }
-  .instance-item-text {
+  .instance-item {
     padding-right: 48px;
+    padding-block: 10px;
+  }
+  .sidebar-brand,
+  .sidebar-edge-toggle {
+    min-height: 44px;
+  }
+  .sidebar-edge-actions.ui-button--icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
   .navigation-item,
   .navigation-create {
@@ -1245,7 +1334,7 @@ button,
 @media (prefers-reduced-motion: reduce) {
   .navigation-item,
   .navigation-create,
-  .instance-item,
+  .instance-row,
   .composer-surface {
     transition: none;
   }

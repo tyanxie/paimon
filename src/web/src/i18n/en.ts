@@ -9,8 +9,6 @@ const en: LocaleResource = {
     close: "Close",
     confirm: "Confirm",
     loading: "Loading…",
-    online: "Online",
-    offline: "Offline",
   },
 
   modal: {
@@ -37,10 +35,12 @@ const en: LocaleResource = {
   // ─── Sidebar ───
   sidebar: {
     newInstance: "New instance",
-    machine_one: "{{count}} machine",
-    machine_other: "{{count}} machines",
-    instance_one: "{{count}} instance",
-    instance_other: "{{count}} instances",
+    hubConnected: "Hub connected",
+    hubConnecting: "Connecting to Hub",
+    hubDisconnected: "Hub disconnected",
+    toggleMachine: "Expand or collapse machine {{edgeId}}",
+    machineActions: "Machine actions for {{edgeId}}",
+    copyMachineId: "Copy Name",
     noInstances: "No pi instances connected",
     settings: "Settings",
     shutdown: "Shutdown instance",
@@ -56,9 +56,7 @@ const en: LocaleResource = {
     main: "Main navigation",
     home: "Home",
     instances: "Instances",
-    connection: "Connection status",
     backToInstances: "Back to instances",
-    copyEdge: "Copy Edge: {{edgeId}}",
     instanceActions: "Actions for {{name}}",
   },
 

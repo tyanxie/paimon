@@ -4,7 +4,13 @@
 import { Button } from "../ui/Button";
 import { StatusMessage } from "../ui/StatusMessage";
 import { AnimatePresence } from "motion/react";
-import { useRef, useLayoutEffect, useState, useCallback } from "react";
+import {
+  useRef,
+  useLayoutEffect,
+  useState,
+  useCallback,
+  type CSSProperties,
+} from "react";
 import { useParams } from "react-router";
 import { ChevronsDown } from "lucide-react";
 import type {
@@ -266,9 +272,11 @@ export function InstanceView() {
     <div className="relative flex-1 min-w-0 overflow-hidden">
       <main className="absolute inset-0 flex min-h-0 flex-col overflow-hidden">
         {/* 顶部悬浮信息栏 */}
-        <div className="pointer-events-none absolute left-0 right-0 top-0 z-20 px-3 pt-3 md:px-4 md:pt-4">
+        <div
+          ref={topChromeRef}
+          className="pointer-events-none absolute left-0 right-0 top-0 z-20 px-3 pt-3 md:px-4 md:pt-0"
+        >
           <div
-            ref={topChromeRef}
             className="conversation-topbar header-material pointer-events-auto w-full px-3 py-2 md:px-4"
             role="region"
             aria-label={t("conversation.instanceInfo")}
@@ -288,9 +296,15 @@ export function InstanceView() {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          style={{ overflowAnchor: "none" }}
+          style={
+            {
+              overflowAnchor: "none",
+              "--conversation-top-edge": `${topChromeHeight}px`,
+              "--conversation-bottom-edge": `${Math.max(0, bottomChromeHeight - bottomSafeGap)}px`,
+            } as CSSProperties
+          }
           aria-busy={isRefreshing}
-          className="absolute bottom-[var(--bottom-safe-gap)] left-0 right-0 top-6 overflow-y-auto scrollbar-auto px-3 md:bottom-0 md:top-7 md:px-4"
+          className="conversation-scroll absolute bottom-[var(--bottom-safe-gap)] left-0 right-0 top-0 overflow-y-auto scrollbar-auto px-3 md:bottom-0 md:px-4"
         >
           <div
             ref={contentRef}

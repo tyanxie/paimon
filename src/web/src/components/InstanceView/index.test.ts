@@ -1,5 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import { pinScrollToBottomIfNeeded } from "./utils";
+import {
+  getConversationScrollSpacing,
+  pinScrollToBottomIfNeeded,
+} from "./utils";
+
+describe("对话悬浮区域间距", () => {
+  test("正文起点保留顶部渐隐之外的阅读空间", () => {
+    const spacing = getConversationScrollSpacing({
+      topChromeHeight: 60,
+      bottomChromeHeight: 160,
+      bottomSafeGap: 12,
+    });
+    expect(spacing.paddingTop).toBe(76);
+    expect(spacing.paddingBottom).toBe(160);
+    expect(spacing.scrollButtonBottom).toBe(172);
+  });
+});
 
 describe("InstanceView 底部跟随", () => {
   test("位于底部且内容位置变化时继续跟随", () => {

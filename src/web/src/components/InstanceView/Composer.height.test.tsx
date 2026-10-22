@@ -124,6 +124,26 @@ async function text(value: string) {
 }
 
 describe("输入区高度调节", () => {
+  test("鼠标与触摸拖动保留编辑焦点，键盘调整保留入口焦点", async () => {
+    await render();
+    editor().focus();
+    for (const pointerType of ["mouse", "touch"]) {
+      await pointer(handle(), "pointerdown", 300, 1, pointerType);
+      expect(document.activeElement).toBe(editor());
+      await pointer(window, "pointermove", 280, 1, pointerType);
+      await pointer(window, "pointerup", 280, 1, pointerType);
+      expect(document.activeElement).toBe(editor());
+      expect(handle().dataset.dragging).toBeUndefined();
+    }
+    handle().focus();
+    const previousHeight = Number.parseFloat(editor().style.height);
+    await key("ArrowUp");
+    expect(document.activeElement).toBe(handle());
+    expect(Number.parseFloat(editor().style.height)).toBeGreaterThan(
+      previousHeight,
+    );
+  });
+
   test("可见视口不足时限制自动高度，恢复后还原默认高度", async () => {
     await render();
     const initial = Number.parseFloat(editor().style.height);

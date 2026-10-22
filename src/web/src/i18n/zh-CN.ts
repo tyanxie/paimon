@@ -7,8 +7,6 @@ const zhCN = {
     close: "关闭",
     confirm: "确认",
     loading: "加载中…",
-    online: "在线",
-    offline: "离线",
   },
 
   modal: {
@@ -35,10 +33,12 @@ const zhCN = {
   // ─── 侧边栏 ───
   sidebar: {
     newInstance: "新建实例",
-    machine_one: "{{count}} 台机器",
-    machine_other: "{{count}} 台机器",
-    instance_one: "{{count}} 个实例",
-    instance_other: "{{count}} 个实例",
+    hubConnected: "Hub 已连接",
+    hubConnecting: "Hub 正在连接",
+    hubDisconnected: "Hub 连接中断",
+    toggleMachine: "展开或折叠机器 {{edgeId}}",
+    machineActions: "{{edgeId}} 的机器操作",
+    copyMachineId: "复制名称",
     noInstances: "暂无 pi 实例连接",
     settings: "设置",
     shutdown: "退出实例",
@@ -54,9 +54,7 @@ const zhCN = {
     main: "主导航",
     home: "首页",
     instances: "实例",
-    connection: "连接状态",
     backToInstances: "返回实例列表",
-    copyEdge: "复制 Edge：{{edgeId}}",
     instanceActions: "{{name}} 的实例操作",
   },
 
