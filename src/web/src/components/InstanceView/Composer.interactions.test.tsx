@@ -154,6 +154,45 @@ async function key(options: KeyboardEventInit) {
 }
 
 describe("输入工具栏交互", () => {
+  test("常用品牌首次渲染直接显示图标，入口保持名称与尺寸", () => {
+    const models = [
+      ["openai/gpt-5", "OpenAI"],
+      ["anthropic/claude-sonnet-4", "Claude"],
+      ["google/gemini-2.5-pro", "Gemini"],
+      ["moonshotai/kimi-k2", "MoonshotAI"],
+      ["qwen/qwen3", "Qwen"],
+      ["z-ai/glm-5", "Z.ai"],
+      ["x-ai/grok-4", "Grok"],
+      ["deepseek/deepseek-r1", "DeepSeek"],
+      ["minimax/minimax-m2.5", "Minimax"],
+      ["tencent/hunyuan-2", "Hunyuan"],
+    ];
+    for (const [id, title] of models) {
+      act(() => {
+        root.render(
+          <MotionConfig reducedMotion="always">
+            <Probe
+              options={{
+                instance: {
+                  ...instance,
+                  model: { provider: "openrouter", id: id!, name: title },
+                },
+              }}
+            />
+          </MotionConfig>,
+        );
+      });
+      const trigger = button(`选择模型: ${title}`);
+      const icon = trigger.querySelector<HTMLElement>(".model-brand-icon")!;
+      expect(trigger.querySelector(".composer-model-name")!.textContent).toBe(
+        title!,
+      );
+      expect(icon.style.width).toBe("14px");
+      expect(icon.style.height).toBe("14px");
+      expect(icon.querySelector("title")!.textContent).toBe(title!);
+    }
+  });
+
   test("实例状态持续可见，活动状态与侧栏采用相同名称和颜色", async () => {
     for (const status of ["streaming", "compacting"] as const) {
       await render({ instance: { ...instance, status } });
@@ -328,6 +367,16 @@ describe("输入工具栏交互", () => {
       { provider: "openrouter", id: "qwen/qwen3", name: "Qwen model" },
       { provider: "openrouter", id: "x-ai/grok-4", name: "Grok model" },
       { provider: "openrouter", id: "moonshotai/kimi-k2", name: "Kimi model" },
+      {
+        provider: "openrouter",
+        id: "minimax/minimax-m2.5",
+        name: "Minimax model",
+      },
+      {
+        provider: "openrouter",
+        id: "tencent/hunyuan-2",
+        name: "Hunyuan model",
+      },
       { provider: "openrouter", id: "z-ai/glm-5", name: "GLM model" },
     ];
     const titles = [
@@ -338,6 +387,8 @@ describe("输入工具栏交互", () => {
       "Qwen",
       "Grok",
       "MoonshotAI",
+      "Minimax",
+      "Hunyuan",
       "Z.ai",
     ];
     const brandColors = new Map([
@@ -397,6 +448,59 @@ describe("输入工具栏交互", () => {
     expect(models).toEqual([["openrouter", "openai/gpt-5"]]);
   });
 
+  test("具体模型优先级与其他品牌使用完整 Lobe 匹配规则", async () => {
+    const { modelMappings } =
+      await import("@lobehub/icons/es/features/modelConfig");
+    const ids = [
+      "openai/sora",
+      "openai/dall-e-3",
+      "glm-4.1v-thinking",
+      "google/gemini-3-pro-image-preview",
+      "gemini-2.5-flash-image",
+      "mistral/mistral-large",
+      "openai/gpt-3.5-turbo",
+      "OPENAI/GPT-4O",
+      "gpt-oss-120b",
+      "o1-preview",
+      "openai/o3",
+      "openai/o4-mini",
+      "text-embedding-3-small",
+      "tts-1",
+      "whisper-1",
+      "codex-mini-latest",
+      "qwq-32b",
+      "qvq-max",
+      "wan2.1-video",
+      "hy3-preview",
+      "hy4-preview",
+      "abab-6.5",
+    ];
+    for (const id of ids) {
+      await render({
+        instance: { ...instance, model: { provider: "provider", id } },
+      });
+      await act(async () => {
+        await import("@lobehub/icons/es/features/ModelIcon");
+      });
+      const expected = modelMappings.find(({ keywords }) =>
+        keywords.some((keyword) =>
+          new RegExp(keyword, "i").test(id.toLowerCase()),
+        ),
+      )!;
+      expect(
+        button(`选择模型: ${id}`).querySelector(".model-brand-icon title")!
+          .textContent,
+      ).toBe((expected.Icon as typeof expected.Icon & { title: string }).title);
+      if (expected.props?.type) {
+        expect(
+          button(`选择模型: ${id}`)
+            .querySelector(".model-brand-icon svg")!
+            .getAttribute("type"),
+        ).toBe(expected.props.type);
+      }
+    }
+  });
+
   test("未知模型展示通用图标，禁用入口保留品牌图标与思考提示", async () => {
     await render();
     await act(async () => {
@@ -404,7 +508,7 @@ describe("输入工具栏交互", () => {
     });
     expect(
       button("选择模型: Current model").querySelector(
-        ".model-brand-icon .lucide-brain",
+        ".model-brand-icon .lucide-cpu",
       ),
     ).not.toBeNull();
     expect(button("选择模型: Current model").textContent).toBe("Current model");
