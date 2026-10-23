@@ -1,0 +1,27 @@
+.settings-content {
+  container: settings / inline-size;
+  width: 100%;
+  max-width: 640px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+}
+.settings-row > .ui-segmented {
+  width: 320px;
+  flex-shrink: 0;
+}
+@container settings (max-width: 520px) {
+  .settings-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .settings-row > .ui-segmented {
+    width: 100%;
+  }
+}

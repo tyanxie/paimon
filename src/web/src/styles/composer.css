@@ -1,0 +1,199 @@
+.composer-surface:has(.composer-editor:focus) {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.composer-surface {
+  container: composer / inline-size;
+  border-radius: var(--radius-panel);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.composer-resize-handle {
+  position: relative;
+  display: flex;
+  height: 16px;
+  margin: 4px 16px 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  cursor: row-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.composer-resize-handle > span {
+  width: 32px;
+  height: 3px;
+  border-radius: var(--radius-inline);
+  background: var(--fill-secondary);
+}
+
+.composer-resize-handle:hover,
+.composer-resize-handle[data-dragging="true"] {
+  background: var(--fill-quaternary);
+}
+
+.composer-resize-handle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.composer-editor {
+  --composer-default-lines: 2;
+  min-height: 0;
+  padding: 6px 16px;
+}
+
+@media (min-width: 768px) {
+  .composer-editor {
+    --composer-default-lines: 3;
+    padding-inline: 20px;
+  }
+}
+
+.model-brand-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--label-primary);
+}
+
+.model-brand-icon svg {
+  color: inherit;
+}
+
+.composer-control {
+  max-width: 100%;
+  min-width: 0;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: var(--radius-inline);
+  background: transparent;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.composer-control:hover:not(:disabled),
+.composer-control:active:not(:disabled) {
+  background: var(--fill-tertiary);
+}
+
+.composer-control:disabled {
+  opacity: 0.5;
+}
+
+.composer-control .composer-model-name {
+  max-width: none;
+  min-width: 0;
+}
+
+.composer-control > svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.composer-control > .selector-chevron {
+  width: 11px;
+  height: 11px;
+}
+
+.composer-toolbar button {
+  min-width: 0;
+}
+
+.composer-toolbar .ui-button--compact {
+  height: 22px;
+  min-height: 22px;
+}
+
+.composer-toolbar .ui-button--icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.composer-context-detail {
+  display: none;
+}
+
+.adaptive-toolbar {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.adaptive-toolbar-item,
+.adaptive-toolbar-more {
+  flex: none;
+  width: max-content;
+}
+
+.adaptive-toolbar-flexible {
+  width: var(--toolbar-item-width, max-content);
+}
+
+.adaptive-toolbar-flexible > div,
+.adaptive-toolbar-flexible button {
+  width: 100%;
+}
+
+.adaptive-toolbar-flexible [data-toolbar-label] {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.adaptive-toolbar-flexible [data-toolbar-label-content] {
+  display: inline-block;
+}
+
+.adaptive-toolbar-hidden {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.adaptive-toolbar-page-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  font-size: 13px;
+  color: var(--label-primary);
+}
+
+@media (pointer: coarse) {
+  .composer-toolbar .ui-button--compact,
+  .composer-toolbar .ui-button--icon {
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+  .composer-toolbar .ui-button--icon {
+    width: 44px;
+  }
+  .composer-toolbar {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+  .composer-actions {
+    gap: 4px;
+  }
+}
+
+@container composer (min-width: 640px) {
+  .composer-context-detail {
+    display: inline;
+  }
+}
