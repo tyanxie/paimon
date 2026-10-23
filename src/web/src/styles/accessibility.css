@@ -1,0 +1,40 @@
+@media (prefers-reduced-motion: reduce) {
+  .ui-button,
+  .ui-field,
+  .ui-menu-item,
+  .ui-segment {
+    transition: none;
+  }
+  .ui-button:active:not(:disabled) {
+    transform: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .conversation-scroll-bottom {
+    background: var(--btn-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .conversation-scroll-bottom:hover:not(:disabled) {
+    background: var(--btn-solid-hover);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navigation-item,
+  .navigation-create,
+  .instance-row,
+  .composer-surface {
+    transition: none;
+  }
+  .navigation-item:active,
+  .navigation-create:active {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animated-bg,
+  .animate-spin,
+  .animate-pulse {
+    animation: none;
+  }
+}

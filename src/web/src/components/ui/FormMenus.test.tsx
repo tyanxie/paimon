@@ -3,9 +3,9 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MotionConfig } from "motion/react";
 import i18n from "../../i18n";
-import { NewInstanceModal } from "./NewInstanceModal";
-import { CompactModal } from "./CompactModal";
-import { SessionPopover } from "./SessionPopover";
+import { NewInstanceModal } from "../../features/instances/NewInstanceModal";
+import { CompactModal } from "../../features/conversation/CompactModal";
+import { SessionPopover } from "../../features/conversation/SessionPopover";
 
 let root: Root;
 let container: HTMLDivElement;

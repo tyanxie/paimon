@@ -25,7 +25,7 @@ Paimon 为多台服务器上的 Pi 实例提供统一的对话界面。页面以
 
 ## 圆角与形状
 
-界面以较小圆角的矩形为主体，圆角按用途采用五个固定档位，统一通过 `src/web/src/index.css` 的主题变量管理。
+界面以较小圆角的矩形为主体，圆角按用途采用五个固定档位，统一通过 `src/web/src/styles/theme.css` 的主题变量管理。
 
 - `inline`：输入工具栏文字按钮、行内代码和小型标记。
 - `control`：普通按钮、图标按钮、字段、菜单与列表条目。
@@ -79,4 +79,4 @@ Pi 回复正文保持可见，执行汇总和有正文的 thinking 提供展开�
 
 ## 源码入口
 
-布局与控件查看 `src/web/src/components/`，视觉参数查看 `src/web/src/index.css`，输入高度逻辑查看 `InstanceView/useComposerHeight.ts`。图表方向见 [Mermaid 设计指导](mermaid-theme.md)。
+对话与输入查看 `src/web/src/features/conversation/`，实例创建查看 `src/web/src/features/instances/`，公共控件查看 `src/web/src/components/ui/`。视觉参数按功能组织在 `src/web/src/styles/`，由 `index.css` 统一导入；输入高度逻辑查看 `features/conversation/useComposerHeight.ts`。图表方向见 [Mermaid 设计指导](mermaid-theme.md)。

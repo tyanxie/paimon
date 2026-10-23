@@ -24,9 +24,9 @@ SVG 背景透明，卡片与全屏预览分别提供适合阅读的底色。普�
 
 ## 源码入口
 
-- `src/web/src/components/entries/MermaidBlock.tsx`：渲染队列、更新、错误与预览。
-- `src/web/src/components/entries/mermaidTheme.ts`：主题和安全配置。
+- `src/web/src/features/conversation/MermaidBlock.tsx`：渲染队列、更新、错误与预览。
+- `src/web/src/features/conversation/mermaidTheme.ts`：主题和安全配置。
 - `src/web/src/components/ui/ImageLightbox.tsx`：图片与图表预览。
-- `src/web/src/index.css`：内容容器与公共控件样式。
+- `src/web/src/styles/controls.css`：内容容器与公共控件样式。
 
 整体页面方向见 [Web 设计指导](web-visual-redesign.md)。

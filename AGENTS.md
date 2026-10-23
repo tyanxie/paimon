@@ -36,6 +36,10 @@ bun run scripts/prepare-npm-packages.ts     # 生成 npm 发布目录
 - `src/extensions/paimon/`：Pi Extension、事件转发与 session 控制。
 - `src/utils/`：后端共享环境、日志与时区工具。
 - `src/web/`：React 前端，入口为 `src/web/index.html`。
+- `src/web/src/features/conversation/`：实例对话页面、输入区、session 列表、消息展示与工具详情，对话类型位于该目录的 `types.ts`。
+- `src/web/src/features/instances/`：实例创建与工作目录补全。
+- `src/web/src/components/ui/`：公共控件；`stores/`：全局 Zustand 状态；`hooks/`：跨功能 hook。
+- `src/web/src/styles/`：按主题、公共控件与功能组织的样式，由 `src/web/src/index.css` 统一导入。
 - `scripts/` 与 `bin/paimon.cjs`：二进制构建、npm 发布与平台启动器。
 
 运行时使用 Bun，前端使用 React、React Router、Tailwind CSS 和 Vite；状态管理使用 Zustand，国际化使用 i18next。依赖与版本查看 `package.json`。
@@ -68,6 +72,8 @@ bun run scripts/prepare-npm-packages.ts     # 生成 npm 发布目录
 
 - 采用 macOS 26 Liquid Glass 风格，颜色、材质、字体和控件的设计参考见 [macOS 26 Design Tokens](docs/design/macos-26-tokens.md)。保留亮暗主题及 `mist`、`aurora`、`ember` 颜色组。玻璃材质用于导航与控制区域，正文优先保证可读性。
 - 对话按用户消息组织回复，正文分隔连续工具执行区域；保留工具、thinking、系统事件与正文的原始顺序。展开状态与阅读位置保持用户选择。
+- `useConversation` 管理当前实例的历史、流式消息与工具执行状态；`useSessionList` 管理 session 列表查询状态，页面组合两个 hook。
+- `useConversationDisplay` 从完整原始条目派生对话展示模型，统一工具结果关联、状态与结果转换。工具卡片接收所属工具的 `presentation`，回复与系统事件使用所属范围的数据；原始条目继续用于分页、滚动与重新编辑。
 - 公共控件统一同类操作与状态，桌面保持紧凑，触摸设备提供充分操作范围；兼顾键盘、Safe Area 和 reduced motion。已有容器内的辅助按钮默认透明，交互时显示反馈；主要操作、选中状态与独立悬浮按钮按需保留背景。
 - Mermaid 使用严格安全配置与 DOMPurify 清理 SVG，保留源码局部样式。渲染串行执行，异步更新保留预览状态与阅读位置。
 - 体积较大的图表与交互依赖按需加载，构建配置位于 `vite.config.ts`。
@@ -79,6 +85,8 @@ bun run scripts/prepare-npm-packages.ts     # 生成 npm 发布目录
 - Extension 开发遵循 Pi Extension 规范。
 - 用户可见 UI 文本通过 `t('namespace.key')` 获取，key 按模块分组，fallback 语言为简体中文。新增文本同时更新 `src/web/src/i18n/zh-CN.ts` 和 `en.ts`。
 - localStorage key 使用 `paimon:camelCase` 格式。
-- `stores/` 每个独立状态域使用一个 `useXxx.ts` 文件，采用 Zustand。共享类型位于 `types.ts`，WebSocket 消息通过 `useWebSocket.subscribe(handler)` 订阅。纯转换函数放在所属 hook 内，不对外导出。
+- 前端业务组件、私有 hook 与领域类型按功能放在 `features/`，公共控件放在 `components/ui/`；功能入口 `index.ts` 负责对外导出，组件实现使用具体文件名。
+- `stores/` 每个独立状态域使用一个 `useXxx.ts` 文件，采用 Zustand。类型放在所属状态或功能目录的 `types.ts`；WebSocket 消息通过 `useWebSocket.subscribe(handler)` 订阅。数据转换函数放在所属 hook 内，不对外导出；多个组件共用的展示格式函数放在所属功能目录。
+- 样式按归属放在 `styles/`，`index.css` 保留 Tailwind 与样式导入入口。调整样式组织时检查 CSS layer、选择器优先级和规则顺序。
 - Git 提交格式为 `type(scope): 中文描述`。提交与推送须用户明确指示。
 - 发版版本号由用户指定，修改根 `package.json` 后使用 `Release version x.y.z` 提交信息。

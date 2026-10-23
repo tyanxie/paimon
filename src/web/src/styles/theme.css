@@ -1,0 +1,261 @@
+@theme {
+  /* 圆角按元素用途统一，圆形用于发送、停止、悬浮导航与状态标记。 */
+  --radius-inline: 4px;
+  --radius-control: 6px;
+  --radius-content: 8px;
+  --radius-surface: 12px;
+  --radius-panel: 16px;
+
+  /* 模糊 */
+  --blur-material: 30px;
+  --blur-bg: 60px;
+
+  /* 阴影 */
+  --shadow-window: 0 0 48px rgba(0, 0, 0, 0.12);
+  --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.08);
+
+  /* 强调色 */
+  --color-accent: #0091ff;
+  --color-accent-vibrant: #0a99ff;
+
+  /* 尺寸 */
+  --spacing-sidebar: 240px;
+  --size-control-height: 36px;
+
+  /* 安全区 */
+  --bottom-safe-gap: max(0.75rem, env(safe-area-inset-bottom));
+
+  /* 字体 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro", sans-serif;
+
+  /* 文字尺寸 */
+  --text-large-title: 26px;
+  --text-title-1: 22px;
+  --text-title-2: 17px;
+  --text-title-3: 15px;
+  --text-headline: 13px;
+  --text-body: 13px;
+  --text-callout: 12px;
+  --text-subheadline: 11px;
+  --text-footnote: 10px;
+  --text-caption: 10px;
+}
+
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
+:root {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+
+  /* Light mode */
+  --label-primary: rgba(0, 0, 0, 0.85);
+  --label-secondary: rgba(0, 0, 0, 0.5);
+  --label-tertiary: rgba(0, 0, 0, 0.25);
+  --fill-primary: rgba(0, 0, 0, 0.1);
+  --fill-secondary: rgba(0, 0, 0, 0.08);
+  --fill-tertiary: rgba(0, 0, 0, 0.05);
+  --fill-quaternary: rgba(0, 0, 0, 0.03);
+
+  /* 材质（Liquid Glass Medium） */
+  --material-thick: rgba(246, 246, 246, 0.72);
+  --material-medium: rgba(246, 246, 246, 0.6);
+  --material-thin: rgba(246, 246, 246, 0.48);
+  --material-modal: rgba(246, 246, 246, 0.82);
+
+  /* 面板 */
+  --panel-bg: var(--material-medium);
+  --panel-border: rgba(255, 255, 255, 0.5);
+  --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  /* 分隔 */
+  --separator: rgba(0, 0, 0, 0.08);
+
+  /* 卡片/代码块背景（light 用更轻的值） */
+  --fill-card: rgba(0, 0, 0, 0.03);
+
+  /* Diff 配色 */
+  --diff-add-bg: rgba(48, 209, 88, 0.08);
+  --diff-add-text: var(--label-primary);
+  --diff-del-bg: rgba(255, 59, 48, 0.08);
+  --diff-del-text: var(--label-primary);
+  --diff-context-text: var(--label-secondary);
+  --diff-line-num: var(--label-tertiary);
+
+  /* 实色按钮 */
+  --btn-solid: #f6f6f6;
+  --btn-solid-hover: #dddddd;
+
+  /* 媒体覆盖 badge（叠在图片/视频上的小控件，不随主题翻转） */
+  --badge-bg: rgba(0, 0, 0, 0.5);
+  --badge-bg-hover: rgba(0, 0, 0, 0.7);
+  --badge-text: #ffffff;
+
+  /* Toast 分级图标色（macOS 26 Accent Colors - Opaque） */
+  --toast-icon-info: #0091ff;
+  --toast-icon-success: #30d158;
+  --toast-icon-warning: #ff9230;
+  --toast-icon-error: #ff4245;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --label-primary: rgba(255, 255, 255, 0.85);
+    --label-secondary: rgba(255, 255, 255, 0.55);
+    --label-tertiary: rgba(255, 255, 255, 0.25);
+    --fill-primary: rgba(255, 255, 255, 0.1);
+    --fill-secondary: rgba(255, 255, 255, 0.08);
+    --fill-tertiary: rgba(255, 255, 255, 0.05);
+    --fill-quaternary: rgba(255, 255, 255, 0.03);
+    --material-thick: rgba(40, 40, 40, 0.8);
+    --material-medium: rgba(40, 40, 40, 0.6);
+    --material-thin: rgba(40, 40, 40, 0.4);
+    --material-modal: rgba(40, 40, 40, 0.82);
+    --fill-card: rgba(255, 255, 255, 0.08);
+    --panel-bg: var(--material-medium);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+    --separator: rgba(255, 255, 255, 0.06);
+    --diff-add-bg: rgba(48, 209, 88, 0.12);
+    --diff-add-text: rgba(48, 209, 88, 0.85);
+    --diff-del-bg: rgba(255, 69, 58, 0.12);
+    --diff-del-text: rgba(255, 69, 58, 0.85);
+    --diff-context-text: var(--label-secondary);
+    --btn-solid: #282828;
+    --btn-solid-hover: #3d3d3d;
+    --bg-gradient: linear-gradient(
+      135deg,
+      #1a1a2e 0%,
+      #2d1b3e 25%,
+      #1b2838 50%,
+      #1e2e1e 75%,
+      #1a1a2e 100%
+    );
+
+    /* Toast 分级图标色（macOS 26 Accent Colors - Vibrant，暗色下更鲜亮） */
+    --toast-icon-info: #0a99ff;
+    --toast-icon-success: #3bdb63;
+    --toast-icon-warning: #ff9e33;
+    --toast-icon-error: #ff4747;
+  }
+}
+
+[data-theme="dark"] {
+  --label-primary: rgba(255, 255, 255, 0.85);
+  --label-secondary: rgba(255, 255, 255, 0.55);
+  --label-tertiary: rgba(255, 255, 255, 0.25);
+  --fill-primary: rgba(255, 255, 255, 0.1);
+  --fill-secondary: rgba(255, 255, 255, 0.08);
+  --fill-tertiary: rgba(255, 255, 255, 0.05);
+  --fill-quaternary: rgba(255, 255, 255, 0.03);
+  --material-thick: rgba(40, 40, 40, 0.8);
+  --material-medium: rgba(40, 40, 40, 0.6);
+  --material-thin: rgba(40, 40, 40, 0.4);
+  --material-modal: rgba(40, 40, 40, 0.82);
+  --fill-card: rgba(255, 255, 255, 0.08);
+  --panel-bg: var(--material-medium);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  --separator: rgba(255, 255, 255, 0.06);
+  --diff-add-bg: rgba(48, 209, 88, 0.12);
+  --diff-add-text: rgba(48, 209, 88, 0.85);
+  --diff-del-bg: rgba(255, 69, 58, 0.12);
+  --diff-del-text: rgba(255, 69, 58, 0.85);
+  --diff-context-text: var(--label-secondary);
+  --btn-solid: #282828;
+  --btn-solid-hover: #3d3d3d;
+
+  /* Toast 分级图标色（macOS 26 Accent Colors - Vibrant） */
+  --toast-icon-info: #0a99ff;
+  --toast-icon-success: #3bdb63;
+  --toast-icon-warning: #ff9e33;
+  --toast-icon-error: #ff4747;
+}
+
+[data-bg="mist"],
+:root:not([data-bg]) {
+  --bg-gradient: linear-gradient(
+    135deg,
+    #e8f0fe 0%,
+    #f5e6f0 25%,
+    #e6f0f5 50%,
+    #f0f5e6 75%,
+    #e8f0fe 100%
+  );
+}
+
+[data-bg="mist"][data-theme="dark"],
+:root:not([data-bg])[data-theme="dark"] {
+  --bg-gradient: linear-gradient(
+    135deg,
+    #1a1a2e 0%,
+    #2d1b3e 25%,
+    #1b2838 50%,
+    #1e2e1e 75%,
+    #1a1a2e 100%
+  );
+}
+
+[data-bg="aurora"] {
+  --bg-gradient: linear-gradient(
+    135deg,
+    #a8d8ea 0%,
+    #aa96da 25%,
+    #8fd3c4 50%,
+    #c4a8d8 75%,
+    #a8d8ea 100%
+  );
+}
+
+[data-bg="aurora"][data-theme="dark"] {
+  --bg-gradient: linear-gradient(
+    135deg,
+    #0d1b2a 0%,
+    #1b0033 25%,
+    #0a2e26 50%,
+    #1a0a2e 75%,
+    #0d1b2a 100%
+  );
+}
+
+[data-bg="ember"] {
+  --bg-gradient: linear-gradient(
+    135deg,
+    #f8d4b0 0%,
+    #f0b0c0 25%,
+    #f8e0a0 50%,
+    #e8c0d0 75%,
+    #f8d4b0 100%
+  );
+}
+
+[data-bg="ember"][data-theme="dark"] {
+  --bg-gradient: linear-gradient(
+    135deg,
+    #2e1a0a 0%,
+    #3e1b2d 25%,
+    #2e2410 50%,
+    #2d1a2e 75%,
+    #2e1a0a 100%
+  );
+}
+
+.animated-bg {
+  background: var(--bg-gradient);
+  background-size: 300% 300%;
+  animation: gradient-shift 20s ease infinite;
+}

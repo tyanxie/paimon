@@ -1,0 +1,151 @@
+.ui-dialog-actions {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 16px max(8px, env(safe-area-inset-bottom));
+  border-top: 0.5px solid var(--separator);
+}
+.ui-dialog-actions > .ui-button--regular {
+  min-height: 28px;
+  min-width: 52px;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+@media (pointer: coarse) {
+  .ui-dialog-actions > .ui-button--regular {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+.modal-panel[data-size="form"] {
+  width: min(480px, calc(100% - 32px));
+}
+.toast-container {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  width: auto;
+  max-width: none;
+  overflow: visible;
+  position: fixed;
+  inset-inline: max(12px, env(safe-area-inset-left))
+    max(12px, env(safe-area-inset-right));
+  top: calc(var(--app-viewport-top, 0px) + max(16px, env(safe-area-inset-top)));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 100;
+}
+.ui-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: fit-content;
+  max-width: min(520px, 100%);
+  padding: 10px 14px;
+  border: 0.5px solid var(--panel-border);
+  border-radius: var(--radius-surface);
+  background: var(--material-modal);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  box-shadow: var(--panel-shadow);
+  color: var(--label-primary);
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+}
+.native-dialog-viewport {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+}
+.native-dialog-viewport:not([open]) {
+  display: none;
+}
+.native-dialog-viewport::backdrop {
+  background: transparent;
+}
+.modal-viewport {
+  background: transparent;
+  overflow: clip;
+}
+.modal-positioner {
+  overflow: clip;
+}
+.modal-panel {
+  width: min(640px, calc(100% - 32px));
+  max-height: 80%;
+  border-radius: var(--radius-panel);
+  background: var(--material-modal);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+  border: 0.5px solid var(--separator);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+}
+.modal-positioner[data-sheet="true"] {
+  align-items: flex-end;
+}
+.modal-panel[data-sheet="true"] {
+  width: 100%;
+  height: calc(100% - max(12px, env(safe-area-inset-top)));
+  max-height: calc(100% - max(12px, env(safe-area-inset-top)));
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+}
+.modal-content {
+  overscroll-behavior: contain;
+}
+.modal-panel[data-sheet="true"] .modal-content {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.modal-panel[data-sheet="true"] .modal-header {
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
+}
+.modal-grabber {
+  min-height: 24px;
+  touch-action: none;
+  cursor: grab;
+}
+.image-lightbox .ui-button {
+  border-radius: var(--radius-control);
+}
+.modal-close,
+.image-lightbox button {
+  min-width: 32px;
+  min-height: 32px;
+}
+@media (pointer: coarse) {
+  .modal-close,
+  .image-lightbox button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+.image-lightbox > img {
+  max-width: min(
+    90%,
+    calc(
+      100% -
+        max(2rem, calc(env(safe-area-inset-left) + env(safe-area-inset-right)))
+    )
+  );
+  max-height: min(
+    90%,
+    calc(
+      100% -
+        max(2rem, calc(env(safe-area-inset-top) + env(safe-area-inset-bottom)))
+    )
+  );
+}

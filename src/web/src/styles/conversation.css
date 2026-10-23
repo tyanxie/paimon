@@ -1,0 +1,70 @@
+.conversation-scroll {
+  --conversation-edge-mask: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent max(0px, calc(var(--conversation-top-edge) - 16px)),
+    black calc(var(--conversation-top-edge) + 12px),
+    black
+      max(
+        calc(var(--conversation-top-edge) + 12px),
+        calc(100% - var(--conversation-bottom-edge) - 12px)
+      ),
+    transparent
+      max(
+        calc(var(--conversation-top-edge) + 12px),
+        calc(100% - var(--conversation-bottom-edge) + 16px)
+      ),
+    transparent 100%
+  );
+  -webkit-mask-image: var(--conversation-edge-mask);
+  mask-image: var(--conversation-edge-mask);
+}
+
+.conversation-scroll-bottom {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--label-primary) 12%, transparent);
+  background: var(--material-thick);
+  color: var(--label-primary);
+  -webkit-backdrop-filter: blur(var(--blur-material));
+  backdrop-filter: blur(var(--blur-material));
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.conversation-scroll-bottom:hover:not(:disabled) {
+  background: var(--material-modal);
+}
+
+@media (pointer: coarse) {
+  .conversation-scroll-bottom::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.conversation-tool-name {
+  flex-shrink: 0;
+  padding: 2px 4px;
+  border-radius: var(--radius-inline);
+  background: var(--fill-tertiary);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.conversation-execution-toggle,
+.conversation-tool-row,
+.conversation-thinking-toggle {
+  min-height: 32px;
+}
