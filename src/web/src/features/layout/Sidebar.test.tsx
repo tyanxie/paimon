@@ -4,10 +4,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, useLocation } from "react-router";
 import { MotionConfig } from "motion/react";
 import { Sidebar } from "./Sidebar";
-import { useSidebar } from "../stores/useSidebar";
-import { useWebSocket } from "../stores/useWebSocket";
-import i18n from "../i18n";
-import type { InstanceInfo } from "../../../protocol/types";
+import { useSidebar } from "../../stores/useSidebar";
+import { useWebSocket } from "../../stores/useWebSocket";
+import i18n from "../../i18n";
+import type { InstanceInfo } from "@protocol/types";
 
 const instances: InstanceInfo[] = ["idle", "streaming", "compacting"].map(
   (status, index) => ({

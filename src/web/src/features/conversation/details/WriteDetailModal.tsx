@@ -2,7 +2,11 @@ import { useTranslation } from "react-i18next";
 import { ResultBlock } from "../../../components/ui/ContentBlock";
 import { ModalShell } from "../../../components/ui/ModalShell";
 import { MarkdownRenderer } from "../Markdown";
-import { ToolModalTitle, ToolPendingIndicator, type DetailModalProps } from "../ToolDetailShared";
+import {
+  ToolModalTitle,
+  ToolPendingIndicator,
+  type DetailModalProps,
+} from "../ToolDetailShared";
 import { getLanguageFromPath, wrapInFence } from "../toolFormatting";
 
 /** Write 工具专用弹窗 */
@@ -15,8 +19,8 @@ export function WriteDetailModal({
   onClose,
 }: DetailModalProps) {
   const { t } = useTranslation();
-  const path = args.path ?? "";
-  const content = args.content ?? "";
+  const path = typeof args.path === "string" ? args.path : "";
+  const content = typeof args.content === "string" ? args.content : "";
   const language = getLanguageFromPath(path);
 
   // markdown 文件直接渲染，其他文件用代码块

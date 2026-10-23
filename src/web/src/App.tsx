@@ -5,17 +5,14 @@ import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useViewportHeight } from "./hooks/useViewportHeight";
-import { useAuth } from "./hooks/useAuth";
+import { LoginPage, useAuth } from "./features/auth";
 import { useWebSocket } from "./stores/useWebSocket";
 import { useInstances } from "./stores/useInstances";
 import { useTaskNotifier } from "./hooks/useTaskNotifier";
-import { Sidebar } from "./components/Sidebar";
+import { Home, MainPanel, Sidebar } from "./features/layout";
 import { InstanceView } from "./features/conversation";
-import { Home } from "./components/Home";
-import { MainPanel } from "./components/MainPanel";
-import { Settings } from "./components/Settings";
+import { Settings } from "./features/settings";
 import { NewInstanceModal } from "./features/instances";
-import { LoginPage } from "./components/LoginPage";
 import { ToastContainer, showToast } from "./components/ui/Toast";
 import type { InstanceId } from "../../protocol/types";
 import { isBusy } from "./utils/status";
@@ -25,7 +22,7 @@ import { useTranslation } from "react-i18next";
 function useSelectedInstanceId(): InstanceId | null {
   const { pathname } = useLocation();
   const match = pathname.match(/^\/instance\/(.+)$/);
-  return match ? (match[1] as InstanceId) : null;
+  return match?.[1] ?? null;
 }
 
 export default function App() {

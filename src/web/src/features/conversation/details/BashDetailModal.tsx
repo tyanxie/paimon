@@ -2,7 +2,11 @@ import { useTranslation } from "react-i18next";
 import { ResultBlock } from "../../../components/ui/ContentBlock";
 import { ModalShell } from "../../../components/ui/ModalShell";
 import { MarkdownRenderer } from "../Markdown";
-import { ToolModalTitle, ToolPendingIndicator, type DetailModalProps } from "../ToolDetailShared";
+import {
+  ToolModalTitle,
+  ToolPendingIndicator,
+  type DetailModalProps,
+} from "../ToolDetailShared";
 import { wrapInFence } from "../toolFormatting";
 
 /** Bash 工具专用弹窗 */
@@ -15,8 +19,8 @@ export function BashDetailModal({
   onClose,
 }: DetailModalProps) {
   const { t } = useTranslation();
-  const command = args.command ?? "";
-  const timeout = args.timeout as number | undefined;
+  const command = typeof args.command === "string" ? args.command : "";
+  const timeout = typeof args.timeout === "number" ? args.timeout : undefined;
 
   // command 用 bash 代码块渲染
   const commandBlock = wrapInFence(command, "bash");

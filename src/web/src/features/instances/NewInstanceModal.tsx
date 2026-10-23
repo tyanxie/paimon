@@ -3,18 +3,16 @@
 import { FolderPlus } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type {
-  EdgeInfo,
-  InstanceId,
-} from "../../../../protocol/types";
+import type { InstanceId } from "../../../../protocol/types";
 import { Button } from "../../components/ui/Button";
 import { FormField, SelectField } from "../../components/ui/FormControls";
 import { ModalShell } from "../../components/ui/ModalShell";
 import { StatusMessage } from "../../components/ui/StatusMessage";
 import { authFetch } from "../../utils/authFetch";
+import { isRecord } from "../../utils/typeGuards";
+import { isInstanceCreationEdgesResponse } from "./instanceData";
+import type { InstanceCreationEdge } from "./types";
 import { PathAutocomplete } from "./PathAutocomplete";
-
-
 
 // ─── NewInstanceModal ────────────────────────────────────────────────────────
 
@@ -32,7 +30,7 @@ export function NewInstanceModal({
   const edgeFieldId = useId();
   const pathFieldId = useId();
   const [cwd, setCwd] = useState("");
-  const [edges, setEdges] = useState<EdgeInfo[]>([]);
+  const [edges, setEdges] = useState<InstanceCreationEdge[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
   const [loadingEdges, setLoadingEdges] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -42,11 +40,15 @@ export function NewInstanceModal({
   useEffect(() => {
     authFetch("/api/edges")
       .then((res) => res.json())
-      .then((data: { edges: EdgeInfo[] }) => {
-        setEdges(data.edges);
-        if (data.edges.length > 0) {
-          setSelectedEdgeId(data.edges[0].edgeId);
-          const homedir = data.edges[0].homedir;
+      .then((value: unknown) => {
+        if (!isInstanceCreationEdgesResponse(value)) {
+          throw new Error("Invalid Edge list response");
+        }
+        const edges = value.edges;
+        setEdges(edges);
+        if (edges.length > 0) {
+          setSelectedEdgeId(edges[0].edgeId);
+          const homedir = edges[0].homedir;
           if (homedir) {
             const defaultPath = homedir.endsWith("/") ? homedir : homedir + "/";
             setCwd(defaultPath);
@@ -91,23 +93,27 @@ export function NewInstanceModal({
         body: JSON.stringify({ cwd: trimmed, edgeId: selectedEdgeId }),
         signal: AbortSignal.timeout(20_000),
       });
-      const data = (await res.json()) as {
-        instanceId?: InstanceId;
-        error?: string;
-      };
-      if (!res.ok || !data.instanceId) {
+      const data: unknown = await res.json();
+      const instanceId =
+        isRecord(data) && typeof data.instanceId === "string"
+          ? data.instanceId
+          : null;
+      if (!res.ok || !instanceId) {
         setError(
-          data.error || t("newInstance.requestFailed", { status: res.status }),
+          (isRecord(data) && typeof data.error === "string"
+            ? data.error
+            : "") || t("newInstance.requestFailed", { status: res.status }),
         );
         setSubmitting(false);
         return;
       }
-      onCreated(data.instanceId);
+      onCreated(instanceId);
     } catch (err) {
       const message =
-        (err as Error).name === "TimeoutError"
+        err instanceof Error && err.name === "TimeoutError"
           ? t("newInstance.requestTimeout")
-          : (err as Error).message || t("newInstance.networkError");
+          : (err instanceof Error ? err.message : "") ||
+            t("newInstance.networkError");
       setError(message);
       setSubmitting(false);
     }

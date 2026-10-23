@@ -12,11 +12,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
-import type {
-  ImagePayload,
-  InstanceId,
-  ThinkingLevel,
-} from "../../../../protocol/types";
+import type { ImagePayload, ThinkingLevel } from "../../../../protocol/types";
 import { Button } from "../../components/ui/Button";
 import { ImageLightbox } from "../../components/ui/ImageLightbox";
 import { MobileNavBar } from "../../components/ui/MobileNavBar";
@@ -30,15 +26,15 @@ import { ConversationList } from "./Conversation";
 import { InstanceHeader } from "./InstanceHeader";
 import { SessionPopover } from "./SessionPopover";
 import { useConversation } from "./useConversation";
+import { useConversationChrome } from "./useConversationChrome";
 import { useReEdit } from "./useReEdit";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { useSessionList } from "./useSessionList";
-import { getComposerButtonMode, getConversationScrollSpacing } from "./utils";
+import { getComposerButtonMode } from "./utils";
 
 export function InstanceView() {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
-  const instanceId = id as InstanceId;
+  const { id: instanceId = "" } = useParams<{ id: string }>();
 
   // ── 全局 stores ──
   const send = useWebSocket((s) => s.send);
@@ -156,9 +152,6 @@ export function InstanceView() {
   // ── 滚动管理 ──
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const topChromeRef = useRef<HTMLDivElement>(null);
-  const bottomChromeRef = useRef<HTMLDivElement>(null);
-  const bottomSafeGapRef = useRef<HTMLDivElement>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
@@ -184,48 +177,15 @@ export function InstanceView() {
     prevLoadStateRef.current = loadState;
   }, [loadState]);
 
-  // Chrome 高度测量
-  const [topChromeHeight, setTopChromeHeight] = useState(64);
-  const [bottomChromeHeight, setBottomChromeHeight] = useState(96);
-  const [bottomSafeGap, setBottomSafeGap] = useState(12);
-  const scrollSpacing = getConversationScrollSpacing({
+  const {
+    topChromeRef,
+    bottomChromeRef,
+    bottomSafeGapRef,
     topChromeHeight,
     bottomChromeHeight,
     bottomSafeGap,
-  });
-
-  useLayoutEffect(() => {
-    const observeHeight = (
-      element: HTMLElement | null,
-      setHeight: (height: number) => void,
-    ) => {
-      if (!element) return () => undefined;
-      const updateHeight = () => {
-        setHeight(Math.ceil(element.getBoundingClientRect().height));
-      };
-      updateHeight();
-      if (typeof ResizeObserver === "undefined") return () => undefined;
-      const observer = new ResizeObserver(updateHeight);
-      observer.observe(element);
-      return () => observer.disconnect();
-    };
-
-    const cleanupTop = observeHeight(topChromeRef.current, setTopChromeHeight);
-    const cleanupBottom = observeHeight(
-      bottomChromeRef.current,
-      setBottomChromeHeight,
-    );
-    const cleanupSafeGap = observeHeight(
-      bottomSafeGapRef.current,
-      setBottomSafeGap,
-    );
-
-    return () => {
-      cleanupTop();
-      cleanupBottom();
-      cleanupSafeGap();
-    };
-  }, [instanceId]);
+    scrollSpacing,
+  } = useConversationChrome(instanceId);
 
   // 滚动 hook
   const {
@@ -248,6 +208,15 @@ export function InstanceView() {
     bottomChromeHeight,
     bottomSafeGap,
   });
+
+  const scrollStyle: CSSProperties & {
+    "--conversation-top-edge": string;
+    "--conversation-bottom-edge": string;
+  } = {
+    overflowAnchor: "none",
+    "--conversation-top-edge": `${topChromeHeight}px`,
+    "--conversation-bottom-edge": `${Math.max(0, bottomChromeHeight - bottomSafeGap)}px`,
+  };
 
   // ── 渲染 ──
   const title = instance?.cwd.split("/").pop() || instance?.cwd || "";
@@ -301,13 +270,7 @@ export function InstanceView() {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          style={
-            {
-              overflowAnchor: "none",
-              "--conversation-top-edge": `${topChromeHeight}px`,
-              "--conversation-bottom-edge": `${Math.max(0, bottomChromeHeight - bottomSafeGap)}px`,
-            } as CSSProperties
-          }
+          style={scrollStyle}
           aria-busy={isRefreshing}
           className="conversation-scroll absolute bottom-[var(--bottom-safe-gap)] left-0 right-0 top-0 overflow-y-auto scrollbar-auto px-3 md:bottom-0 md:px-4"
         >

@@ -3,13 +3,13 @@
 // macOS 26 Liquid Glass 风格：动态渐变背景 + 居中毛玻璃面板。
 
 import { useState, useCallback, useId, type FormEvent } from "react";
-import { Button } from "./ui/Button";
-import { FormField, TextField } from "./ui/FormControls";
-import { StatusMessage } from "./ui/StatusMessage";
+import { Button } from "../../components/ui/Button";
+import { FormField, TextField } from "../../components/ui/FormControls";
+import { StatusMessage } from "../../components/ui/StatusMessage";
 import { useTranslation, Trans } from "react-i18next";
-import { useLogoSrc } from "../hooks/useLogoSrc";
-import { setStoredToken } from "../utils/token";
-import { withBasePath } from "../utils/basePath";
+import { useLogoSrc } from "../../hooks/useLogoSrc";
+import { setStoredToken } from "../../utils/token";
+import { withBasePath } from "../../utils/basePath";
 
 interface LoginPageProps {
   /** 提交 token 后的回调 */

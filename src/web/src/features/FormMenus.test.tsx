@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MotionConfig } from "motion/react";
-import i18n from "../../i18n";
-import { NewInstanceModal } from "../../features/instances/NewInstanceModal";
-import { CompactModal } from "../../features/conversation/CompactModal";
-import { SessionPopover } from "../../features/conversation/SessionPopover";
+import i18n from "../i18n";
+import { NewInstanceModal } from "./instances/NewInstanceModal";
+import { CompactModal } from "./conversation/CompactModal";
+import { SessionPopover } from "./conversation/SessionPopover";
 
 let root: Root;
 let container: HTMLDivElement;

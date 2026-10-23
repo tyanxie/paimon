@@ -8,8 +8,9 @@ import {
   getStoredToken,
   setStoredToken,
   clearStoredToken,
-} from "../utils/token";
-import { withBasePath } from "../utils/basePath";
+} from "../../utils/token";
+import { withBasePath } from "../../utils/basePath";
+import { isRecord } from "../../utils/typeGuards";
 
 export function useAuth() {
   const [authToken, setAuthToken] = useState<string | null>(getStoredToken());
@@ -29,9 +30,10 @@ export function useAuth() {
         });
         if (cancelled) return;
         if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        const token = data.token as string;
+        const data: unknown = await res.json();
+        if (cancelled || !isRecord(data) || typeof data.token !== "string")
+          return;
+        const token = data.token;
         setStoredToken(token);
         setAuthToken(token);
       } catch {

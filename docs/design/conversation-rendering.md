@@ -31,12 +31,14 @@
 
 ## 源码入口
 
+- `src/web/src/features/conversation/conversationData.ts`：原始历史、消息和工具事件的字段识别。
 - `src/web/src/features/conversation/useConversation.ts`：历史、流式消息与实时工具状态。
 - `src/web/src/features/conversation/useConversationDisplay.ts`：回复与执行区域的派生展示，以及工具结果关联与展示数据。
 - `src/web/src/features/conversation/types.ts`：对话数据与展示类型。
 - `src/web/src/features/conversation/Conversation.tsx`：回复与执行汇总组件，使用展示模型及所属范围的数据。
 - `src/web/src/features/conversation/ToolCallCard.tsx` 与 `details/`：工具入口及各工具详情。
 - `src/web/src/features/conversation/useSessionList.ts`：session 列表查询状态。
+- `src/web/src/features/conversation/useConversationChrome.ts`：顶部栏、输入区与 Safe Area 的尺寸观察。
 - `src/web/src/features/conversation/useScrollAnchor.ts`：分页与阅读位置管理。
 
 页面方向见 [Web 设计指导](web-visual-redesign.md)。

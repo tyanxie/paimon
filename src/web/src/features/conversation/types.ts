@@ -2,19 +2,22 @@
 
 // ── SessionEntry：对话条目模型 ──
 
+/** 原始消息保留扩展字段，消费时检查具体内容类型。 */
+export interface SessionMessage {
+  role: string;
+  content: unknown;
+  [key: string]: unknown;
+}
+
 /** 统一的 session entry（来自 getBranch 或实时事件构造） */
 export interface SessionEntry {
   type: string;
   id?: string;
   /** 前端内部使用的稳定渲染 key，不参与协议传输 */
   __renderKey?: string;
-  parentId?: string;
+  parentId?: string | null;
   timestamp?: string;
-  message?: {
-    role: string;
-    content: unknown;
-    [key: string]: unknown;
-  };
+  message?: SessionMessage;
   summary?: string;
   [key: string]: unknown;
 }
@@ -29,6 +32,21 @@ export function getSessionEntryRenderKey(entry: SessionEntry): string {
   }
   return key;
 }
+
+/** 对话消费的工具事件字段。 */
+export type ConversationToolEvent = {
+  toolCallId: string;
+  parentToolCallId?: string;
+} & (
+  | { type: "tool_execution_start" }
+  | { type: "tool_execution_update"; partialResult: unknown }
+  | {
+      type: "tool_execution_end";
+      result: unknown;
+      isError: boolean;
+      durationMs?: number;
+    }
+);
 
 /** 当前页面接收到的工具执行状态 */
 export type ToolExecutionState = {

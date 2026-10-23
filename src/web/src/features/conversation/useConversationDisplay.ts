@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { InstanceStatus } from "../../../../protocol/types";
+import { isRecord } from "../../utils/typeGuards";
 import {
   getSessionEntryRenderKey,
   type ConversationExecution,
@@ -36,28 +37,26 @@ export function useConversationDisplay(
 
 const EMPTY_TOOL_CALL_IDS = new Set<string>();
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function normalizeToolResult(
   value: unknown,
   isError = false,
   durationMs?: number,
 ): ToolResult {
-  const result = value as {
-    content?: unknown;
-    details?: Record<string, unknown>;
-  } | null;
+  const result = isRecord(value) ? value : null;
   const content = result?.content;
   return {
     content: Array.isArray(content)
       ? content
-          .filter((block) => block?.type === "text")
-          .map((block) => block.text)
+          .flatMap((block: unknown) =>
+            isRecord(block) &&
+            block.type === "text" &&
+            typeof block.text === "string"
+              ? [block.text]
+              : [],
+          )
           .join("\n")
       : String(content ?? ""),
-    details: result?.details,
+    details: isRecord(result?.details) ? result.details : undefined,
     isError,
     durationMs,
   };

@@ -6,10 +6,15 @@ import type {
   HubToBrowserMessage,
   InstanceId,
   InstanceInfo,
-  ToolExecutionEventData,
 } from "../../../../protocol/types";
 import { showToast } from "../../components/ui/Toast";
 import { useWebSocket } from "../../stores/useWebSocket";
+import { isRecord } from "../../utils/typeGuards";
+import {
+  isConversationToolEvent,
+  isSessionEntry,
+  isSessionMessage,
+} from "./conversationData";
 import type {
   ConversationItem,
   ConversationLoadState,
@@ -118,7 +123,13 @@ export function useConversation(
         }
         case "history": {
           if (msg.payload.instanceId !== instanceId) return;
-          const messages = msg.payload.messages as SessionEntry[];
+          const messages: unknown = msg.payload.messages;
+          if (!Array.isArray(messages) || !messages.every(isSessionEntry)) {
+            console.error("[Paimon] Invalid conversation history");
+            setLoadState("error");
+            setErrorMessage(null);
+            break;
+          }
           const newHasMore = msg.payload.hasMore ?? false;
           applyHistory(instanceId, messages, newHasMore);
           break;
@@ -210,12 +221,13 @@ export function useConversation(
     const blocks = Array.isArray(message.content) ? message.content : [];
     setLiveToolCallIds(
       new Set(
-        blocks
-          .filter(
-            (block) =>
-              block?.type === "toolCall" && typeof block.id === "string",
-          )
-          .map((block) => block.id as string),
+        blocks.flatMap((block: unknown) =>
+          isRecord(block) &&
+          block.type === "toolCall" &&
+          typeof block.id === "string"
+            ? [block.id]
+            : [],
+        ),
       ),
     );
   }
@@ -227,15 +239,16 @@ export function useConversation(
     data: unknown,
     timestamp: number,
   ) {
-    const d = data as Record<string, unknown>;
+    if (!isRecord(data)) return;
+    const d = data;
     const eventTime = new Date(timestamp).toISOString();
 
     switch (event) {
       case "tool_execution_start":
       case "tool_execution_update":
       case "tool_execution_end": {
-        const tool = { ...d, type: event } as ToolExecutionEventData;
-        if (tool.parentToolCallId || !tool.toolCallId) break;
+        const tool = { ...d, type: event };
+        if (!isConversationToolEvent(tool) || tool.parentToolCallId) break;
         const startedAt =
           tool.type === "tool_execution_start" ? performance.now() : undefined;
         setToolExecutions((prev) => {
@@ -276,8 +289,8 @@ export function useConversation(
         break;
       }
       case "message_start": {
-        const message = d.message as SessionEntry["message"];
-        if (!message || message.role !== "assistant") break;
+        const message = d.message;
+        if (!isSessionMessage(message) || message.role !== "assistant") break;
         rememberLiveToolCalls(message);
         const entry = ensureRenderKey(
           id,
@@ -290,8 +303,8 @@ export function useConversation(
         break;
       }
       case "message_update": {
-        const message = d.message as SessionEntry["message"];
-        if (!message) break;
+        const message = d.message;
+        if (!isSessionMessage(message)) break;
         rememberLiveToolCalls(message);
         const stableKey =
           streamingKeyRef.current ?? nextRenderKey(id, "streaming");
@@ -313,8 +326,8 @@ export function useConversation(
         break;
       }
       case "message_end": {
-        const message = d.message as SessionEntry["message"];
-        if (message) {
+        const message = d.message;
+        if (isSessionMessage(message)) {
           rememberLiveToolCalls(message);
           // 复用 streamingEntry 的 key，避免 React 重建组件导致弹窗状态丢失
           const stableKey =

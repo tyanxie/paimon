@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { TextField } from "../../components/ui/FormControls";
 import { MenuItem } from "../../components/ui/MenuItem";
 import { authFetch } from "../../utils/authFetch";
+import { isRecord } from "../../utils/typeGuards";
+import { isBrowseEntry } from "./instanceData";
 
 // ─── PathAutocomplete ────────────────────────────────────────────────────────
 // 路径自动补全输入框：输入时通过 Edge browse API 列出匹配的子目录
@@ -25,14 +27,6 @@ interface PathAutocompleteProps {
   autoFocus?: boolean;
   /** Enter 无高亮时向上冒泡（用于提交表单） */
   onSubmit?: () => void;
-}
-
-/** 浏览 API 响应 */
-interface BrowseResponse {
-  parent: string;
-  entries: BrowseEntry[];
-  truncated: boolean;
-  error?: string;
 }
 
 export function PathAutocomplete({
@@ -83,18 +77,25 @@ export function PathAutocomplete({
         `/api/edges/${encodeURIComponent(eid)}/browse?path=${encodeURIComponent(path)}`,
         { signal: controller.signal },
       );
-      const data = (await res.json()) as BrowseResponse;
+      const data: unknown = await res.json();
 
       if (controller.signal.aborted) return;
+      if (!isRecord(data)) throw new Error("Invalid directory browse response");
 
       if (data.error) {
         setSuggestions([]);
         setTruncated(false);
         setShowSuggestions(false);
       } else {
-        setSuggestions(data.entries ?? []);
-        setTruncated(data.truncated ?? false);
-        setShowSuggestions((data.entries ?? []).length > 0 || data.truncated);
+        const entries: unknown = data.entries ?? [];
+        if (!Array.isArray(entries) || !entries.every(isBrowseEntry)) {
+          throw new Error("Invalid directory browse entries");
+        }
+        const truncated =
+          typeof data.truncated === "boolean" ? data.truncated : false;
+        setSuggestions(entries);
+        setTruncated(truncated);
+        setShowSuggestions(entries.length > 0 || truncated);
       }
       setHighlightIndex(-1);
     } catch {
@@ -197,8 +198,8 @@ export function PathAutocomplete({
   useEffect(() => {
     if (highlightIndex < 0 || !listRef.current) return;
     const items = listRef.current.children;
-    const item = items[highlightIndex] as HTMLElement | undefined;
-    item?.scrollIntoView({ block: "nearest" });
+    const item = items[highlightIndex];
+    if (item instanceof HTMLElement) item.scrollIntoView({ block: "nearest" });
   }, [highlightIndex]);
 
   // edgeId 变化时重置建议列表

@@ -1,6 +1,6 @@
 // 首页：未选择实例时的占位页面
 
-import { useLogoSrc } from "../hooks/useLogoSrc";
+import { useLogoSrc } from "../../hooks/useLogoSrc";
 import { useTranslation } from "react-i18next";
 
 export function Home() {

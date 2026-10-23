@@ -2,8 +2,10 @@
 
 import yaml from "js-yaml";
 import { Check, Copy } from "lucide-react";
+import type { Root } from "mdast";
 import {
   createContext,
+  isValidElement,
   useCallback,
   useContext,
   useMemo,
@@ -23,6 +25,7 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
 import { Button } from "../../components/ui/Button";
 import { ContentToolbar } from "../../components/ui/ContentBlock";
+import { isRecord } from "../../utils/typeGuards";
 import { MermaidBlock } from "./MermaidBlock";
 
 const StreamingContext = createContext(false);
@@ -32,7 +35,7 @@ const StreamingContext = createContext(false);
  * 转为带特殊语言标记的 code 节点，使其能通过 remark-rehype 传递到组件层
  */
 function remarkFrontmatterToCode() {
-  return (tree: any) => {
+  return (tree: Root) => {
     if (tree.children[0]?.type === "yaml") {
       tree.children[0] = {
         type: "code",
@@ -48,16 +51,14 @@ function FrontmatterBlock({ yamlText }: { yamlText: string }) {
   // 解析 YAML 为 key-value 对
   let entries: [string, string][] = [];
   try {
-    const parsed = yaml.load(yamlText);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      entries = Object.entries(parsed as Record<string, unknown>).map(
-        ([key, value]) => {
-          // 值转为可读字符串
-          const display =
-            typeof value === "string" ? value : JSON.stringify(value, null, 2);
-          return [key, display];
-        },
-      );
+    const parsed: unknown = yaml.load(yamlText);
+    if (isRecord(parsed)) {
+      entries = Object.entries(parsed).map(([key, value]) => {
+        // 值转为可读字符串
+        const display =
+          typeof value === "string" ? value : JSON.stringify(value, null, 2);
+        return [key, display];
+      });
     }
   } catch {
     // YAML 解析失败时回退为原始文本展示
@@ -94,8 +95,8 @@ function extractText(node: React.ReactNode): string {
   if (node == null || typeof node === "boolean") return "";
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(extractText).join("");
-  if (typeof node === "object" && "props" in node) {
-    return extractText((node as React.ReactElement<any>).props.children);
+  if (isValidElement<{ children?: React.ReactNode }>(node)) {
+    return extractText(node.props.children);
   }
   return "";
 }

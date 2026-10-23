@@ -36,9 +36,13 @@ bun run scripts/prepare-npm-packages.ts     # 生成 npm 发布目录
 - `src/extensions/paimon/`：Pi Extension、事件转发与 session 控制。
 - `src/utils/`：后端共享环境、日志与时区工具。
 - `src/web/`：React 前端，入口为 `src/web/index.html`。
+- `src/web/src/features/auth/`：登录页面与认证状态管理。
+- `src/web/src/features/settings/`：设置页面。
+- `src/web/src/features/layout/`：首页、主面板与侧栏。
 - `src/web/src/features/conversation/`：实例对话页面、输入区、session 列表、消息展示与工具详情，对话类型位于该目录的 `types.ts`。
 - `src/web/src/features/instances/`：实例创建与工作目录补全。
 - `src/web/src/components/ui/`：公共控件；`stores/`：全局 Zustand 状态；`hooks/`：跨功能 hook。
+- `src/web/src/utils/`：前端跨功能工具函数。
 - `src/web/src/styles/`：按主题、公共控件与功能组织的样式，由 `src/web/src/index.css` 统一导入。
 - `scripts/` 与 `bin/paimon.cjs`：二进制构建、npm 发布与平台启动器。
 
@@ -87,6 +91,8 @@ bun run scripts/prepare-npm-packages.ts     # 生成 npm 发布目录
 - localStorage key 使用 `paimon:camelCase` 格式。
 - 前端业务组件、私有 hook 与领域类型按功能放在 `features/`，公共控件放在 `components/ui/`；功能入口 `index.ts` 负责对外导出，组件实现使用具体文件名。
 - `stores/` 每个独立状态域使用一个 `useXxx.ts` 文件，采用 Zustand。类型放在所属状态或功能目录的 `types.ts`；WebSocket 消息通过 `useWebSocket.subscribe(handler)` 订阅。数据转换函数放在所属 hook 内，不对外导出；多个组件共用的展示格式函数放在所属功能目录。
+- 前端业务代码避免使用 `any` 和未经检查的类型断言。外部数据使用 `unknown` 接收，通过字段检查和 type guard 确认消费字段；优先使用依赖库提供的类型。保留原始数据、未知条目与扩展字段。
+- 业务数据的 type guard 放在所属功能目录，跨功能的通用 type guard 放在 `utils/`。
 - 样式按归属放在 `styles/`，`index.css` 保留 Tailwind 与样式导入入口。调整样式组织时检查 CSS layer、选择器优先级和规则顺序。
 - Git 提交格式为 `type(scope): 中文描述`。提交与推送须用户明确指示。
 - 发版版本号由用户指定，修改根 `package.json` 后使用 `Release version x.y.z` 提交信息。

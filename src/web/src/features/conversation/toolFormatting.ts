@@ -1,10 +1,13 @@
 /** 从 args 中提取摘要信息 */
-export function getToolSummary(name: string, args: Record<string, any>): string {
+export function getToolSummary(
+  name: string,
+  args: Record<string, unknown>,
+): string {
   switch (name) {
     case "read": {
-      const path = args.path ?? "";
-      const offset = args.offset as number | undefined;
-      const limit = args.limit as number | undefined;
+      const path = typeof args.path === "string" ? args.path : "";
+      const offset = typeof args.offset === "number" ? args.offset : undefined;
+      const limit = typeof args.limit === "number" ? args.limit : undefined;
       if (offset != null || limit != null) {
         const start = offset ?? "";
         const end = limit != null ? (offset ?? 1) + limit - 1 : "";
@@ -15,9 +18,8 @@ export function getToolSummary(name: string, args: Record<string, any>): string 
     case "bash":
       return args.command ? String(args.command).slice(0, 80) : "";
     case "edit":
-      return args.path ?? "";
     case "write":
-      return args.path ?? "";
+      return typeof args.path === "string" ? args.path : "";
     default:
       return "";
   }

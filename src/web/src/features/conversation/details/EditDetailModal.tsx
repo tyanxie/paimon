@@ -1,6 +1,10 @@
 import { ResultBlock } from "../../../components/ui/ContentBlock";
 import { ModalShell } from "../../../components/ui/ModalShell";
-import { ToolModalTitle, ToolPendingIndicator, type DetailModalProps } from "../ToolDetailShared";
+import {
+  ToolModalTitle,
+  ToolPendingIndicator,
+  type DetailModalProps,
+} from "../ToolDetailShared";
 
 /** Diff 行解析渲染 */
 function DiffView({ diff }: { diff: string }) {
@@ -63,8 +67,9 @@ export function EditDetailModal({
   status,
   onClose,
 }: DetailModalProps) {
-  const path = args.path ?? "";
-  const diff = result?.details?.diff as string | undefined;
+  const path = typeof args.path === "string" ? args.path : "";
+  const diff =
+    typeof result?.details?.diff === "string" ? result.details.diff : undefined;
 
   return (
     <ModalShell

@@ -15,7 +15,7 @@ export function ToolCallCard({
   compact = false,
 }: {
   name: string;
-  args: Record<string, any>;
+  args: Record<string, unknown>;
   toolCallId?: string;
   presentation: ToolPresentation;
   compact?: boolean;
@@ -29,7 +29,10 @@ export function ToolCallCard({
   const statusLabel = useToolStatusLabel(status);
   const elapsed = useToolElapsed(status === "running" ? startedAt : undefined);
   const durationDisplay = (
-    <ToolDuration elapsed={isCompleted ? result?.durationMs : elapsed} isFinal={isCompleted} />
+    <ToolDuration
+      elapsed={isCompleted ? result?.durationMs : elapsed}
+      isFinal={isCompleted}
+    />
   );
 
   return (

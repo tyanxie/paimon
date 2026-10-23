@@ -1,7 +1,7 @@
 // 整体玻璃侧栏：全局入口与按 Edge 分组的实例列表
 
 import { AnimatePresence } from "motion/react";
-import { Button } from "./ui/Button";
+import { Button } from "../../components/ui/Button";
 import {
   useMemo,
   useState,
@@ -21,21 +21,21 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
-import type { InstanceInfo, InstanceId } from "../../../protocol/types";
+import type { InstanceInfo, InstanceId } from "@protocol/types";
 import {
   getInstanceStatusDotClass,
   getInstanceStatusKey,
-} from "../utils/status";
-import { useLogoSrc } from "../hooks/useLogoSrc";
-import { useSidebar } from "../stores/useSidebar";
-import { useWebSocket } from "../stores/useWebSocket";
-import { Popover } from "./ui/Popover";
-import { MenuItem } from "./ui/MenuItem";
+} from "../../utils/status";
+import { useLogoSrc } from "../../hooks/useLogoSrc";
+import { useSidebar } from "../../stores/useSidebar";
+import { useWebSocket } from "../../stores/useWebSocket";
+import { Popover } from "../../components/ui/Popover";
+import { MenuItem } from "../../components/ui/MenuItem";
 import {
   ContextMenu,
   ContextMenuItem,
   type ContextMenuPosition,
-} from "./ui/ContextMenu";
+} from "../../components/ui/ContextMenu";
 import { useTranslation } from "react-i18next";
 
 interface SidebarProps {

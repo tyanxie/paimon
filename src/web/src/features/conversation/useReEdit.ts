@@ -6,15 +6,12 @@
 import { useCallback, useMemo } from "react";
 import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
-import type {
-  ImagePayload,
-  InstanceId,
-  InstanceStatus,
-} from "../../../../protocol/types";
+import type { InstanceId, InstanceStatus } from "../../../../protocol/types";
 import { showToast } from "../../components/ui/Toast";
 import type { InputDraft } from "../../stores/useDrafts";
 import { EMPTY_DRAFT, useDrafts } from "../../stores/useDrafts";
 import { generateImageId, type AttachedImage } from "../../utils/image";
+import { isRecord } from "../../utils/typeGuards";
 import type { SessionEntry } from "./types";
 
 /**
@@ -42,7 +39,7 @@ export function useReEdit(
     if (
       lastEntry.type !== "message" ||
       lastEntry.message?.role !== "assistant" ||
-      (lastEntry.message as any).stopReason !== "aborted"
+      lastEntry.message.stopReason !== "aborted"
     ) {
       return { canReEdit: false, userContent: null };
     }
@@ -90,16 +87,20 @@ function extractDraftFromContent(content: unknown): InputDraft {
   } else if (Array.isArray(content)) {
     const textParts: string[] = [];
     for (const block of content) {
-      if (block.type === "text") {
+      if (!isRecord(block)) continue;
+      if (block.type === "text" && typeof block.text === "string") {
         textParts.push(block.text);
-      } else if (block.type === "image") {
-        const img = block as ImagePayload;
+      } else if (
+        block.type === "image" &&
+        typeof block.data === "string" &&
+        typeof block.mimeType === "string"
+      ) {
         const id = generateImageId();
         images.push({
           id,
-          data: img.data,
-          mimeType: img.mimeType,
-          previewUrl: `data:${img.mimeType};base64,${img.data}`,
+          data: block.data,
+          mimeType: block.mimeType,
+          previewUrl: `data:${block.mimeType};base64,${block.data}`,
         });
       }
     }

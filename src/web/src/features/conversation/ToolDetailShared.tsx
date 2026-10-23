@@ -5,7 +5,7 @@ import type { ConversationToolState, ToolResult } from "./types";
 
 export interface DetailModalProps {
   name: string;
-  args: Record<string, any>;
+  args: Record<string, unknown>;
   result: ToolResult | null;
   durationDisplay: ReactNode;
   status: ConversationToolState["status"];

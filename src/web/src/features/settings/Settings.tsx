@@ -1,6 +1,6 @@
 // 设置页面：外观（主题 + 背景）+ 语言 + 通知
 
-import { SegmentedControl } from "./ui/SegmentedControl";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useTranslation } from "react-i18next";
 import {
   useAppearance,
@@ -8,11 +8,11 @@ import {
   useNotification,
   type Appearance,
   type Background,
-} from "../stores/useSettings";
-import { supportsNotification } from "../hooks/useTaskNotifier";
-import { type Language, setStoredLanguage } from "../i18n";
-import { MobileNavBar } from "./ui/MobileNavBar";
-import { showToast } from "./ui/Toast";
+} from "../../stores/useSettings";
+import { supportsNotification } from "../../hooks/useTaskNotifier";
+import { type Language, setStoredLanguage } from "../../i18n";
+import { MobileNavBar } from "../../components/ui/MobileNavBar";
+import { showToast } from "../../components/ui/Toast";
 
 // ========================================
 // 通用组件
@@ -163,7 +163,7 @@ export function Settings() {
             <SegmentedControl
               label={t("settings.language")}
               options={languageOptions}
-              value={i18n.language as Language}
+              value={i18n.language === "en" ? "en" : "zh-CN"}
               onChange={setStoredLanguage}
             />
           </SettingRow>

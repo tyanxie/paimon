@@ -394,4 +394,51 @@ describe("useConversation 展示模型", () => {
     expect(state.entries).toHaveLength(6);
     expect(state.displayItems.at(-1)!.key).toBe("reply:u1");
   });
+
+  test("未知历史类型保留条目数量、对象身份与分页 offset", async () => {
+    const entry = {
+      type: "future_entry",
+      id: "future",
+      parentId: null,
+      extra: true,
+    };
+    await history([entry], true);
+    expect(state.entries[0]).toBe(entry);
+    expect(state.displayItems).toEqual([]);
+    await act(async () => state.loadMore());
+    expect(sentMessages).toContainEqual({
+      type: "get_history",
+      payload: { instanceId, offset: 1 },
+    });
+  });
+
+  test("无效历史显示加载错误，合法响应恢复对话", async () => {
+    const log = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await history([null]);
+      expect(state.loadState).toBe("error");
+      expect(state.entries).toEqual([]);
+      await history([
+        {
+          type: "message",
+          id: "valid",
+          message: { role: "user", content: "question" },
+        },
+      ]);
+      expect(state.loadState).toBe("idle");
+      expect(state.entries).toHaveLength(1);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  test("无效实时字段保持原有对话与工具状态", async () => {
+    await event("message_start", { message: { role: 1, content: [] } });
+    await event("message_update", null);
+    await event("tool_execution_start", { toolCallId: 1 });
+    await event("tool_execution_end", { toolCallId: "one", isError: "false" });
+    expect(state.streamingEntry).toBeNull();
+    expect(state.toolExecutions.size).toBe(0);
+    expect(state.entries).toEqual([]);
+  });
 });

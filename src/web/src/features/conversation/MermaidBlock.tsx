@@ -45,8 +45,13 @@ function renderMermaid(
       );
       signal.throwIfAborted();
       // 使用 viewBox 的尺寸，让 SVG 图片按图表比例参与页面布局
-      const element = new DOMParser().parseFromString(svg, "image/svg+xml")
-        .documentElement as unknown as SVGSVGElement;
+      const element = new DOMParser().parseFromString(
+        svg,
+        "image/svg+xml",
+      ).documentElement;
+      if (!(element instanceof SVGSVGElement)) {
+        throw new Error("Invalid Mermaid SVG document");
+      }
       const viewBox = element.viewBox?.baseVal;
       if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
         element.setAttribute("width", String(viewBox.width));

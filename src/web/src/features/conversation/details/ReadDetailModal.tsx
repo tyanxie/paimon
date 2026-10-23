@@ -1,7 +1,11 @@
 import { ResultBlock } from "../../../components/ui/ContentBlock";
 import { ModalShell } from "../../../components/ui/ModalShell";
 import { MarkdownRenderer } from "../Markdown";
-import { ToolModalTitle, ToolPendingIndicator, type DetailModalProps } from "../ToolDetailShared";
+import {
+  ToolModalTitle,
+  ToolPendingIndicator,
+  type DetailModalProps,
+} from "../ToolDetailShared";
 import { getLanguageFromPath, wrapInFence } from "../toolFormatting";
 
 /** Read 工具专用弹窗 */
@@ -13,9 +17,9 @@ export function ReadDetailModal({
   status,
   onClose,
 }: DetailModalProps) {
-  const path = args.path ?? "";
-  const offset = args.offset as number | undefined;
-  const limit = args.limit as number | undefined;
+  const path = typeof args.path === "string" ? args.path : "";
+  const offset = typeof args.offset === "number" ? args.offset : undefined;
+  const limit = typeof args.limit === "number" ? args.limit : undefined;
   const language = getLanguageFromPath(path);
 
   // 构造地址栏文本

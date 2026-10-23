@@ -79,4 +79,4 @@ Pi 回复正文保持可见，执行汇总和有正文的 thinking 提供展开�
 
 ## 源码入口
 
-对话与输入查看 `src/web/src/features/conversation/`，实例创建查看 `src/web/src/features/instances/`，公共控件查看 `src/web/src/components/ui/`。视觉参数按功能组织在 `src/web/src/styles/`，由 `index.css` 统一导入；输入高度逻辑查看 `features/conversation/useComposerHeight.ts`。图表方向见 [Mermaid 设计指导](mermaid-theme.md)。
+应用布局与侧栏查看 `src/web/src/features/layout/`，认证查看 `features/auth/`，设置查看 `features/settings/`。对话与输入查看 `features/conversation/`，实例创建查看 `features/instances/`，公共控件查看 `src/web/src/components/ui/`。视觉参数按功能组织在 `src/web/src/styles/`，由 `index.css` 统一导入；输入高度逻辑查看 `features/conversation/useComposerHeight.ts`，对话控制区域尺寸观察查看 `features/conversation/useConversationChrome.ts`。图表方向见 [Mermaid 设计指导](mermaid-theme.md)。
