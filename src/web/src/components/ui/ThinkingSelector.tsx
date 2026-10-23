@@ -1,10 +1,12 @@
-// 思考等级选择器：点击弹出 Popover，展示可选等级
+// 思考等级选择器与工具栏菜单共用选项
 
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Brain } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Button } from "./Button";
+import { MenuItem } from "./MenuItem";
 import { Popover } from "./Popover";
 import type { ThinkingLevel } from "../../../../protocol/types";
 
-/** 老版本 Extension 不传 availableThinkingLevels 时的 fallback */
 const DEFAULT_THINKING_LEVELS: ThinkingLevel[] = [
   "off",
   "minimal",
@@ -19,69 +21,111 @@ interface ThinkingSelectorProps {
   onSelect?: (level: ThinkingLevel) => void;
 }
 
+export function ThinkingOptions({
+  currentLevel,
+  availableLevels,
+  onSelect,
+  onDone,
+}: ThinkingSelectorProps & { onDone: () => void }) {
+  const levels =
+    availableLevels.length > 0 ? availableLevels : DEFAULT_THINKING_LEVELS;
+  return (
+    <div
+      className="ui-menu-scroll scrollbar-auto"
+      style={{ maxHeight: "inherit" }}
+    >
+      {levels.map((level) => {
+        const active = level === currentLevel;
+        return (
+          <MenuItem
+            selected={active}
+            type="button"
+            key={level}
+            aria-pressed={active}
+            onClick={() => {
+              if (!active) onSelect?.(level);
+              onDone();
+            }}
+          >
+            <span className="flex-1 text-[13px] text-[var(--label-primary)]">
+              {level}
+            </span>
+            {active && (
+              <Check
+                size={14}
+                className="text-[var(--color-accent)] flex-shrink-0"
+                aria-hidden="true"
+              />
+            )}
+          </MenuItem>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ThinkingSelector({
   currentLevel,
   availableLevels,
   onSelect,
-}: ThinkingSelectorProps) {
-  const canSelect = !!onSelect;
-  const levels =
-    availableLevels.length > 0 ? availableLevels : DEFAULT_THINKING_LEVELS;
-
+  showLabel = false,
+  pending = false,
+  className = "",
+}: Omit<ThinkingSelectorProps, "currentLevel"> & {
+  currentLevel?: ThinkingLevel;
+  showLabel?: boolean;
+  pending?: boolean;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const valueLabel =
+    currentLevel ??
+    t(pending ? "composer.pendingThinking" : "composer.unsupportedThinking");
+  const canSelect = !!onSelect && currentLevel != null;
   return (
     <Popover
       disabled={!canSelect}
+      label={t("composer.thinkingLevel")}
       width={160}
       align="left"
-      trigger={({ open }) => (
-        <button
-          className={`inline-flex items-center gap-1 px-2 py-1 rounded-[9px] bg-[var(--fill-tertiary)] text-[12px] transition-colors ${
-            canSelect
-              ? "hover:bg-[var(--fill-secondary)] hover:text-[var(--label-primary)] cursor-pointer"
-              : "cursor-default"
-          } text-[var(--label-secondary)]`}
+      trigger={({ open, id }) => (
+        <Button
+          size="compact"
+          type="button"
+          disabled={!canSelect}
+          aria-label={`${t("composer.thinkingLevel")}: ${valueLabel}`}
+          aria-haspopup={canSelect ? "dialog" : undefined}
+          aria-expanded={canSelect ? open : undefined}
+          aria-controls={open ? id : undefined}
+          className={`inline-flex items-center gap-1.5 px-2 text-[12px] font-normal disabled:opacity-100 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${canSelect ? "hover:bg-[var(--fill-secondary)] cursor-pointer" : "cursor-default"} text-[var(--label-secondary)] ${className}`}
         >
-          <span className="select-text">{currentLevel}</span>
+          {showLabel && (
+            <>
+              <Brain size={14} aria-hidden="true" />
+              <span>{t("composer.thinkingLabel")}</span>
+            </>
+          )}
+          <span className="select-text">{valueLabel}</span>
           {canSelect && (
             <ChevronDown
-              size={10}
-              className={`transition-transform ${open ? "rotate-180" : ""}`}
+              size={12}
+              aria-hidden="true"
+              className={`selector-chevron transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
             />
           )}
-        </button>
+        </Button>
       )}
     >
-      {(close) => (
-        <div className="py-1.5 px-1.5">
-          {levels.map((level) => {
-            const active = level === currentLevel;
-            return (
-              <button
-                key={level}
-                onClick={() => {
-                  if (!active) onSelect?.(level);
-                  close();
-                }}
-                className={`w-full text-left px-2.5 py-2 rounded-[8px] flex items-center gap-2 transition-colors select-none mb-0.5 ${
-                  active
-                    ? "bg-[var(--fill-secondary)]"
-                    : "hover:bg-[var(--fill-tertiary)]"
-                }`}
-              >
-                <span className="flex-1 text-[13px] text-[var(--label-primary)]">
-                  {level}
-                </span>
-                {active && (
-                  <Check
-                    size={14}
-                    className="text-[var(--color-accent)] flex-shrink-0"
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {(close) =>
+        currentLevel != null ? (
+          <ThinkingOptions
+            currentLevel={currentLevel}
+            availableLevels={availableLevels}
+            onSelect={onSelect}
+            onDone={close}
+          />
+        ) : null
+      }
     </Popover>
   );
 }

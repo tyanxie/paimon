@@ -1,51 +1,32 @@
-# Mermaid 图表视觉规范
+# Mermaid 设计指导
 
-Paimon 使用 Mermaid `base` 主题，并通过 `src/web/src/components/entries/mermaidTheme.ts` 生成亮色与暗色配置。
+## 视觉方向
 
-## 内容容器
+Mermaid 与普通代码块共用内容容器和操作控件，提供源码复制与放大查看。图表使用项目主题的字体、文字层次与中性表面，在亮暗模式下保持清晰可读。
 
-Mermaid 的外框、标题栏和操作按钮采用与普通代码块一致的样式。容器布局使用 Tailwind utility classes，颜色引用项目 CSS variables。
+SVG 背景透明，卡片与全屏预览分别提供适合阅读的底色。普通节点、分组、注释和连线通过颜色与边框表达关系，多分类图表使用协调的分类颜色。
 
-- 外框采用 8px 圆角、`my-2` 对应的上下间距和 `--separator` 边框。
-- 背景使用 `--fill-card`：亮色为黑色 3%，暗色为白色 8%。标题栏和内容区共同叠加在页面面板上。
-- 类型标签与操作文字采用 11px 系统字体、`--label-tertiary`。
-- Mermaid 标题栏显示图表名称、源码复制和放大查看操作。
-- 操作按钮采用轻量文字样式，hover 使用 `--label-secondary`，键盘焦点使用强调色轮廓；reduced motion 下关闭颜色过渡。
-- 代码正文保持 13px 等宽字体、20px 行高和现有语法高亮配色，内边距对应 `px-3 py-2.5`。图表使用相同内边距，内部字体与节点样式独立配置。
-- Mermaid 源码复制成功后显示两秒反馈，卸载时清理计时器。
-- 毛玻璃用于页面面板与预览控件；代码与图表内容块使用相同的半透明卡片背景。
+特殊节点形状及作者提供的局部样式保持可用。默认主题应保证文字和连线的可读性，具体视觉参数从源码获取。
 
-## 颜色与文字
+## 渲染与预览
 
-- SVG 与 XY chart 使用透明背景，卡片中的图表自然显示 `--fill-card` 背景；全屏预览使用相同 SVG 图片，并由 `ImageLightbox` 提供 `--btn-solid` 阅读底色。
-- 默认字体使用 `--font-sans`。节点正文为 14px，时序图说明与图例为 13px，图表标题为 17px。源码可通过各图表独立配置自定义字体与字号，例如 `sequence.actorFontFamily` 和 `sequence.messageFontSize`。
-- 主要文字、次要文字使用 `--label-primary`、`--label-secondary`。khroma 将透明颜色与参考底色 `--btn-solid` 合成，向 Mermaid 提供不透明的 HEX 色值。
-- 普通节点使用中性表面。分组通过背景与边框区别于节点，连线标签使用阅读底色。
-- 强调元素使用项目蓝色；注释采用淡橙色；甘特图的运行任务与关键任务使用绿色、红色。
-- 多分类图表使用 macOS Accent Colors。分类填充与底色混合，保持文字可读性；思维导图、时间线、饼图、Git graph、quadrantChart 和 journey 使用同一组分类颜色。
-- 默认主题的主要文字与填充背景对比度至少为 4.5:1，主要连线与参考底色、分组背景至少为 3:1；卡片背景下的页面效果由用户检查。源码指定的颜色由图表作者控制。
+- 图表依赖按需加载，多个图表串行渲染，流式更新合并请求并取消过期结果。
+- 渲染失败时保留源码，后续内容或主题更新可以恢复图表。
+- 主题变化重新生成图表，保留预览窗口、尺寸模式与阅读位置。
+- 卡片适应内容宽度，全屏预览支持完整阅读和原始尺寸查看。
+- 生成反馈、操作与预览兼顾 reduced motion、键盘和触摸使用。
 
-## 图形与展示
+## 安全与主题配置
 
-- 常见矩形节点、分组、时序图参与者和注释使用 8px 圆角，连线标签使用 4px 圆角。
-- 判断、圆形、数据库、终止节点等特殊形状保留各自的结构。
-- 主题样式使用局部 CSS 选择器，保留源码中的 `style`、`classDef`、`linkStyle` 以及显式圆角设置。
-- 图表生成提示支持 reduced motion。
-- 临时渲染容器使用 960px 布局宽度，使 gantt 等依赖容器尺寸的图表拥有稳定的原始尺寸。图表图片适应卡片宽度，完整阅读可使用全屏预览与原始尺寸模式。
-- 毛玻璃应用于外部面板与预览控件，卡片使用半透明背景，全屏预览提供独立阅读底色。
+使用 Mermaid 严格安全配置和 DOMPurify 清理 SVG，通过图片展示。安全配置保护主题与顶层渲染设置，源码仍可使用允许的局部样式和图表专用字体配置。
 
-## 渲染约定
+主题读取项目 CSS variables，透明颜色与阅读底色合成后传递给 Mermaid，保持各类图表的默认主题一致。普通节点使用 `--radius-content`，连线标签使用 `--radius-inline`；生成 SVG 时转换为独立数值。
 
-Mermaid、DOMPurify、主题配置和 khroma 按需加载。渲染串行执行，切换主题时重新生成 SVG，保留预览窗口、尺寸模式和阅读位置。
+## 源码入口
 
-`securityLevel: "strict"`、`htmlLabels: false` 与 DOMPurify 的 SVG 清理共同用于图片展示。`secure` 保护顶层 `theme`、`themeVariables`、`themeCSS`、`fontFamily`、`darkMode` 和 `look` 等配置。源码可通过各图表独立配置覆盖默认字体与字号，也可使用局部样式。
+- `src/web/src/components/entries/MermaidBlock.tsx`：渲染队列、更新、错误与预览。
+- `src/web/src/components/entries/mermaidTheme.ts`：主题和安全配置。
+- `src/web/src/components/ui/ImageLightbox.tsx`：图片与图表预览。
+- `src/web/src/index.css`：内容容器与公共控件样式。
 
-## 验证
-
-```bash
-bun test
-bunx tsc --noEmit
-bun run build
-```
-
-单元测试覆盖主题配置、颜色转换、文字与连线对比度、源码复制、渲染队列、流式更新和预览生命周期。页面的配色、排版和交互效果由用户验证。
+整体页面方向见 [Web 设计指导](web-visual-redesign.md)。

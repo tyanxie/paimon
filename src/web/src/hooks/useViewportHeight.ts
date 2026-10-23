@@ -15,20 +15,24 @@ export function useViewportHeight(): void {
       const diff = window.innerHeight - viewport.height;
       if (diff > 1) {
         root.style.setProperty("--app-viewport-height", `${viewport.height}px`);
+        root.style.setProperty("--app-viewport-top", `${viewport.offsetTop}px`);
         if (window.scrollY > 0) {
           window.scrollTo(0, 0);
         }
       } else {
         root.style.removeProperty("--app-viewport-height");
+        root.style.removeProperty("--app-viewport-top");
       }
     }
 
+    update();
     viewport.addEventListener("resize", update);
     viewport.addEventListener("scroll", update);
     return () => {
       viewport.removeEventListener("resize", update);
       viewport.removeEventListener("scroll", update);
       root.style.removeProperty("--app-viewport-height");
+      root.style.removeProperty("--app-viewport-top");
     };
   }, []);
 }

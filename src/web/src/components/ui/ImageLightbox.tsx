@@ -1,7 +1,17 @@
 // 图片大图查看：全屏预览、可选原始尺寸与滚动阅读
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useRef, useState, type ReactNode } from "react";
+import {
+  LazyMotion,
+  MotionConfigContext,
+  domAnimation,
+  useIsPresent,
+  useReducedMotion,
+} from "motion/react";
+import * as m from "motion/react-m";
+import { cycleDialogFocus, useNativeDialog } from "./useNativeDialog";
 import { createPortal } from "react-dom";
+import { Button } from "./Button";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -18,7 +28,15 @@ interface ImageLightboxProps {
   onClose: () => void;
 }
 
-export function ImageLightbox({
+export function ImageLightbox(props: ImageLightboxProps) {
+  return (
+    <LazyMotion features={domAnimation} strict>
+      <LightboxContent {...props} />
+    </LazyMotion>
+  );
+}
+
+function LightboxContent({
   src,
   alt,
   zoomable = false,
@@ -31,47 +49,17 @@ export function ImageLightbox({
     width: number;
     height: number;
   } | null>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const overlayRef = useRef<HTMLDialogElement>(null);
+  const initialFocusRef = useRef<HTMLSpanElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
-        previousFocus.focus();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      } else if (event.key === "Tab") {
-        const controls = overlayRef.current?.querySelectorAll<HTMLElement>(
-          'button, [tabindex="0"]',
-        );
-        if (!controls?.length) return;
-        const first = controls[0]!;
-        const last = controls[controls.length - 1]!;
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  const present = useIsPresent();
+  const motionPolicy = useContext(MotionConfigContext).reducedMotion;
+  const reducedMotion = useReducedMotion() || motionPolicy === "always";
+  useNativeDialog(overlayRef, initialFocusRef);
+  function requestClose() {
+    if (present) onClose();
+  }
 
   function toggleSize() {
     setActualSize((value) => !value);
@@ -84,49 +72,69 @@ export function ImageLightbox({
   const placeholderContent = (
     <div
       onClick={(event) => event.stopPropagation()}
-      className="max-w-full max-h-full overflow-auto rounded-lg bg-[var(--btn-solid)] text-[var(--label-primary)] shadow-2xl"
+      className="max-w-full max-h-full overflow-auto rounded-content bg-[var(--btn-solid)] text-[var(--label-primary)] shadow-2xl"
     >
       {placeholder}
     </div>
   );
 
   return createPortal(
-    <div
+    <m.dialog
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
       aria-label={alt ?? t("imagePreview.title")}
-      className="fixed-viewport z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[30px] animate-in fade-in duration-150"
-      onClick={onClose}
+      inert={!present}
+      data-presence={present ? "present" : "exiting"}
+      className="native-dialog-viewport image-lightbox fixed-viewport z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[30px]"
+      initial={{ opacity: reducedMotion ? 1 : 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: reducedMotion ? 0 : 0.15 } }}
+      transition={{ duration: reducedMotion ? 0 : 0.2 }}
+      onClick={requestClose}
+      onKeyDown={cycleDialogFocus}
+      onCancel={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        requestClose();
+      }}
     >
+      <span
+        ref={initialFocusRef}
+        tabIndex={-1}
+        className="sr-only outline-none"
+      >
+        {alt ?? t("imagePreview.title")}
+      </span>
       {/* 浮动工具栏与关闭按钮保持在滚动内容之外 */}
       {zoomable && (
-        <button
+        <Button
+          size="compact"
           type="button"
           onClick={(event) => {
             event.stopPropagation();
             toggleSize();
           }}
-          className="glass-panel absolute top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-10 flex h-9 items-center gap-2 px-4 text-[13px] text-[var(--label-primary)] select-none hover:text-[var(--color-accent)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+          className="glass-panel absolute top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 text-[13px] text-[var(--label-primary)] select-none hover:text-[var(--color-accent)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
         >
           {actualSize ? <ZoomOut size={16} /> : <ZoomIn size={16} />}
           {actualSize
             ? t("imagePreview.fitWindow")
             : t("imagePreview.actualSize")}
-        </button>
+        </Button>
       )}
-      <button
-        ref={closeRef}
+      <Button
+        size="icon"
         type="button"
         onClick={(event) => {
           event.stopPropagation();
-          onClose();
+          requestClose();
         }}
-        className={`absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-10 flex h-9 w-9 items-center justify-center select-none transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${zoomable ? "glass-panel text-[var(--label-primary)] hover:text-[var(--color-accent)]" : "rounded-full bg-[var(--badge-bg)] hover:bg-[var(--badge-bg-hover)] text-[var(--badge-text)]"}`}
+        className={`absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-10 flex items-center justify-center select-none transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${zoomable ? "glass-panel text-[var(--label-primary)] hover:text-[var(--color-accent)]" : "bg-[var(--badge-bg)] hover:bg-[var(--badge-bg-hover)] text-[var(--badge-text)]"}`}
         aria-label={t("imagePreview.close")}
       >
         <X size={18} />
-      </button>
+      </Button>
 
       {zoomable ? (
         <div className="absolute left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] bottom-[max(1rem,env(safe-area-inset-bottom))]">
@@ -156,7 +164,7 @@ export function ImageLightbox({
                     }
                   }}
                   onClick={(event) => event.stopPropagation()}
-                  className={`block shrink-0 rounded-lg bg-[var(--btn-solid)] shadow-2xl select-none ${actualSize ? "max-w-none max-h-none" : "max-w-full max-h-full object-contain"}`}
+                  className={`block shrink-0 rounded-content bg-[var(--btn-solid)] shadow-2xl select-none ${actualSize ? "max-w-none max-h-none" : "max-w-full max-h-full object-contain"}`}
                   draggable={false}
                 />
               ) : (
@@ -182,13 +190,13 @@ export function ImageLightbox({
           src={src}
           alt={alt ?? t("imagePreview.title")}
           onClick={(event) => event.stopPropagation()}
-          className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl select-none"
+          className="max-w-[90vw] max-h-[90vh] object-contain rounded-content shadow-2xl select-none"
           draggable={false}
         />
       ) : (
         placeholderContent
       )}
-    </div>,
+    </m.dialog>,
     document.body,
   );
 }

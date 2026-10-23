@@ -21,6 +21,8 @@ import {
 import type { Components } from "react-markdown";
 import { Copy, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../ui/Button";
+import { ContentToolbar } from "../ui/ContentBlock";
 import { MermaidBlock } from "./MermaidBlock";
 
 const StreamingContext = createContext(false);
@@ -65,7 +67,7 @@ function FrontmatterBlock({ yamlText }: { yamlText: string }) {
   if (entries.length === 0) return null;
 
   return (
-    <div className="my-2 rounded-[8px] border border-[var(--separator)] overflow-hidden">
+    <div className="content-block">
       <table className="w-full text-[13px]">
         <tbody>
           {entries.map(([key, value]) => (
@@ -117,20 +119,17 @@ function CodeBlock({
   }, [code]);
 
   return (
-    <div className="group/code relative my-2 rounded-[8px] bg-[var(--fill-card)] border border-[var(--separator)] overflow-hidden">
-      {/* 语言标签 + 复制按钮 */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--separator)]">
-        <span className="text-[11px] text-[var(--label-tertiary)] font-medium">
-          {language || "code"}
-        </span>
-        <button
+    <div className="content-block group/code relative">
+      <ContentToolbar label={language || t("entries.code")}>
+        <Button
+          size="compact"
           onClick={handleCopy}
-          className="flex items-center gap-1 text-[11px] text-[var(--label-tertiary)] hover:text-[var(--label-secondary)] transition-colors"
+          aria-label={copied ? t("entries.copied") : t("entries.copy")}
         >
           {copied ? <Check size={12} /> : <Copy size={12} />}
           {copied ? t("entries.copied") : t("entries.copy")}
-        </button>
-      </div>
+        </Button>
+      </ContentToolbar>
       {/* 代码内容 */}
       <pre className="px-3 py-2.5 overflow-x-auto text-[13px] leading-[20px]">
         <code>{children}</code>
@@ -174,7 +173,7 @@ const components: Components = {
     // 行内代码
     return (
       <code
-        className="px-1.5 py-0.5 rounded-[4px] bg-[var(--fill-secondary)] text-[13px] font-mono break-words"
+        className="px-1.5 py-0.5 rounded-inline bg-[var(--fill-secondary)] text-[13px] font-mono break-words"
         {...props}
       >
         {children}
@@ -244,7 +243,7 @@ const components: Components = {
   // 表格
   table({ children }) {
     return (
-      <div className="overflow-x-auto my-2 rounded-[8px] border border-[var(--separator)]">
+      <div className="content-block overflow-x-auto">
         <table className="w-full text-[13px]">{children}</table>
       </div>
     );

@@ -22,7 +22,7 @@ interface InstancesState {
 
 export const useInstances = create<InstancesState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       instances: [],
       instanceListReady: false,
 

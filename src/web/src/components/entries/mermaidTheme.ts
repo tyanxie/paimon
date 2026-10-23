@@ -8,6 +8,8 @@ export function createMermaidConfig(theme: "light" | "dark"): MermaidConfig {
   const style = getComputedStyle(document.documentElement);
   const token = (name: string, fallback: string) =>
     style.getPropertyValue(name).trim() || fallback;
+  const contentRadius = Number.parseFloat(token("--radius-content", "8px"));
+  const inlineRadius = Number.parseFloat(token("--radius-inline", "4px"));
   const background = toHex(token("--btn-solid", dark ? "#282828" : "#f6f6f6"));
   // 透明颜色与阅读底色合成，图片内部无需依赖页面背景或 CSS 变量
   const opaque = (color: string) =>
@@ -98,7 +100,7 @@ export function createMermaidConfig(theme: "light" | "dark"): MermaidConfig {
       fontFamily,
       fontSize: "14px",
       fontWeight: "400",
-      radius: 8,
+      radius: contentRadius,
       strokeWidth: 1,
       useGradient: false,
       dropShadow: "none",
@@ -259,10 +261,10 @@ export function createMermaidConfig(theme: "light" | "dark"): MermaidConfig {
       ${accents.map((color, index) => `.section-edge-${index - 1} { stroke: ${tint(color, 65)}; }`).join("\n")}
       .node > rect.label-container:not([rx]), .node > rect.label-container[rx="0"],
       .node > rect.outer, .cluster > rect, rect.actor, rect.note, rect.labelBox {
-        rx: 8px;
-        ry: 8px;
+        rx: ${contentRadius}px;
+        ry: ${contentRadius}px;
       }
-      .edgeLabel rect { opacity: 1; rx: 4px; ry: 4px; }
+      .edgeLabel rect { opacity: 1; rx: ${inlineRadius}px; ry: ${inlineRadius}px; }
       .cluster-label text, .cluster-label span { font-weight: 500; }
       .flowchart-link, .transition, .messageLine0, .messageLine1 {
         stroke-linecap: round;
@@ -288,7 +290,7 @@ export function createMermaidConfig(theme: "light" | "dark"): MermaidConfig {
       diagramMarginX: 16,
       diagramMarginY: 16,
     },
-    state: { fontSize: 14, radius: 8 },
+    state: { fontSize: 14, radius: contentRadius },
     er: { fontSize: 14 },
     gantt: { fontSize: 13, sectionFontSize: 13 },
     xyChart: {

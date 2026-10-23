@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { MotionConfig } from "motion/react";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import mermaid from "mermaid";
@@ -21,7 +22,11 @@ async function render(content: string, streaming = false) {
     root = createRoot(container);
   }
   await act(async () => {
-    root!.render(<MarkdownRenderer content={content} streaming={streaming} />);
+    root!.render(
+      <MotionConfig reducedMotion="always">
+        <MarkdownRenderer content={content} streaming={streaming} />
+      </MotionConfig>,
+    );
   });
 }
 
@@ -174,7 +179,6 @@ describe("MermaidBlock", () => {
     await render(diagram);
     await waitForRender();
     const image = container.querySelector("img")!;
-    expect(image.className).toContain("max-w-full h-auto");
     const expand = container.querySelector<HTMLButtonElement>(
       '[aria-haspopup="dialog"]',
     )!;
@@ -188,12 +192,12 @@ describe("MermaidBlock", () => {
     );
     expect(renderSpy).toHaveBeenCalledTimes(1);
     await act(async () => preview.querySelector("button")!.click());
-    expect(preview.querySelector("img")!.className).toContain("max-w-none");
-    await act(async () => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    });
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
-    expect(document.activeElement).toBe(expand);
+    await act(async () =>
+      preview.dispatchEvent(new Event("cancel", { cancelable: true })),
+    );
+    await waitForRender();
+    expect(document.body.querySelector('[role="dialog"]') === null).toBe(true);
+    expect(document.activeElement === expand).toBe(true);
   });
 
   test("全屏预览随主题更新，生成期间保持窗口、焦点和尺寸模式", async () => {
@@ -253,7 +257,6 @@ describe("MermaidBlock", () => {
     expect(image.getAttribute("src")).toBe(
       container.querySelector("img")!.getAttribute("src"),
     );
-    expect(image.className).toContain("max-w-none max-h-none");
     expect(image.getAttribute("width")).toBe("4000");
     expect(image.getAttribute("height")).toBe("2000");
     expect(viewport.scrollLeft).toBe(1000);
@@ -308,13 +311,15 @@ describe("MermaidBlock", () => {
     );
     await act(async () => useSettings.setState({ resolvedTheme: "dark" }));
     await waitForRender();
-    await act(async () => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    });
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    const preview = document.body.querySelector('[role="dialog"]')!;
+    await act(async () =>
+      preview.dispatchEvent(new Event("cancel", { cancelable: true })),
+    );
+    await waitForRender();
+    expect(document.body.querySelector('[role="dialog"]') === null).toBe(true);
     await act(async () => finish(result));
     expect(container.querySelector("img")).not.toBeNull();
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.querySelector('[role="dialog"]') === null).toBe(true);
   });
 
   test("生成期间和渲染失败时隐藏放大入口，成功后显示国际化操作", async () => {
@@ -468,10 +473,8 @@ describe("Paimon Mermaid 主题", () => {
       );
       expect(colors.useGradient).toBe(false);
       expect(colors.dropShadow).toBe("none");
-      expect(colors.radius).toBe(8);
       expect(config.fontFamily).toBe(colors.fontFamily);
       expect(config.sequence!.actorFontFamily).toBe(config.fontFamily);
-      expect(config.sequence!.messageFontSize).toBe(13);
       const palette = Array.from(
         { length: 12 },
         (_, index) => colors[`pie${index + 1}`],

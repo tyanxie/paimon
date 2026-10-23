@@ -47,6 +47,89 @@ export type ToolExecutionState = {
     }
 );
 
+// ── 对话展示模型 ──
+
+/** 保留原始消息身份、时间和 content block 位置 */
+export interface ConversationSource {
+  key: string;
+  entry: SessionEntry;
+  blockIndex?: number;
+  streaming: boolean;
+}
+
+export type ConversationToolState =
+  | {
+      status: "running";
+      execution: Extract<ToolExecutionState, { status: "running" }>;
+    }
+  | {
+      status: "completed" | "error";
+      result: unknown;
+      resultEntry?: SessionEntry;
+      durationMs?: number;
+    }
+  | { status: "pending" | "aborted" | "unknown" };
+
+export interface ConversationTool {
+  type: "tool";
+  key: string;
+  source: ConversationSource;
+  toolCallId: string;
+  name: string;
+  args: Record<string, unknown>;
+  state: ConversationToolState;
+}
+
+interface ConversationThinking {
+  type: "thinking";
+  key: string;
+  source: ConversationSource;
+  content: string;
+}
+
+export interface ConversationExecution {
+  type: "execution";
+  key: string;
+  items: (ConversationTool | ConversationThinking)[];
+  counts: Record<ConversationToolState["status"], number>;
+}
+
+interface ConversationSystemEvent {
+  type: "system";
+  key: string;
+  entry: SessionEntry;
+}
+
+type ConversationPart =
+  | ConversationExecution
+  | {
+      type: "text";
+      key: string;
+      source: ConversationSource;
+      content: string;
+    }
+  | {
+      type: "error";
+      key: string;
+      source: ConversationSource;
+      content: string;
+      stopReason: "error" | "aborted";
+    };
+
+export interface ConversationReply {
+  type: "reply";
+  key: string;
+  userEntryKey?: string;
+  /** 回复范围内的原始条目，用于时间与消息归属 */
+  entries: SessionEntry[];
+  parts: ConversationPart[];
+}
+
+export type ConversationItem =
+  | { type: "user"; key: string; entry: SessionEntry }
+  | ConversationReply
+  | ConversationSystemEvent;
+
 // ── ConversationLoadState ──
 
 export type ConversationLoadState =

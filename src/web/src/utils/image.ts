@@ -1,7 +1,7 @@
 // 图片处理工具函数：压缩、转 base64、校验
 
 /** 支持的图片 MIME 类型 */
-export const SUPPORTED_IMAGE_TYPES = [
+const SUPPORTED_IMAGE_TYPES = [
   "image/png",
   "image/jpeg",
   "image/gif",
@@ -49,7 +49,7 @@ export async function processImageFile(file: File): Promise<AttachedImage> {
     MAX_HEIGHT,
   );
 
-  // 使用 OffscreenCanvas 进行压缩（如果支持），否则 fallback 到普通 Canvas
+  // 使用 Canvas 进行压缩
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;

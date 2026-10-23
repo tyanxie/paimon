@@ -1,111 +1,40 @@
-# 对话渲染设计方案
+# 对话数据与展示原则
 
-## 数据模型
+## 数据来源
 
-### Session Entry
+对话使用 Pi 提供的历史消息、流式消息、工具执行事件与实例状态。原始条目保留消息身份、内容、时间、图片、工具参数与结果等信息，派生展示保持这些信息的含义。
 
-pi 的 `getBranch()` 返回 `SessionEntry[]`，每个 entry 有不同 type：
+已完成历史与流式消息分别管理。加载更早历史时使用已完成的原始条目数量作为分页 offset，展示分组和当前流式消息均不影响分页。
 
-| type                    | 含义           | 关键字段                        |
-| ----------------------- | -------------- | ------------------------------- |
-| `message`               | 对话消息       | `message: {role, content, ...}` |
-| `compaction`            | 压缩摘要       | `summary`                       |
-| `branch_summary`        | 分支摘要       | `summary`                       |
-| `custom`                | 扩展自定义数据 | `customType`, `data`            |
-| `model_change`          | 模型切换       | -                               |
-| `thinking_level_change` | 思考级别切换   | -                               |
-| `label`                 | 标签           | -                               |
+## 回复与执行区域
 
-### Message 结构
+- 用户消息独立展示，其后的 assistant 内容组成回复；系统事件结束当前可见回复，后续 assistant 内容继续独立展示。
+- 连续 thinking 与工具调用可跨 assistant 消息进入执行区域，正文、用户消息和系统事件形成区域边界。
+- 工具汇总与正文保持原始顺序，thinking 单独标识，系统摘要与错误保留所在位置。空字符串、纯空白及仅有 signature 的 thinking 保留原始数据，展示时省略其条目与空执行区域。
+- 缺少前置用户消息的历史内容仍保持可见。
+- Pi 回复正文保持可见，执行区域与有正文的 thinking 提供收折入口。用户气泡省略可见角色名称，用户、回复与系统事件常显可选择的日期与时分秒文字；回复时间范围位于容器外部左下方，正文使用完整内容宽度。
+- 压缩进行状态与完成摘要作为独立系统事件展示，保持原始顺序与工具结果关联。
 
-`message` entry 的 `message` 字段是 `AgentMessage`（来自 `@earendil-works/pi-ai`）：
+## 工具状态与结果
 
-```typescript
-// 三种角色
-UserMessage     { role: "user", content: string | (TextContent | ImageContent)[] }
-AssistantMessage { role: "assistant", content: (TextContent | ThinkingContent | ToolCall)[] }
-ToolResultMessage { role: "toolResult", toolCallId, toolName, content: (TextContent | ImageContent)[], isError, details }
-```
+工具通过 `toolCallId` 去重及关联结果。历史 `toolResult` 优先提供最终内容，其次使用实时结束事件；部分结果使用最新快照。
 
-### Content Block 类型
+当前页面实时接收到的工具调用在执行事件到达前显示准备中，运行状态来自真实执行事件。缺少结果和执行信息时静态显示结果不可用，明确的终止消息结束回复内未完成工具，实例空闲时结束运行指示。结果跨正文或用户消息返回时仍归属原工具。
 
-```typescript
-TextContent     { type: "text", text: string }
-ThinkingContent { type: "thinking", thinking: string }
-ToolCall        { type: "toolCall", id: string, name: string, arguments: Record<string, any> }
-ImageContent    { type: "image", data: string, mimeType: string }
-```
+消息时间来自已有消息或事件，工具耗时采用已有执行结果。流式内容更新保留首次事件时间。实例确认空闲且没有流式消息时，回复以已有开始与最后更新时间计算约耗时；只有单个有效时间或时间范围无法计算时省略耗时。耗时按时长使用毫秒、秒、分钟、小时或天，长时段保留最多两个单位并省略零值。
 
-## 统一 Entry 列表
+## 身份与阅读连续
 
-浏览器只维护当前实例的 `Entry[]` 列表，由两个来源共同填充：
+流式增长、最终结果交接与历史追加保持已有内容身份。展开状态、已打开详情和阅读位置随用户选择保留，实例或 session 切换时重置相关状态。
 
-1. **历史刷新**：subscribe / 切换实例时请求 `get_history` → 获得当前页 `SessionEntry[]`，替换现有列表
-2. **历史分页**：滚动到顶部时带 offset 请求更早 history，响应后 prepend 到列表开头
-3. **实时事件**：通过 `forwarded_event` 增量更新列表
+位于底部时跟随新内容，浏览历史时保持阅读位置。折叠操作保持点击入口位置，用户继续滚动后恢复正常滚动管理。
 
-### 实时事件处理
+## 源码入口
 
-| 事件                              | 操作                                                                  |
-| --------------------------------- | --------------------------------------------------------------------- |
-| `message_start`                   | 追加新 entry 到列表末尾                                               |
-| `message_update`                  | 替换列表最后一条 message entry（`data.message` 是完整快照，非 delta） |
-| `message_end`                     | 去掉 streaming 标记                                                   |
-| `tool_execution_start/update/end` | 暂不处理（后续可在 toolCall block 下显示执行状态）                    |
+- `src/web/src/components/InstanceView/useConversation.ts`：历史、流式消息与实时工具状态。
+- `src/web/src/components/InstanceView/useConversationDisplay.ts`：回复与执行区域的派生展示。
+- `src/web/src/stores/types.ts`：共享数据类型。
+- `src/web/src/components/entries/Conversation.tsx`：回复与执行汇总组件。
+- `src/web/src/components/InstanceView/useScrollAnchor.ts`：分页与阅读位置管理。
 
-### 关键点
-
-- `message_update` 的 `data.message` 和 history 里的 `message` 是**同一种结构**（`AgentMessage`）
-- 渲染层只需统一解析 `AgentMessage`，流式和历史用同一套渲染器
-- 流式阶段唯一区别：最后一条 assistant message 后面显示 loading 指示
-
-## 渲染策略
-
-### 当前实现（v0.1 平铺）
-
-所有 entry 平铺展示：
-
-- `message` → 显示 role + 遍历 content blocks
-- `compaction` / `branch_summary` → 一行元信息 `[type] summary`
-- 未知 type → `[type]` 标记，不过滤
-
-### 后续对话 UI（规划）
-
-#### toolCall + toolResult 配对
-
-当前是两条独立 entry：
-
-1. `assistant` message，content 含 `{type: "toolCall", id: "xxx", name: "bash", arguments: {...}}`
-2. `toolResult` message，`{role: "toolResult", toolCallId: "xxx", ...}`
-
-后续渲染时通过 `toolCallId` 配对，将 toolResult 折叠在对应 toolCall 下方：
-
-```
-┌─ assistant ─────────────────────┐
-│  我来执行一下...                  │
-│  ┌─ bash ─────────────────────┐ │
-│  │  ls -la                     │ │
-│  │  ▼ 结果                     │ │
-│  │  total 32                   │ │
-│  │  drwxr-xr-x ...            │ │
-│  └─────────────────────────────┘ │
-└──────────────────────────────────┘
-```
-
-#### thinking 折叠
-
-`ThinkingContent` 默认折叠（`<details>`），点击展开。
-
-#### 流式指示
-
-最后一条 streaming 中的 assistant message 末尾显示动画光标（`animate-pulse`）。
-
-## 自动滚动
-
-依赖当前视图状态区分 refresh、prepend 和实时更新。
-覆盖场景：
-
-- 实例切换 / 历史刷新完成 → 滚到底
-- 新 entry 追加 → 用户在底部附近时滚到底
-- message_update 内容增长 → 用户在底部附近时滚到底
-- 加载更早历史 prepend → 通过可见内容 anchor 恢复当前位置，不滚到底
+页面方向见 [Web 设计指导](web-visual-redesign.md)。

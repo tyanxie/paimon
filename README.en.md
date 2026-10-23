@@ -15,10 +15,13 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 ## ✨ Features
 
 - 💬 **Real-time Streaming** — Streaming output, thinking process, and tool calls fully displayed
+- 🧩 **Replies and Execution Summaries** — Rounded reply containers support collapsing the whole reply, with ordered tool summaries and distinct text, thinking, and tool details
 - 🛠️ **Tool Execution Details** — Live top-level tool status, tool-provided partial output, errors, and execution duration, with history support
 - 📊 **Mermaid Diagrams** — Automatically renders `mermaid` code blocks in Markdown, with light and dark themes, source copying, and full-screen previews
 - 🖼️ **Image Support** — Paste or upload images to send to LLM, view full-size in history
 - 🔄 **Multi-instance Switching** — Manage all pi sessions in one page
+- 🧭 **Instance Sidebar** — One glass panel contains home, settings, connection information, and instances grouped by Edge
+- ⌨️ **Resizable Composer** — Drag the top handle to resize the editor; equal-height labeled image, model, thinking, and compaction controls wrap in order, with context and send/stop on the right
 - 🌐 **Multi-machine Support** — Centralized Hub + distributed Edge, manage pi instances across servers
 - ➕ **Create Instances from UI** — Select Edge node + path picker
 - 📋 **Session Management** — Browse session history, create or switch with one click
@@ -28,7 +31,11 @@ Paimon lets you talk to all your [Pi](https://pi.dev/) instances from the browse
 - 🔔 **Task Notifications** — Sends a system notification after retries, compaction recovery, and queued messages have all finished
 - 📱 **Responsive Design** — Desktop/mobile adaptive, iOS Safe Area support
 
-After a refresh or reconnection during tool execution, subsequent update or end events resume the live display. Final results are also available through history. Running tools show call elapsed time measured with a monotonic clock; completed tools show the execution duration reported by Pi. The card's right side and detail header share one elapsed-time value and the same duration display, using `s` and `ms` with a non-breaking space between the number and unit. Bash details show the supplied timeout in the command area.
+Replies, execution summaries, and thinking sections expand independently and retain your choices during live updates. Message timestamps are available on hover, focus, or click, with running and compaction feedback beside the current reply.
+
+Tool details are centered on desktops and use a bottom sheet on phones, with swipe-down dismissal and independently scrolling content. Images and Mermaid diagrams support enlarged previews.
+
+The editor grows automatically and supports resizing with its top handle. Double-click or press Home to restore automatic height, use arrow keys to adjust, and End for the maximum. Sending preserves your manual height; switching instances or sessions resets it. Drafts, IME input, image uploads, and pasting remain available. The context readout opens full usage information, and model and thinking controls use the instance's available options.
 
 ## 📋 Prerequisites
 
@@ -126,6 +133,18 @@ proxy_set_header Authorization "Bearer <access-token>";
 ```
 
 > 🔒 Proxy authentication should protect the entire `/paimon/` path and allow access only to trusted users.
+
+## Development
+
+See [Web Design Guide](docs/design/web-visual-redesign.md) for the visual direction, [Conversation Data and Display Principles](docs/design/conversation-rendering.md) for data rules, and [Mermaid Design Guide](docs/design/mermaid-theme.md) for diagrams. Implementation details and visual parameters are available in the source.
+
+Use `bunx tsc --noEmit` for code checks and select business tests based on the changes. After frontend changes, build and restart Hub before checking the result in your browser:
+
+```bash
+bun run build && paimon hub restart
+```
+
+Restart Edge when the changes require it.
 
 ## 📄 License
 

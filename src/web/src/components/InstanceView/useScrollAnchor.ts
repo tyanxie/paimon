@@ -31,8 +31,6 @@ interface ScrollAnchorSnapshot {
 
 interface AnchorRestoreResult {
   mode: "deep" | "entry" | "diff" | "none";
-  delta: number;
-  adjusted: boolean;
 }
 
 interface AnchorPinSession {
@@ -42,7 +40,7 @@ interface AnchorPinSession {
   warmupFrame: number;
 }
 
-export interface UseScrollAnchorOptions {
+interface UseScrollAnchorOptions {
   scrollRef: RefObject<HTMLDivElement | null>;
   contentRef: RefObject<HTMLDivElement | null>;
   bottomChromeRef: RefObject<HTMLDivElement | null>;
@@ -62,6 +60,7 @@ export interface UseScrollAnchorReturn {
   scrollToBottom: () => void;
   showScrollBtn: boolean;
   startBottomFollow: () => void;
+  prepareForContentResize: (element: HTMLElement) => void;
 }
 
 // ─── DOM 工具函数 ────────────────────────────────────────────────
@@ -168,10 +167,9 @@ function captureScrollAnchor(container: HTMLElement): ScrollAnchorSnapshot {
 
 function applyScrollDelta(container: HTMLElement, delta: number) {
   if (Math.abs(delta) <= ANCHOR_RESTORE_EPSILON) {
-    return false;
+    return;
   }
   container.scrollTop += delta;
-  return true;
 }
 
 function restoreScrollAnchor(
@@ -195,11 +193,8 @@ function restoreScrollAnchor(
     if (!snapshot.entryKey || entryKey === snapshot.entryKey) {
       const delta =
         getRelativeTop(containerRect, snapshot.element) - snapshot.elementTop;
-      return {
-        mode: "deep",
-        delta,
-        adjusted: applyScrollDelta(container, delta),
-      };
+      applyScrollDelta(container, delta);
+      return { mode: "deep" };
     }
   }
 
@@ -208,11 +203,8 @@ function restoreScrollAnchor(
     if (entryElement) {
       const delta =
         getRelativeTop(containerRect, entryElement) - snapshot.entryTop;
-      return {
-        mode: "entry",
-        delta,
-        adjusted: applyScrollDelta(container, delta),
-      };
+      applyScrollDelta(container, delta);
+      return { mode: "entry" };
     }
   }
 
@@ -222,16 +214,11 @@ function restoreScrollAnchor(
       previousScrollHeight: snapshot.fallbackScrollHeight,
       nextScrollHeight: container.scrollHeight,
     });
-    const delta = targetTop - container.scrollTop;
     container.scrollTop = targetTop;
-    return {
-      mode: "diff",
-      delta,
-      adjusted: Math.abs(delta) > ANCHOR_RESTORE_EPSILON,
-    };
+    return { mode: "diff" };
   }
 
-  return { mode: "none", delta: 0, adjusted: false };
+  return { mode: "none" };
 }
 
 // ─── Hook ────────────────────────────────────────────────────────
@@ -387,11 +374,7 @@ export function useScrollAnchor({
     const session = anchorPinRef.current;
     if (!el || !session) return;
 
-    let result: AnchorRestoreResult = {
-      mode: "none",
-      delta: 0,
-      adjusted: false,
-    };
+    let result: AnchorRestoreResult = { mode: "none" };
     runProgrammaticScroll(() => {
       result = restoreScrollAnchor(el, session.snapshot, {
         allowDiffFallback: false,
@@ -548,11 +531,7 @@ export function useScrollAnchor({
 
       if (didPrepend) {
         const snapshot = loadMoreAnchorRef.current;
-        let result: AnchorRestoreResult = {
-          mode: "none",
-          delta: 0,
-          adjusted: false,
-        };
+        let result: AnchorRestoreResult = { mode: "none" };
 
         if (snapshot) {
           runProgrammaticScroll(() => {
@@ -598,6 +577,29 @@ export function useScrollAnchor({
     runProgrammaticScroll,
     startAnchorPin,
   ]);
+
+  const prepareForContentResize = useCallback(
+    (element: HTMLElement) => {
+      const el = scrollRef.current;
+      if (!el || loadingMoreRef.current) return;
+      suppressLoadMoreUntilRef.current =
+        performance.now() + LOAD_MORE_SUPPRESS_MS;
+      if (isAtBottomRef.current) return;
+      const entryElement = getEntryElementFromElement(el, element);
+      const entryKey = entryElement ? getEntryKey(entryElement) : undefined;
+      if (!entryElement || !entryKey) return;
+      const containerRect = el.getBoundingClientRect();
+      startAnchorPin({
+        entryKey,
+        element,
+        elementTop: getRelativeTop(containerRect, element),
+        entryTop: getRelativeTop(containerRect, entryElement),
+        fallbackScrollTop: getSafeScrollTop(el.scrollTop),
+        fallbackScrollHeight: el.scrollHeight,
+      });
+    },
+    [scrollRef, startAnchorPin],
+  );
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -675,5 +677,6 @@ export function useScrollAnchor({
     scrollToBottom,
     showScrollBtn,
     startBottomFollow,
+    prepareForContentResize,
   };
 }

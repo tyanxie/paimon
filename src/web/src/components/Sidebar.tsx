@@ -1,17 +1,36 @@
-// 侧边栏：pi 实例列表（按 Edge 分组，独立玻璃面板）
+// 整体玻璃侧栏：全局入口与按 Edge 分组的实例列表
 
-import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import { AnimatePresence } from "motion/react";
+import { Button } from "./ui/Button";
+import {
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useId,
+} from "react";
 import {
   Settings as SettingsIcon,
+  ChevronRight,
   LogOut,
   Plus,
   Check,
   Copy,
+  Server,
+  MoreHorizontal,
 } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import type { InstanceInfo, InstanceId } from "../../../protocol/types";
+import {
+  getInstanceStatusDotClass,
+  getInstanceStatusKey,
+} from "../utils/status";
 import { useLogoSrc } from "../hooks/useLogoSrc";
-import { ConnectionIndicator } from "./ui/ConnectionIndicator";
+import { useSidebar } from "../stores/useSidebar";
+import { useWebSocket } from "../stores/useWebSocket";
+import { Popover } from "./ui/Popover";
+import { MenuItem } from "./ui/MenuItem";
 import {
   ContextMenu,
   ContextMenuItem,
@@ -27,7 +46,6 @@ interface SidebarProps {
   onNewInstance: () => void;
 }
 
-/** 长按触发阈值 (ms) */
 const LONG_PRESS_DELAY = 500;
 
 export function Sidebar({
@@ -39,66 +57,51 @@ export function Sidebar({
 }: SidebarProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const logoSrc = useLogoSrc();
-
-  // 右键/长按菜单状态
+  const sidebarId = useId();
+  const collapsedEdges = useSidebar((s) => s.collapsedEdges);
+  const toggleEdge = useSidebar((s) => s.toggleEdge);
+  const connectionState = useWebSocket((s) => s.connectionState);
   const [contextMenu, setContextMenu] = useState<{
     position: ContextMenuPosition;
     instanceId: InstanceId;
   } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 标记当前触摸是否已触发长按（防止 touchEnd 时触发 click）
   const longPressFiredRef = useRef(false);
+  const [copiedEdgeId, setCopiedEdgeId] = useState<string | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, instanceId: InstanceId) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setContextMenu({ position: { x: e.clientX, y: e.clientY }, instanceId });
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  }, []);
+
+  useEffect(
+    () => () => {
+      cancelLongPress();
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     },
-    [],
+    [cancelLongPress],
   );
 
   const handleTouchStart = useCallback(
-    (e: React.TouchEvent, instanceId: InstanceId) => {
+    (event: React.TouchEvent, instanceId: InstanceId) => {
+      cancelLongPress();
       longPressFiredRef.current = false;
-      const touch = e.touches[0];
-      const pos = { x: touch.clientX, y: touch.clientY };
+      const touch = event.touches[0];
+      if (!touch) return;
+      const position = { x: touch.clientX, y: touch.clientY };
       longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null;
         longPressFiredRef.current = true;
         navigator.vibrate?.(10);
-        setContextMenu({ position: pos, instanceId });
+        setContextMenu({ position, instanceId });
       }, LONG_PRESS_DELAY);
     },
-    [],
+    [cancelLongPress],
   );
 
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
-
-  const handleTouchMove = useCallback(() => {
-    // 手指移动取消长按
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
-
-  const closeContextMenu = useCallback(() => setContextMenu(null), []);
-
-  // Edge 标题点击复制
-  const [copiedEdgeId, setCopiedEdgeId] = useState<string | null>(null);
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-    },
-    [],
-  );
   const handleCopyEdgeId = useCallback((edgeId: string) => {
     navigator.clipboard.writeText(edgeId).then(
       () => {
@@ -110,182 +113,280 @@ export function Sidebar({
     );
   }, []);
 
-  // 按 edgeId 分组并按字母序排序
   const edgeGroups = useMemo(() => {
-    const map = new Map<string, InstanceInfo[]>();
+    const groups = new Map<string, InstanceInfo[]>();
     for (const instance of instances) {
-      const group = map.get(instance.edgeId);
+      const group = groups.get(instance.edgeId);
       if (group) group.push(instance);
-      else map.set(instance.edgeId, [instance]);
+      else groups.set(instance.edgeId, [instance]);
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [instances]);
 
   return (
-    <aside className="glass-panel select-none w-[240px] md:w-[240px] flex-shrink-0 flex flex-col overflow-hidden max-md:w-full max-md:flex-1">
-      {/* 标题区 */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="grid grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-x-2.5 items-center">
-          <div className="row-span-2">
-            <img
-              src={logoSrc}
-              alt="Paimon"
-              className="h-[34px] aspect-square object-contain"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <h1 className="text-[16px] leading-[20px] max-md:text-[18px] max-md:leading-[24px] font-semibold text-[var(--label-primary)]">
-              Paimon
-            </h1>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onNewInstance}
-                title={t("sidebar.newInstance")}
-                className="select-none w-6 h-6 flex items-center justify-center rounded-full text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-all duration-150"
-              >
-                <Plus size={16} />
-              </button>
-              <ConnectionIndicator />
-            </div>
-          </div>
-          <div className="text-[12px] leading-[15px] max-md:text-[13px] max-md:leading-[18px] text-[var(--label-tertiary)]">
-            {t("sidebar.machine", { count: edgeGroups.length })}
-            {" · "}
-            {t("sidebar.instance", { count: instances.length })}
-          </div>
-        </div>
-      </div>
-
-      {/* 实例列表（按 Edge 分组） */}
-      <div className="flex-1 overflow-y-auto px-2 py-1 scrollbar-auto">
-        {instances.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[var(--label-tertiary)] text-[12px] leading-[16px] max-md:text-[13px] max-md:leading-[18px]">
-            {t("sidebar.noInstances")}
-          </div>
-        ) : (
-          <div>
-            {edgeGroups.map(([edgeId, groupInstances], groupIdx) => (
-              <div key={edgeId}>
-                {/* Edge 分组标题（点击复制） */}
-                <button
-                  type="button"
-                  onClick={() => handleCopyEdgeId(edgeId)}
-                  title={edgeId}
-                  className={`flex items-center gap-1 px-2.5 pb-1 text-[11px] leading-[14px] font-semibold text-[var(--label-tertiary)] max-w-full max-md:px-3 rounded-[4px] hover:text-[var(--label-secondary)] transition-colors cursor-pointer ${
-                    groupIdx === 0 ? "pt-1" : "pt-3"
-                  }`}
-                >
-                  <span className="truncate">{edgeId}</span>
-                  <span className="shrink-0 opacity-60">
-                    {copiedEdgeId === edgeId ? (
-                      <Check size={10} className="text-green-500" />
-                    ) : (
-                      <Copy size={10} />
-                    )}
-                  </span>
-                </button>
-                {/* 该 Edge 下的实例列表 */}
-                <ul className="space-y-0.5 max-md:space-y-1">
-                  {groupInstances.map((instance) => (
-                    <li key={instance.id}>
-                      <button
-                        onClick={() => {
-                          // 长按触发后不响应 click
-                          if (longPressFiredRef.current) return;
-                          onSelect(instance.id);
-                        }}
-                        onContextMenu={(e) => handleContextMenu(e, instance.id)}
-                        onTouchStart={(e) => handleTouchStart(e, instance.id)}
-                        onTouchEnd={handleTouchEnd}
-                        onTouchMove={handleTouchMove}
-                        className={`w-full text-left px-2.5 py-1.5 max-md:px-3 max-md:py-2.5 rounded-[8px] transition-all duration-150 ${
-                          selectedId === instance.id
-                            ? "bg-[rgba(0,145,255,0.08)] dark:bg-[rgba(0,145,255,0.12)]"
-                            : "hover:bg-[var(--fill-tertiary)]"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {/* 状态指示 */}
-                          <span
-                            className={`w-1.5 h-1.5 max-md:w-2 max-md:h-2 rounded-full flex-shrink-0 transition-colors ${
-                              instance.status === "streaming"
-                                ? "bg-[var(--color-accent)] animate-pulse"
-                                : instance.status === "compacting"
-                                  ? "bg-amber-500 animate-pulse"
-                                  : "bg-green-500"
-                            }`}
-                            title={
-                              instance.status === "streaming"
-                                ? t("sidebar.statusStreaming")
-                                : instance.status === "compacting"
-                                  ? t("sidebar.statusCompacting")
-                                  : t("sidebar.statusIdle")
-                            }
-                          />
-                          {/* 工作目录（取最后一段） */}
-                          <span className="text-[14px] leading-[18px] max-md:text-[15px] max-md:leading-[21px] text-[var(--label-primary)] truncate">
-                            {instance.cwd.split("/").pop() || instance.cwd}
-                          </span>
-                        </div>
-                        <div className="ml-3.5 text-[11px] leading-[14px] max-md:text-[12px] max-md:leading-[16px] text-[var(--label-secondary)] truncate mt-0.5">
-                          {instance.model.name ||
-                            `${instance.model.provider}/${instance.model.id}`}
-                        </div>
-                        {/* 上下文使用率进度条 */}
-                        {instance.contextUsage?.percent != null &&
-                          instance.contextUsage.percent > 0 && (
-                            <div className="ml-3.5 mt-1.5 h-[3px] rounded-full bg-[var(--fill-quaternary)] overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all duration-300"
-                                style={{
-                                  width: `${Math.max(2, Math.min(100, instance.contextUsage.percent))}%`,
-                                  backgroundColor:
-                                    instance.contextUsage.percent >= 90
-                                      ? "#ff4245"
-                                      : instance.contextUsage.percent >= 60
-                                        ? "#ff9230"
-                                        : "#30d158",
-                                }}
-                              />
-                            </div>
-                          )}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 右键/长按上下文菜单 */}
-      {contextMenu && (
-        <ContextMenu position={contextMenu.position} onClose={closeContextMenu}>
-          <ContextMenuItem
-            icon={<LogOut size={14} />}
-            label={t("sidebar.shutdown")}
-            danger
-            onClick={() => {
-              onShutdown(contextMenu.instanceId);
-              closeContextMenu();
-            }}
-          />
-        </ContextMenu>
-      )}
-
-      {/* 设置入口 */}
-      <div className="px-3 py-2 border-t border-[var(--separator)]">
+    <aside className="sidebar-layout select-none glass-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden md:w-[240px] md:flex-none lg:w-[260px]">
+      <header className="sidebar-header flex min-h-[60px] shrink-0 items-center gap-2 px-3 py-2">
         <button
-          onClick={() => navigate("/settings")}
-          className="flex items-center gap-2 w-full px-2.5 py-1.5 max-md:py-2.5 rounded-[8px] text-[var(--label-secondary)] hover:text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)] transition-all duration-150"
+          type="button"
+          onClick={() => navigate("/")}
+          title={t("navigation.home")}
+          aria-label={t("navigation.home")}
+          aria-current={pathname === "/" ? "page" : undefined}
+          className="sidebar-brand flex min-w-0 flex-1 items-center gap-2 rounded-control text-left"
         >
-          <SettingsIcon size={15} className="max-md:w-4 max-md:h-4" />
-          <span className="text-[13px] leading-[18px] max-md:text-[14px] max-md:leading-[20px]">
-            {t("sidebar.settings")}
+          <img
+            src={logoSrc}
+            alt=""
+            className="h-[34px] w-[34px] shrink-0 object-contain"
+          />
+          <span className="min-w-0">
+            <span className="block truncate text-[14px] font-semibold leading-[20px] text-[var(--label-primary)]">
+              {t("navigation.brand")}
+            </span>
+            <span className="block text-[10px] leading-[14px] text-[var(--label-secondary)]">
+              {t(
+                connectionState === "connected"
+                  ? "sidebar.hubConnected"
+                  : connectionState === "connecting"
+                    ? "sidebar.hubConnecting"
+                    : "sidebar.hubDisconnected",
+              )}
+            </span>
           </span>
         </button>
-      </div>
+        <nav
+          className="sidebar-navigation flex shrink-0 items-center gap-1"
+          aria-label={t("navigation.main")}
+        >
+          <Button
+            size="icon"
+            type="button"
+            onClick={onNewInstance}
+            title={t("sidebar.newInstance")}
+            aria-label={t("sidebar.newInstance")}
+            className="navigation-create"
+          >
+            <Plus size={18} aria-hidden="true" />
+          </Button>
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            title={t("sidebar.settings")}
+            aria-label={t("sidebar.settings")}
+            aria-current={pathname === "/settings" ? "page" : undefined}
+            className="navigation-item"
+          >
+            <SettingsIcon size={18} aria-hidden="true" />
+          </button>
+        </nav>
+      </header>
+
+      <section
+        className="instance-list flex min-h-0 min-w-0 flex-1 flex-col"
+        aria-label={t("navigation.instances")}
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2 scrollbar-auto">
+          {instances.length === 0 ? (
+            <div className="px-4 py-12 text-center text-[13px] leading-[20px] text-[var(--label-secondary)]">
+              <Server
+                size={24}
+                className="mx-auto mb-3 opacity-60"
+                aria-hidden="true"
+              />
+              {t("sidebar.noInstances")}
+            </div>
+          ) : (
+            edgeGroups.map(([edgeId, groupInstances]) => (
+              <section
+                key={edgeId}
+                className="mb-3"
+                data-edge-id={edgeId}
+                aria-label={edgeId}
+              >
+                <div className="sidebar-edge-header flex items-center gap-1">
+                  <button
+                    type="button"
+                    aria-expanded={!collapsedEdges[edgeId]}
+                    aria-controls={`${sidebarId}-edge-${encodeURIComponent(edgeId)}`}
+                    aria-label={t("sidebar.toggleMachine", { edgeId })}
+                    title={edgeId}
+                    onClick={() => toggleEdge(edgeId)}
+                    className="sidebar-edge-toggle flex min-w-0 flex-1 items-center gap-1.5 rounded-control px-2 py-1.5 text-left text-[11px] leading-[16px] text-[var(--label-secondary)]"
+                  >
+                    <ChevronRight
+                      size={12}
+                      className={`shrink-0 ${collapsedEdges[edgeId] ? "" : "rotate-90"}`}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{edgeId}</span>
+                    <span className="shrink-0 tabular-nums">
+                      ({groupInstances.length})
+                    </span>
+                  </button>
+                  <Popover
+                    label={t("sidebar.machineActions", { edgeId })}
+                    placement="bottom"
+                    trigger={({ open, id }) => (
+                      <Button
+                        size="icon"
+                        type="button"
+                        className="sidebar-edge-actions"
+                        aria-label={t("sidebar.machineActions", { edgeId })}
+                        title={t("sidebar.machineActions", { edgeId })}
+                        aria-haspopup="dialog"
+                        aria-expanded={open}
+                        aria-controls={open ? id : undefined}
+                      >
+                        {copiedEdgeId === edgeId ? (
+                          <Check size={14} aria-hidden="true" />
+                        ) : (
+                          <MoreHorizontal size={14} aria-hidden="true" />
+                        )}
+                      </Button>
+                    )}
+                  >
+                    {(close) => (
+                      <div className="p-2">
+                        <MenuItem
+                          onClick={() => {
+                            handleCopyEdgeId(edgeId);
+                            close();
+                          }}
+                        >
+                          <Copy size={14} aria-hidden="true" />
+                          {t("sidebar.copyMachineId")}
+                        </MenuItem>
+                      </div>
+                    )}
+                  </Popover>
+                </div>
+                <ul
+                  id={`${sidebarId}-edge-${encodeURIComponent(edgeId)}`}
+                  hidden={!!collapsedEdges[edgeId]}
+                  className="space-y-1"
+                >
+                  {groupInstances.map((instance) => {
+                    const name =
+                      instance.cwd.split("/").filter(Boolean).pop() ||
+                      instance.cwd;
+                    const statusKey = getInstanceStatusKey(instance.status);
+                    const percent = instance.contextUsage?.percent;
+                    return (
+                      <li
+                        key={instance.id}
+                        data-instance-id={instance.id}
+                        className="instance-row relative"
+                        data-selected={selectedId === instance.id || undefined}
+                      >
+                        <button
+                          type="button"
+                          data-instance-select
+                          title={instance.cwd}
+                          aria-current={
+                            selectedId === instance.id ? "page" : undefined
+                          }
+                          onClick={() => {
+                            if (longPressFiredRef.current) {
+                              longPressFiredRef.current = false;
+                              return;
+                            }
+                            onSelect(instance.id);
+                          }}
+                          onTouchStart={(event) =>
+                            handleTouchStart(event, instance.id)
+                          }
+                          onTouchEnd={cancelLongPress}
+                          onTouchMove={cancelLongPress}
+                          onTouchCancel={cancelLongPress}
+                          className="instance-item w-full rounded-control text-left"
+                        >
+                          <span
+                            className={`instance-status h-2 w-2 rounded-full ${getInstanceStatusDotClass(instance.status)}`}
+                            title={t(statusKey)}
+                            aria-hidden="true"
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate text-[14px] font-medium leading-[20px] text-[var(--label-primary)]">
+                              {name}
+                            </div>
+                            <span className="sr-only">{t(statusKey)}</span>
+                            <div className="mt-0.5 truncate text-[11px] leading-[14px] text-[var(--label-secondary)]">
+                              {instance.model.name ||
+                                `${instance.model.provider}/${instance.model.id}`}
+                            </div>
+                            {percent != null && percent > 0 && (
+                              <div
+                                className="instance-progress-track mt-1.5 h-[3px] overflow-hidden rounded-full bg-[var(--fill-quaternary)]"
+                                role="progressbar"
+                                aria-label={t("composer.contextUsage")}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-valuenow={Math.min(
+                                  100,
+                                  Math.max(0, percent),
+                                )}
+                              >
+                                <div
+                                  className="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+                                  style={{
+                                    width: `${Math.max(2, Math.min(100, percent))}%`,
+                                    backgroundColor:
+                                      percent >= 90
+                                        ? "var(--toast-icon-error)"
+                                        : percent >= 60
+                                          ? "var(--toast-icon-warning)"
+                                          : "var(--toast-icon-success)",
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                        <Button
+                          size="icon"
+                          type="button"
+                          aria-label={t("navigation.instanceActions", { name })}
+                          title={t("navigation.instanceActions", { name })}
+                          className="instance-actions absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center text-[var(--label-secondary)]"
+                          onClick={(event) => {
+                            const rect =
+                              event.currentTarget.getBoundingClientRect();
+                            setContextMenu({
+                              position: { x: rect.left, y: rect.bottom },
+                              instanceId: instance.id,
+                            });
+                          }}
+                        >
+                          <MoreHorizontal size={16} aria-hidden="true" />
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))
+          )}
+        </div>
+      </section>
+      <AnimatePresence>
+        {contextMenu && (
+          <ContextMenu
+            key={contextMenu.instanceId}
+            position={contextMenu.position}
+            onClose={() => setContextMenu(null)}
+          >
+            <ContextMenuItem
+              icon={<LogOut size={14} />}
+              label={t("sidebar.shutdown")}
+              danger
+              onClick={() => {
+                onShutdown(contextMenu.instanceId);
+                setContextMenu(null);
+              }}
+            />
+          </ContextMenu>
+        )}
+      </AnimatePresence>
     </aside>
   );
 }

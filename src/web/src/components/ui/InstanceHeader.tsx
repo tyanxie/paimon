@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
 } from "react";
+import { Button } from "./Button";
 import { GitBranch, Folder, Check } from "lucide-react";
 
 interface InstanceHeaderProps {
@@ -22,7 +23,11 @@ interface InstanceHeaderProps {
 
 /** 将 home 前缀替换为 ~ */
 function abbreviatePath(fullPath: string, homedir?: string): string {
-  if (homedir && fullPath.startsWith(homedir)) {
+  if (
+    homedir &&
+    (fullPath === homedir ||
+      fullPath.startsWith(homedir.endsWith("/") ? homedir : homedir + "/"))
+  ) {
     const rest = fullPath.slice(homedir.length);
     if (!rest || rest === "/") return "~";
     return "~" + (rest.startsWith("/") ? rest : "/" + rest);
@@ -93,24 +98,33 @@ function CopyableInfo({
   );
 
   const handleClick = useCallback(() => {
-    navigator.clipboard.writeText(copyText);
-    setCopied(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setCopied(false), 1500);
+    navigator.clipboard.writeText(copyText).then(
+      () => {
+        setCopied(true);
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => setCopied(false), 1500);
+      },
+      () => {},
+    );
   }, [copyText]);
 
   return (
-    <button
+    <Button
+      size="inline"
       type="button"
       onClick={handleClick}
       title={title ?? copyText}
-      className="inline-flex min-w-0 items-center gap-1 rounded-[4px] px-1 py-0.5 -mx-1 transition-colors hover:bg-[var(--fill-tertiary)] active:bg-[var(--fill-secondary)] cursor-pointer select-none"
+      className="inline-flex min-h-[18px] min-w-0 items-center gap-1 px-1 -mx-1 transition-colors hover:bg-[var(--fill-tertiary)] active:bg-[var(--fill-secondary)] cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
     >
       <span className="shrink-0 opacity-70">
-        {copied ? <Check size={11} className="text-green-500" /> : icon}
+        {copied ? (
+          <Check size={11} className="text-[var(--toast-icon-success)]" />
+        ) : (
+          icon
+        )}
       </span>
       <span className="truncate">{text}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -171,7 +185,7 @@ export function InstanceHeader({
   }, [displayPath, gitBranch, recalculate]);
 
   return (
-    <div className="flex items-center justify-between gap-2 min-w-0 flex-1 min-h-[40px]">
+    <div className="flex min-h-[44px] min-w-0 w-full flex-1 items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="truncate text-[14px] leading-[20px] font-medium text-[var(--label-primary)] select-text">
           {title}
@@ -201,7 +215,11 @@ export function InstanceHeader({
           </div>
         )}
       </div>
-      {actions}
+      {actions && (
+        <div className="flex shrink-0 items-center justify-center">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

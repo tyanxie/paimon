@@ -1,5 +1,6 @@
 // 设置页面：外观（主题 + 背景）+ 语言 + 通知
 
+import { SegmentedControl } from "./ui/SegmentedControl";
 import { useTranslation } from "react-i18next";
 import {
   useAppearance,
@@ -17,35 +18,6 @@ import { showToast } from "./ui/Toast";
 // 通用组件
 // ========================================
 
-/** 分段控件 */
-function SegmentedControl<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex rounded-[8px] bg-[var(--fill-secondary)] p-[2px] select-none">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          className={`px-3 py-1.5 rounded-[6px] text-[13px] leading-[18px] transition-all ${
-            value === opt.value
-              ? "bg-[var(--panel-bg)] text-[var(--label-primary)] font-semibold shadow-sm backdrop-blur-sm"
-              : "text-[var(--label-secondary)] font-normal hover:text-[var(--label-primary)]"
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 /** 设置行 */
 function SettingRow({
   label,
@@ -58,7 +30,7 @@ function SettingRow({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-3 select-none">
+      <div className="settings-row select-none">
         <span className="text-[14px] leading-[20px] font-semibold text-[var(--label-primary)]">
           {label}
         </span>
@@ -71,7 +43,7 @@ function SettingRow({
   );
 }
 
-/** 背景选择器（色块圆圈 + 文字） */
+/** 背景选项：彩色标记与文字共用分段控件。 */
 function BackgroundPicker({
   value,
   onChange,
@@ -81,36 +53,26 @@ function BackgroundPicker({
   onChange: (v: Background) => void;
   options: { value: Background; label: string; colors: string[] }[];
 }) {
+  const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-3 select-none">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          className="flex flex-col items-center gap-1"
-        >
-          <div
-            className={`w-7 h-7 rounded-full transition-all ${
-              value === opt.value
-                ? "ring-2 ring-[var(--color-accent)] ring-offset-1"
-                : "hover:scale-110"
-            }`}
-            style={{
-              background: `conic-gradient(${opt.colors.join(", ")})`,
-            }}
-          />
-          <span
-            className={`text-[12px] leading-[16px] ${
-              value === opt.value
-                ? "text-[var(--label-primary)] font-semibold"
-                : "text-[var(--label-secondary)] font-normal"
-            }`}
-          >
-            {opt.label}
-          </span>
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      label={t("settings.background")}
+      value={value}
+      onChange={onChange}
+      options={options.map((opt) => ({
+        value: opt.value,
+        label: (
+          <>
+            <span
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 rounded-full"
+              style={{ background: `conic-gradient(${opt.colors.join(", ")})` }}
+            />
+            <span>{opt.label}</span>
+          </>
+        ),
+      }))}
+    />
   );
 }
 
@@ -164,7 +126,7 @@ export function Settings() {
 
   return (
     <div className="flex-1 flex items-start justify-center p-4 md:p-6 overflow-y-auto scrollbar-auto">
-      <div className="w-full max-w-[480px]">
+      <div className="settings-content">
         <MobileNavBar title={t("settings.title")} />
         <h1 className="hidden md:block text-[22px] font-semibold text-[var(--label-primary)] mb-6 px-4 select-none">
           {t("settings.title")}
@@ -177,6 +139,7 @@ export function Settings() {
         <section className="glass-panel overflow-hidden">
           <SettingRow label={t("settings.theme")}>
             <SegmentedControl
+              label={t("settings.theme")}
               options={appearanceOptions}
               value={appearance}
               onChange={setAppearance}
@@ -198,6 +161,7 @@ export function Settings() {
         <section className="glass-panel overflow-hidden">
           <SettingRow label={t("settings.language")} showSeparator={false}>
             <SegmentedControl
+              label={t("settings.language")}
               options={languageOptions}
               value={i18n.language as Language}
               onChange={setStoredLanguage}
@@ -213,6 +177,7 @@ export function Settings() {
             <section className="glass-panel overflow-hidden">
               <SettingRow label={t("notification.label")} showSeparator={false}>
                 <SegmentedControl
+                  label={t("notification.label")}
                   options={notificationOptions}
                   value={notification ? "on" : "off"}
                   onChange={async (v) => {

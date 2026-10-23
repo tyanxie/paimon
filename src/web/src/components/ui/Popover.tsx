@@ -1,18 +1,35 @@
 // 通用 Popover 浮层组件：Portal 到 body，glass-popover 样式
 
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useId,
+  useLayoutEffect,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { AnimatePresence } from "motion/react";
+import { FloatingSurface } from "./FloatingSurface";
+import { useFloatingViewport } from "./useFloatingViewport";
 import { createPortal } from "react-dom";
 
 /** 弹出方向 */
-export type PopoverPlacement = "top" | "bottom";
+type PopoverPlacement = "top" | "bottom";
 /** 水平对齐 */
-export type PopoverAlign = "left" | "right";
+type PopoverAlign = "left" | "right";
 
 interface PopoverProps {
+  onOpenChange?: (open: boolean) => void;
   /** 渲染触发按钮，接收 open 状态 */
-  trigger: (props: { open: boolean }) => ReactNode;
+  trigger: (props: { open: boolean; id: string }) => ReactNode;
+  /** 弹层的可访问名称 */
+  label?: string;
   /** 面板宽度（px） */
   width?: number;
+  /** 面板高度上限（px），同时受可用视口空间限制。 */
+  maxHeight?: number;
   /** 面板内容，接收 close 回调 */
   children: (close: () => void) => ReactNode;
   /** 禁用弹出 */
@@ -37,13 +54,24 @@ export function calcPosition(
   align: PopoverAlign = "right",
   margin = 8,
   viewportPadding = 12,
+  width = 0,
 ): PopoverPosition {
   const { innerWidth, innerHeight } = window;
 
   // 水平定位
   const horizontal: Pick<PopoverPosition, "left" | "right"> =
     align === "left"
-      ? { left: Math.max(viewportPadding, anchorRect.left) }
+      ? {
+          left: Math.max(
+            viewportPadding,
+            Math.min(
+              anchorRect.left,
+              innerWidth -
+                Math.min(width, Math.max(0, innerWidth - viewportPadding * 2)) -
+                viewportPadding,
+            ),
+          ),
+        }
       : { right: Math.max(viewportPadding, innerWidth - anchorRect.right) };
 
   // 垂直定位
@@ -62,31 +90,122 @@ export function calcPosition(
 
 export function Popover({
   trigger,
+  label,
   width = 200,
+  maxHeight = Infinity,
   children,
   disabled = false,
   placement = "top",
   align = "right",
+  onOpenChange,
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState<PopoverPosition | null>(null);
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
+  useLayoutEffect(() => {
+    onOpenChangeRef.current?.(open);
+  }, [open]);
+  const [position, setPosition] = useState<CSSProperties | null>(null);
+  const bounds = useFloatingViewport(open);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const popoverId = useId();
+  const close = useCallback(() => {
+    setOpen(false);
+    containerRef.current?.querySelector("button")?.focus();
+  }, []);
 
-  // 点击外部关闭
+  useLayoutEffect(() => {
+    if (!open) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const panelWidth = Math.min(width, Math.max(0, bounds.width - 24));
+    const anchorTop = Math.max(
+      bounds.top + 12,
+      Math.min(rect.top, bounds.top + bounds.height - 12),
+    );
+    const anchorBottom = Math.max(
+      anchorTop,
+      Math.min(rect.bottom, bounds.top + bounds.height - 12),
+    );
+    const availableAbove = Math.max(0, anchorTop - bounds.top - 20);
+    const availableBelow = Math.max(
+      0,
+      bounds.top + bounds.height - anchorBottom - 20,
+    );
+    const below =
+      placement === "bottom"
+        ? availableBelow >= 160 || availableBelow >= availableAbove
+        : availableAbove < 160 && availableBelow > availableAbove;
+    const left = Math.max(
+      bounds.left + 12,
+      Math.min(
+        align === "left" ? rect.left : rect.right - panelWidth,
+        bounds.left + bounds.width - panelWidth - 12,
+      ),
+    );
+    const compactViewport = Math.max(availableAbove, availableBelow) < 160;
+    setPosition({
+      left,
+      ...(compactViewport
+        ? { top: bounds.top + 12 }
+        : below
+          ? { top: Math.max(bounds.top + 12, anchorBottom + 8) }
+          : { bottom: Math.max(12, window.innerHeight - anchorTop + 8) }),
+      maxHeight: Math.min(
+        maxHeight,
+        compactViewport
+          ? Math.max(0, bounds.height - 24)
+          : below
+            ? availableBelow
+            : availableAbove,
+      ),
+    });
+  }, [open, bounds, width, maxHeight, placement, align]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  useEffect(() => {
+    if (!open) return;
+    const panel = popoverRef.current;
+    if (panel && !panel.contains(document.activeElement)) {
+      (
+        panel.querySelector<HTMLElement>("input, button:not([disabled])") ??
+        panel
+      ).focus();
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, !!position, close]);
+
+  // 在菜单内容更新前判定点击位置，保留切换页面的点击路径。
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      const target = e.target as Node;
+      const path = e.composedPath();
+      const anchor = containerRef.current;
+      const panel = popoverRef.current;
       if (
-        !containerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
+        !(anchor && path.includes(anchor)) &&
+        !(panel && path.includes(panel))
       ) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handleClick, true);
+    document.addEventListener("click", handleClick, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClick, true);
+      document.removeEventListener("click", handleClick, true);
+    };
   }, [open]);
 
   // resize 时关闭（锚点在固定定位面板上，scroll 不影响其位置，无需关闭）
@@ -105,42 +224,41 @@ export function Popover({
       setOpen(false);
       return;
     }
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setPosition(calcPosition(rect, placement, align));
     setOpen(true);
   };
 
-  const close = () => setOpen(false);
-
-  const popoverPortal =
-    open && position
-      ? createPortal(
-          <div
-            ref={popoverRef}
-            className="glass-popover z-50"
-            style={{
-              position: "fixed",
-              ...(position.left !== undefined
-                ? { left: position.left }
-                : { right: position.right }),
-              ...(position.top !== undefined
-                ? { top: position.top }
-                : { bottom: position.bottom }),
-              width: `${width}px`,
-            }}
-          >
-            {children(close)}
-          </div>,
-          document.body,
-        )
-      : null;
+  const popoverPortal = position
+    ? createPortal(
+        <AnimatePresence>
+          {open && position && (
+            <FloatingSurface
+              key="popover"
+              ref={popoverRef}
+              id={popoverId}
+              role={label ? "dialog" : undefined}
+              aria-label={label}
+              tabIndex={-1}
+              className="z-50"
+              style={{
+                position: "fixed",
+                ...position,
+                width: `${Math.min(width, Math.max(0, bounds.width - 24))}px`,
+                maxWidth: "calc(100vw - 24px)",
+              }}
+            >
+              {children(close)}
+            </FloatingSurface>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )
+    : null;
 
   return (
     <>
       {/* 触发区域：包裹一层 div 用于绑定点击和定位 */}
-      <div className="relative" ref={containerRef} onClick={toggle}>
-        {trigger({ open })}
+      <div className="relative min-w-0" ref={containerRef} onClick={toggle}>
+        {trigger({ open, id: popoverId })}
       </div>
       {popoverPortal}
     </>

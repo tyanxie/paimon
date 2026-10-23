@@ -1,7 +1,16 @@
 // 实例详情页：自治页面组件
 // 从 URL 获取 instanceId，内部管理所有状态和操作
 
-import { useRef, useLayoutEffect, useState, useCallback } from "react";
+import { Button } from "../ui/Button";
+import { StatusMessage } from "../ui/StatusMessage";
+import { AnimatePresence } from "motion/react";
+import {
+  useRef,
+  useLayoutEffect,
+  useState,
+  useCallback,
+  type CSSProperties,
+} from "react";
 import { useParams } from "react-router";
 import { ChevronsDown } from "lucide-react";
 import type {
@@ -9,12 +18,11 @@ import type {
   ImagePayload,
   ThinkingLevel,
 } from "../../../../protocol/types";
-import { getSessionEntryRenderKey } from "../../stores/types";
 import { useWebSocket } from "../../stores/useWebSocket";
 import { useInstances, selectInstance } from "../../stores/useInstances";
 import { useDrafts, EMPTY_DRAFT } from "../../stores/useDrafts";
 import { isBusy } from "../../utils/status";
-import { EntryItem } from "../entries";
+import { ConversationList } from "../entries/Conversation";
 import { ImageLightbox } from "../ui/ImageLightbox";
 import { MobileNavBar } from "../ui/MobileNavBar";
 import { InstanceHeader } from "../ui/InstanceHeader";
@@ -40,7 +48,7 @@ export function InstanceView() {
   // ── 对话状态（私有 hook） ──
   const {
     entries,
-    toolExecutions,
+    displayItems,
     isStreaming,
     loadState,
     errorMessage,
@@ -215,21 +223,26 @@ export function InstanceView() {
   }, [instanceId]);
 
   // 滚动 hook
-  const { handleScroll, scrollToBottom, showScrollBtn, startBottomFollow } =
-    useScrollAnchor({
-      scrollRef,
-      contentRef,
-      bottomChromeRef,
-      entries,
-      entriesRef,
-      instanceId,
-      hasMore,
-      shouldScrollToBottom,
-      onScrollToBottomHandled: clearScrollToBottom,
-      onLoadMore: loadMore,
-      bottomChromeHeight,
-      bottomSafeGap,
-    });
+  const {
+    handleScroll,
+    scrollToBottom,
+    showScrollBtn,
+    startBottomFollow,
+    prepareForContentResize,
+  } = useScrollAnchor({
+    scrollRef,
+    contentRef,
+    bottomChromeRef,
+    entries,
+    entriesRef,
+    instanceId,
+    hasMore,
+    shouldScrollToBottom,
+    onScrollToBottomHandled: clearScrollToBottom,
+    onLoadMore: loadMore,
+    bottomChromeHeight,
+    bottomSafeGap,
+  });
 
   // ── 渲染 ──
   const title = instance?.cwd.split("/").pop() || instance?.cwd || "";
@@ -259,12 +272,14 @@ export function InstanceView() {
     <div className="relative flex-1 min-w-0 overflow-hidden">
       <main className="absolute inset-0 flex min-h-0 flex-col overflow-hidden">
         {/* 顶部悬浮信息栏 */}
-        <div className="pointer-events-none absolute left-0 right-0 top-0 z-20 px-3 pt-3 md:px-4 md:pt-4">
+        <div
+          ref={topChromeRef}
+          className="pointer-events-none absolute left-0 right-0 top-0 z-20 px-3 pt-3 md:px-4 md:pt-0"
+        >
           <div
-            ref={topChromeRef}
-            className="glass-panel pointer-events-auto mx-auto w-full max-w-[920px] px-3 py-2 md:px-4 md:py-2.5"
+            className="conversation-topbar header-material pointer-events-auto w-full px-3 py-2 md:px-4"
             role="region"
-            aria-label="Instance info"
+            aria-label={t("conversation.instanceInfo")}
           >
             {/* PC 端 */}
             <div className="hidden md:flex">
@@ -281,9 +296,15 @@ export function InstanceView() {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          style={{ overflowAnchor: "none" }}
+          style={
+            {
+              overflowAnchor: "none",
+              "--conversation-top-edge": `${topChromeHeight}px`,
+              "--conversation-bottom-edge": `${Math.max(0, bottomChromeHeight - bottomSafeGap)}px`,
+            } as CSSProperties
+          }
           aria-busy={isRefreshing}
-          className="absolute bottom-[var(--bottom-safe-gap)] left-0 right-0 top-6 overflow-y-auto scrollbar-auto px-3 md:bottom-0 md:top-7 md:px-4"
+          className="conversation-scroll absolute bottom-[var(--bottom-safe-gap)] left-0 right-0 top-0 overflow-y-auto scrollbar-auto px-3 md:bottom-0 md:px-4"
         >
           <div
             ref={contentRef}
@@ -294,44 +315,37 @@ export function InstanceView() {
             className="mx-auto max-w-[920px] space-y-2"
           >
             {loadState === "loadingMore" && (
-              <div className="text-center text-[var(--label-tertiary)] text-[11px] py-2 select-none">
-                Loading earlier messages...
-              </div>
+              <StatusMessage compact tone="loading" className="justify-center">
+                {t("conversation.loadingEarlier")}
+              </StatusMessage>
             )}
             {isRefreshing ? (
               <RefreshingConversationSkeleton />
             ) : loadState === "error" ? (
-              <div className="mx-auto mt-8 max-w-[520px] rounded-[12px] border border-[var(--separator)] bg-[var(--fill-card)] px-4 py-3 text-center">
-                <div className="text-[13px] text-[var(--label-primary)] select-none">
-                  Failed to load conversation
-                </div>
-                {errorMessage && (
-                  <div className="mt-1 text-[12px] text-[var(--label-secondary)] break-words select-text">
-                    {errorMessage}
-                  </div>
-                )}
-              </div>
-            ) : entries.length === 0 && !hasMore ? (
-              <div className="text-center text-[var(--label-tertiary)] text-[12px] pt-8 select-none">
-                No messages yet
-              </div>
+              <StatusMessage
+                tone="error"
+                detail={errorMessage}
+                className="mx-auto mt-8 max-w-[520px] border border-[var(--separator)] bg-[var(--fill-card)]"
+              >
+                {t("conversation.loadFailed")}
+              </StatusMessage>
+            ) : displayItems.length === 0 &&
+              !hasMore &&
+              !isBusy(instance?.status) &&
+              !isStreaming ? (
+              <StatusMessage className="pt-8">
+                {t("conversation.noMessages")}
+              </StatusMessage>
             ) : (
-              entries.map((entry, i) => {
-                const key = getSessionEntryRenderKey(entry);
-                const isLast = i === entries.length - 1;
-                return (
-                  <div key={key} data-entry-key={key}>
-                    <EntryItem
-                      entry={entry}
-                      entries={entries}
-                      toolExecutions={toolExecutions}
-                      isLast={isLast}
-                      isStreaming={isStreaming}
-                      onReEdit={isLast ? onReEdit : undefined}
-                    />
-                  </div>
-                );
-              })
+              <ConversationList
+                items={displayItems}
+                entries={entries}
+                conversationKey={`${instanceId}:${instance?.sessionId ?? ""}`}
+                status={instance?.status}
+                isStreaming={isStreaming}
+                onReEdit={onReEdit}
+                onBeforeToggle={prepareForContentResize}
+              />
             )}
           </div>
         </div>
@@ -342,13 +356,15 @@ export function InstanceView() {
             style={{ bottom: scrollSpacing.scrollButtonBottom }}
             className="absolute left-1/2 z-30 -translate-x-1/2"
           >
-            <button
+            <Button
+              size="icon"
               onClick={scrollToBottom}
-              className="select-none w-9 h-9 rounded-full bg-[var(--btn-solid)] border border-[var(--separator)] text-[var(--label-secondary)] flex items-center justify-center hover:bg-[var(--btn-solid-hover)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+              aria-label={t("eventStream.scrollToBottom")}
+              className="conversation-scroll-bottom"
               title={t("eventStream.scrollToBottom")}
             >
-              <ChevronsDown size={16} />
-            </button>
+              <ChevronsDown size={16} aria-hidden="true" />
+            </Button>
           </div>
         )}
 
@@ -359,6 +375,7 @@ export function InstanceView() {
         >
           <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
             <Composer
+              key={`${instanceId}:${instance?.sessionId ?? ""}`}
               ref={composerRef}
               instance={instance}
               draft={draft}
@@ -384,9 +401,15 @@ export function InstanceView() {
       </main>
 
       {/* 图片大图查看 */}
-      {lightboxSrc && (
-        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
-      )}
+      <AnimatePresence>
+        {lightboxSrc && (
+          <ImageLightbox
+            key="image"
+            src={lightboxSrc}
+            onClose={() => setLightboxSrc(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -394,17 +417,21 @@ export function InstanceView() {
 // ─── 内部子组件 ──────────────────────────────────────────────────
 
 function RefreshingConversationSkeleton() {
+  const { t } = useTranslation();
   return (
     <div
       className="space-y-3 pt-3 select-none"
-      aria-label="Loading conversation"
+      aria-label={t("conversation.loadingConversation")}
     >
       {[0, 1, 2, 3].map((item) => (
-        <div key={item} className="space-y-1.5 animate-pulse">
-          <div className="h-3 w-20 rounded-full bg-[var(--fill-tertiary)]" />
-          <div className="max-w-[680px] space-y-1.5 rounded-[10px] border border-[var(--separator)] bg-[var(--fill-card)] p-3">
-            <div className="h-3 w-[82%] rounded-full bg-[var(--fill-secondary)]" />
-            <div className="h-3 w-[64%] rounded-full bg-[var(--fill-tertiary)]" />
+        <div
+          key={item}
+          className="space-y-4 rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] px-4 py-4 animate-pulse"
+        >
+          <div className="h-4 w-28 rounded-inline bg-[var(--fill-tertiary)]" />
+          <div className="space-y-2.5">
+            <div className="h-3 w-[82%] rounded-inline bg-[var(--fill-secondary)]" />
+            <div className="h-3 w-[64%] rounded-inline bg-[var(--fill-tertiary)]" />
           </div>
         </div>
       ))}

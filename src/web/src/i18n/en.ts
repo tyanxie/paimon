@@ -6,10 +6,13 @@ const en: LocaleResource = {
   // ─── Common ───
   common: {
     cancel: "Cancel",
+    close: "Close",
     confirm: "Confirm",
     loading: "Loading…",
-    online: "Online",
-    offline: "Offline",
+  },
+
+  modal: {
+    content: "Dialog content",
   },
 
   imagePreview: {
@@ -32,17 +35,58 @@ const en: LocaleResource = {
   // ─── Sidebar ───
   sidebar: {
     newInstance: "New instance",
-    machine_one: "{{count}} machine",
-    machine_other: "{{count}} machines",
-    instance_one: "{{count}} instance",
-    instance_other: "{{count}} instances",
+    hubConnected: "Hub connected",
+    hubConnecting: "Connecting to Hub",
+    hubDisconnected: "Hub disconnected",
+    toggleMachine: "Expand or collapse machine {{edgeId}}",
+    machineActions: "Machine actions for {{edgeId}}",
+    copyMachineId: "Copy Name",
     noInstances: "No pi instances connected",
     settings: "Settings",
     shutdown: "Shutdown instance",
     shutdownBusy: "Instance is running, please wait before shutting down",
-    statusStreaming: "Streaming",
+    statusStreaming: "Running",
     statusCompacting: "Compacting",
     statusIdle: "Idle",
+    statusPending: "Waiting for status",
+  },
+
+  navigation: {
+    brand: "Paimon",
+    main: "Main navigation",
+    home: "Home",
+    instances: "Instances",
+    backToInstances: "Back to instances",
+    instanceActions: "Actions for {{name}}",
+  },
+
+  composer: {
+    options: "Input options",
+    more: "More input options",
+    backToOptions: "Back to input options",
+    images: "Images",
+    modelWaiting: "Awaiting model",
+    thinkingLabel: "Thinking",
+    pendingThinking: "Awaiting update",
+    unsupportedThinking: "Unsupported",
+    compact: "Compact",
+    compactBusy: "Compaction is unavailable while a task is running",
+    compactUnavailable:
+      "Compaction will be available after context usage updates",
+    resizeHeight: "Resize input area",
+    resizeHeightHelp:
+      "Drag to resize; double-click or press Home for automatic height; use arrow keys to resize and End for maximum height",
+    heightPixels: "{{height}} pixels",
+    model: "Select model",
+    thinkingLevel: "Thinking level",
+    contextUsage: "Context usage",
+    usedTokens: "Used tokens",
+    contextWindow: "Context window",
+    pendingUsage: "Awaiting update",
+    pendingUsageDescription:
+      "Context usage will update after the next response",
+    previewImage: "Preview attached image {{count}}",
+    removeImage: "Remove attached image {{count}}",
   },
 
   // ─── Event Stream / Conversation ───
@@ -54,11 +98,58 @@ const en: LocaleResource = {
     send: "Send",
     attachImage: "Attach image",
     imageProcessFailed: "Image processing failed, please check the format",
-    statusRunning: "Running",
-    statusCompacting: "Compacting",
-    statusOnline: "Online",
     compactContext: "Compact context",
     instanceNotFound: "Instance not found",
+  },
+
+  conversation: {
+    agentName: "Pi",
+    you: "Your message",
+    approximateDuration: "Approx. {{duration}}",
+    durationMilliseconds: "{{value}} ms",
+    durationSeconds: "{{value}} s",
+    durationMinutes: "{{value}} min",
+    durationHours: "{{value}} h",
+    durationDays: "{{value}} d",
+    compactingContext: "Compacting context",
+    attachedImage: "Attached image {{count}}",
+    expandExecution: "Expand tools and thinking",
+    collapseExecution: "Collapse tools and thinking",
+    toolDetails: "View {{name}} tool details",
+    moreToolTypes_one: "{{count}} more tool type",
+    moreToolTypes_other: "{{count}} more tool types",
+    thinkingCount_one: "{{count}} thinking section",
+    thinkingCount_other: "{{count}} thinking sections",
+    thinkingStreamingCount_one:
+      "{{count}} thinking section, thinking in progress",
+    thinkingStreamingCount_other:
+      "{{count}} thinking sections, thinking in progress",
+    toolsPending_one: "{{count}} tool preparing",
+    toolsPending_other: "{{count}} tools preparing",
+    toolsRunning_one: "{{count}} tool running",
+    toolsRunning_other: "{{count}} tools running",
+    toolsCompleted_one: "{{count}} tool completed",
+    toolsCompleted_other: "{{count}} tools completed",
+    toolsFailed_one: "{{count}} tool failed",
+    toolsFailed_other: "{{count}} tools failed",
+    toolsAborted_one: "{{count}} tool aborted",
+    toolsAborted_other: "{{count}} tools aborted",
+    toolsUnknown_one: "{{count}} tool result unavailable",
+    toolsUnknown_other: "{{count}} tool results unavailable",
+    toolPending: "Preparing",
+    toolCompleted: "Completed",
+    toolFailed: "Failed",
+    toolUnknown: "Result unavailable",
+    toolUnavailableDescription:
+      "No tool result or execution record was received.",
+    replyFailed: "Reply failed",
+    replyStart: "Started",
+    replyEnd: "Last updated",
+    loadingEarlier: "Loading earlier messages…",
+    loadingConversation: "Loading conversation",
+    loadFailed: "Failed to load conversation",
+    noMessages: "No messages yet",
+    instanceInfo: "Instance info",
   },
 
   // ─── Compact Modal ───
@@ -129,6 +220,7 @@ const en: LocaleResource = {
 
   // ─── Message Entries ───
   entries: {
+    code: "Code",
     contextCompacted: "Context compacted",
     branchSummary: "Branch summary",
     thinking: "Thinking",

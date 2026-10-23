@@ -1,5 +1,7 @@
 // 根组件：auth + 路由 + 全局 WS 订阅
 
+import { StatusMessage } from "./components/ui/StatusMessage";
+import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useViewportHeight } from "./hooks/useViewportHeight";
@@ -128,7 +130,7 @@ export default function App() {
     return (
       <div className="h-[var(--app-viewport-height,100dvh)] w-screen animated-bg flex items-center justify-center">
         <div className="glass-panel p-8 flex flex-col items-center gap-4">
-          <div className="w-6 h-6 border-2 border-[var(--label-tertiary)] border-t-transparent rounded-full animate-spin" />
+          <StatusMessage tone="loading">{t("common.loading")}</StatusMessage>
         </div>
       </div>
     );
@@ -186,12 +188,15 @@ export default function App() {
       </Routes>
 
       {/* 新建实例弹窗 */}
-      {showNewInstance && (
-        <NewInstanceModal
-          onClose={() => setShowNewInstance(false)}
-          onCreated={handleInstanceCreated}
-        />
-      )}
+      <AnimatePresence>
+        {showNewInstance && (
+          <NewInstanceModal
+            key="new-instance"
+            onClose={() => setShowNewInstance(false)}
+            onCreated={handleInstanceCreated}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 全局 Toast */}
       <ToastContainer />

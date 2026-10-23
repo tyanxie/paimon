@@ -1,6 +1,17 @@
 // 通用右键/长按上下文菜单：Portal 到 body，glass-popover 样式
 
-import { useEffect, useRef, useCallback, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { useIsPresent } from "motion/react";
+import { FloatingSurface } from "./FloatingSurface";
+import { MenuItem } from "./MenuItem";
+import { useFloatingViewport } from "./useFloatingViewport";
 import { createPortal } from "react-dom";
 
 export interface ContextMenuPosition {
@@ -44,6 +55,9 @@ function clampPosition(
 
 export function ContextMenu({ position, onClose, children }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const present = useIsPresent();
+  const bounds = useFloatingViewport(present);
+  const [placement, setPlacement] = useState(position);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -52,6 +66,7 @@ export function ContextMenu({ position, onClose, children }: ContextMenuProps) {
 
   // 点击外部/右键其他位置关闭
   useEffect(() => {
+    if (!present) return;
     function handleMouseDown(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         stableClose();
@@ -75,35 +90,60 @@ export function ContextMenu({ position, onClose, children }: ContextMenuProps) {
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [stableClose]);
+  }, [stableClose, present]);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    menuRef.current
+      ?.querySelector<HTMLButtonElement>("button:not(:disabled)")
+      ?.focus({ preventScroll: true });
+    return () => {
+      if (
+        previousFocus instanceof HTMLElement &&
+        previousFocus.isConnected &&
+        (document.activeElement === document.body ||
+          menuRef.current?.contains(document.activeElement))
+      )
+        previousFocus.focus({ preventScroll: true });
+    };
+  }, []);
 
   // 首次渲染后根据实际尺寸调整位置
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
       const clamped = clampPosition(position, {
         width: rect.width,
         height: rect.height,
       });
-      menuRef.current.style.left = `${clamped.left}px`;
-      menuRef.current.style.top = `${clamped.top}px`;
-      menuRef.current.style.opacity = "1";
+      setPlacement({
+        x: Math.max(
+          bounds.left + 12,
+          Math.min(clamped.left, bounds.left + bounds.width - rect.width - 12),
+        ),
+        y: Math.max(
+          bounds.top + 12,
+          Math.min(clamped.top, bounds.top + bounds.height - rect.height - 12),
+        ),
+      });
     }
-  }, [position]);
+  }, [position, bounds]);
 
   return createPortal(
-    <div
+    <FloatingSurface
+      role="menu"
       ref={menuRef}
-      className="glass-popover z-50 py-1.5 min-w-[160px]"
+      className="z-50 p-1.5 min-w-[160px] scrollbar-auto"
       style={{
         position: "fixed",
-        left: position.x,
-        top: position.y,
-        opacity: 0, // 首帧隐藏，clamp 后显示
+        left: placement.x,
+        top: placement.y,
+        maxWidth: bounds.width - 24,
+        maxHeight: bounds.height - 24,
       }}
     >
       {children}
-    </div>,
+    </FloatingSurface>,
     document.body,
   );
 }
@@ -130,19 +170,14 @@ export function ContextMenuItem({
   onClick,
 }: ContextMenuItemProps) {
   return (
-    <button
+    <MenuItem
+      role="menuitem"
+      danger={danger}
       onClick={(e) => {
         e.stopPropagation();
         if (!disabled) onClick();
       }}
       disabled={disabled}
-      className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-[13px] leading-[18px] transition-colors ${
-        disabled
-          ? "opacity-40 cursor-default"
-          : danger
-            ? "text-red-500 hover:bg-[var(--fill-tertiary)]"
-            : "text-[var(--label-primary)] hover:bg-[var(--fill-tertiary)]"
-      }`}
     >
       {icon && (
         <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
@@ -150,6 +185,6 @@ export function ContextMenuItem({
         </span>
       )}
       <span>{label}</span>
-    </button>
+    </MenuItem>
   );
 }

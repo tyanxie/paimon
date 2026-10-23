@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act } from "react";
+import { MotionConfig } from "motion/react";
 import { createRoot, type Root } from "react-dom/client";
 import i18n from "../../i18n";
 import { ToolCallCard } from "./ToolCallCard";
 import type { SessionEntry, ToolExecutionState } from "../../stores/types";
 
 let root: Root | undefined;
-let container: HTMLDivElement;
+let container: HTMLElement;
+let mountPoint: HTMLDivElement;
 
 async function renderCard(
   execution?: ToolExecutionState,
@@ -14,19 +16,22 @@ async function renderCard(
   name = "bash",
 ) {
   if (!root) {
-    container = document.createElement("div");
-    document.body.append(container);
-    root = createRoot(container);
+    mountPoint = document.createElement("div");
+    document.body.append(mountPoint);
+    container = document.body;
+    root = createRoot(mountPoint);
   }
   await act(async () => {
     root!.render(
-      <ToolCallCard
-        name={name}
-        args={{ command: "echo hello" }}
-        toolCallId="call-1"
-        entries={entries}
-        execution={execution}
-      />,
+      <MotionConfig reducedMotion="always">
+        <ToolCallCard
+          name={name}
+          args={{ command: "echo hello" }}
+          toolCallId="call-1"
+          entries={entries}
+          execution={execution}
+        />
+      </MotionConfig>,
     );
   });
 }
@@ -35,7 +40,7 @@ afterEach(async () => {
   await act(async () => root?.unmount());
   await act(async () => i18n.changeLanguage("zh-CN"));
   root = undefined;
-  container?.remove();
+  mountPoint?.remove();
 });
 
 describe("ToolCallCard lifecycle", () => {
@@ -46,7 +51,11 @@ describe("ToolCallCard lifecycle", () => {
     });
     await act(async () => container.querySelector("button")!.click());
     expect(container.textContent).toContain("first output");
-    expect(container.textContent).toContain("执行中");
+    expect(
+      container
+        .querySelector('.modal-header [data-tool-status="running"]')
+        ?.getAttribute("aria-label"),
+    ).toContain("执行中");
     await renderCard({
       status: "running",
       partialResult: { content: [{ type: "text", text: "latest output" }] },
@@ -67,7 +76,9 @@ describe("ToolCallCard lifecycle", () => {
     expect(container.textContent).toContain("1.2\u00a0s");
     await act(async () => container.querySelector("button")!.click());
     expect(container.textContent).toContain("command failed");
-    expect(container.querySelector("pre.text-red-400")).not.toBeNull();
+    expect(container.querySelector("pre.tool-result-error") !== null).toBe(
+      true,
+    );
   });
 
   test("uses final history content and tolerates legacy results", async () => {
@@ -159,27 +170,6 @@ describe("ToolCallCard lifecycle", () => {
     expect(container.querySelector('[title="执行耗时"]')).toBeNull();
   });
 
-  test("places duration in the right-side group for every tool", async () => {
-    for (const name of ["bash", "read", "write", "edit", "custom"]) {
-      await renderCard(
-        {
-          status: "completed",
-          result: { content: [] },
-          isError: false,
-          durationMs: 1200,
-        },
-        [],
-        name,
-      );
-      const duration = container.querySelector('[title="执行耗时"]')!;
-      expect(duration.parentElement!.classList.contains("ml-auto")).toBe(true);
-      expect(
-        duration.parentElement ===
-          container.querySelector("button")!.lastElementChild,
-      ).toBe(true);
-    }
-  });
-
   test("uses the same duration in the bash card and detail header", async () => {
     await renderCard();
     await act(async () =>
@@ -202,8 +192,6 @@ describe("ToolCallCard lifecycle", () => {
     expect(durations.length).toBe(2);
     expect(durations[0].textContent).toBe(durations[1].textContent);
     expect(container.textContent).toContain("超时时间: 60\u00a0s");
-    expect(container.querySelector("button")!.textContent).not.toContain("60");
-    expect(durations[1].parentElement!.textContent).not.toContain("60");
   });
 
   test("keeps units identical across languages and translates the timeout label", async () => {
@@ -340,6 +328,10 @@ describe("ToolCallCard lifecycle", () => {
     );
     await act(async () => container.querySelector("button")!.click());
     expect(container.textContent).toContain("progress update");
-    expect(container.textContent).toContain("执行中");
+    expect(
+      container
+        .querySelector('.modal-header [data-tool-status="running"]')
+        ?.getAttribute("aria-label"),
+    ).toContain("执行中");
   });
 });

@@ -1,6 +1,10 @@
 // 新建实例弹窗：选择 Edge + 输入工作目录（带目录自动补全），在指定 Edge 上 spawn 一个 pi 实例
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useId } from "react";
+import { Button } from "./Button";
+import { FormField, SelectField, TextField } from "./FormControls";
+import { MenuItem } from "./MenuItem";
+import { StatusMessage } from "./StatusMessage";
 import { FolderPlus, Folder, Loader2 } from "lucide-react";
 import { ModalShell } from "./ModalShell";
 import { authFetch } from "../../utils/authFetch";
@@ -20,6 +24,7 @@ import { useTranslation } from "react-i18next";
 // - 键盘导航（↑↓ 选择，Tab/Enter 补全，Enter 无高亮时触发 onSubmit）
 
 interface PathAutocompleteProps {
+  id: string;
   value: string;
   onChange: (path: string) => void;
   /** 目标 Edge 节点 ID，用于调 browse API */
@@ -40,6 +45,7 @@ interface BrowseResponse {
 }
 
 function PathAutocomplete({
+  id,
   value,
   onChange,
   edgeId,
@@ -63,12 +69,15 @@ function PathAutocomplete({
   useEffect(() => {
     return () => {
       browseAbortRef.current?.abort();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
 
   // 自动聚焦
   useEffect(() => {
-    if (autoFocus) inputRef.current?.focus();
+    if (autoFocus && !window.matchMedia("(pointer: coarse)").matches) {
+      inputRef.current?.focus();
+    }
   }, [autoFocus]);
 
   // 请求目录补全
@@ -211,7 +220,8 @@ function PathAutocomplete({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="relative">
-        <input
+        <TextField
+          id={id}
           ref={inputRef}
           type="text"
           value={value}
@@ -228,7 +238,7 @@ function PathAutocomplete({
           disabled={disabled}
           spellCheck={false}
           autoComplete="off"
-          className="w-full rounded-[10px] px-3 py-2 bg-[var(--fill-tertiary)] border border-[var(--separator)] text-[14px] leading-[20px] text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] outline-none focus:border-[var(--color-accent)] transition-colors disabled:opacity-50 pr-8"
+          className="pr-10"
         />
         {/* 加载指示器 */}
         {browsing && (
@@ -245,22 +255,16 @@ function PathAutocomplete({
       {showSuggestions && (
         <div
           ref={listRef}
-          className="max-h-[200px] overflow-y-auto rounded-[10px] border border-[var(--separator)] bg-[var(--fill-quaternary)]"
+          className="max-h-[200px] overflow-y-auto rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] p-1.5 scrollbar-auto"
         >
           {suggestions.map((entry, i) => (
-            <button
+            <MenuItem
+              selected={i === highlightIndex}
               key={entry.name}
               type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                selectSuggestion(entry);
-              }}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => selectSuggestion(entry)}
               onMouseEnter={() => setHighlightIndex(i)}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors ${
-                i === highlightIndex
-                  ? "bg-[var(--fill-secondary)]"
-                  : "hover:bg-[var(--fill-tertiary)]"
-              }`}
             >
               <Folder
                 size={14}
@@ -269,7 +273,7 @@ function PathAutocomplete({
               <span className="text-[var(--label-primary)] truncate">
                 {entry.name}
               </span>
-            </button>
+            </MenuItem>
           ))}
           {truncated && (
             <div className="px-3 py-1.5 text-[12px] text-[var(--label-tertiary)] border-t border-[var(--separator)]">
@@ -295,6 +299,8 @@ export function NewInstanceModal({
   onCreated,
 }: NewInstanceModalProps) {
   const { t } = useTranslation();
+  const edgeFieldId = useId();
+  const pathFieldId = useId();
   const [cwd, setCwd] = useState("");
   const [edges, setEdges] = useState<EdgeInfo[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
@@ -379,6 +385,27 @@ export function NewInstanceModal({
 
   return (
     <ModalShell
+      mobileSheet={false}
+      size="form"
+      footer={
+        <>
+          <Button
+            onClick={onClose}
+            disabled={submitting}
+            className="active:bg-[var(--fill-tertiary)]"
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            loading={submitting}
+            disabled={!cwd.trim() || !selectedEdgeId}
+          >
+            {submitting ? t("newInstance.creating") : t("newInstance.create")}
+          </Button>
+        </>
+      }
       title={
         <>
           <FolderPlus size={16} />
@@ -387,49 +414,44 @@ export function NewInstanceModal({
       }
       onClose={onClose}
     >
-      <div className="px-5 py-4 flex flex-col gap-3">
+      <div className="ui-form-content">
         {/* Edge 选择 */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] text-[var(--label-secondary)]">
-            {t("newInstance.edgeNode")}
-          </label>
+        <FormField label={t("newInstance.edgeNode")} htmlFor={edgeFieldId}>
           {loadingEdges ? (
-            <div className="text-[13px] text-[var(--label-tertiary)]">
+            <StatusMessage compact tone="loading">
               {t("common.loading")}
-            </div>
+            </StatusMessage>
           ) : edges.length === 0 ? (
-            <div className="text-[12px] text-[#ff4245]">
+            <StatusMessage compact tone="error">
               {t("newInstance.noEdges")}
-            </div>
+            </StatusMessage>
           ) : edges.length === 1 ? (
-            <div className="text-[13px] text-[var(--label-primary)]">
+            <div id={edgeFieldId} className="ui-form-note">
               {edges[0].hostname}
               <span className="text-[var(--label-tertiary)] ml-1.5">
                 ({edges[0].edgeId})
               </span>
             </div>
           ) : (
-            <select
+            <SelectField
+              id={edgeFieldId}
               value={selectedEdgeId}
               onChange={(e) => handleEdgeChange(e.target.value)}
               disabled={submitting}
-              className="w-full rounded-[10px] px-3 py-2 bg-[var(--fill-tertiary)] border border-[var(--separator)] text-[14px] text-[var(--label-primary)] outline-none focus:border-[var(--color-accent)] transition-colors disabled:opacity-50"
             >
               {edges.map((edge) => (
                 <option key={edge.edgeId} value={edge.edgeId}>
                   {edge.hostname} ({edge.edgeId})
                 </option>
               ))}
-            </select>
+            </SelectField>
           )}
-        </div>
+        </FormField>
 
         {/* 工作目录 */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] text-[var(--label-secondary)]">
-            {t("newInstance.workingDir")}
-          </label>
+        <FormField label={t("newInstance.workingDir")} htmlFor={pathFieldId}>
           <PathAutocomplete
+            id={pathFieldId}
             value={cwd}
             onChange={setCwd}
             edgeId={selectedEdgeId}
@@ -437,29 +459,13 @@ export function NewInstanceModal({
             autoFocus={!loadingEdges}
             onSubmit={handleSubmit}
           />
-        </div>
+        </FormField>
 
         {error && (
-          <div className="text-[12px] leading-[16px] text-[#ff4245] whitespace-pre-wrap break-words">
+          <StatusMessage compact tone="error">
             {error}
-          </div>
+          </StatusMessage>
         )}
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <button
-            onClick={onClose}
-            disabled={submitting}
-            className="px-3.5 py-1.5 rounded-[8px] text-[13px] text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] transition-colors disabled:opacity-50"
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || !cwd.trim() || !selectedEdgeId}
-            className="px-3.5 py-1.5 rounded-[8px] text-[13px] font-medium text-white bg-[var(--color-accent)] hover:opacity-90 transition-opacity disabled:opacity-40"
-          >
-            {submitting ? t("newInstance.creating") : t("newInstance.create")}
-          </button>
-        </div>
       </div>
     </ModalShell>
   );
