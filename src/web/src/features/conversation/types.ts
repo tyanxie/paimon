@@ -126,10 +126,16 @@ export interface ConversationExecution {
   counts: Record<ConversationToolState["status"], number>;
 }
 
+export type SystemEntryState =
+  | { status: "compacting" | "refreshing" }
+  | { status: "completed"; entry: SessionEntry }
+  | { status: "failed" | "aborted" | "unavailable"; message?: string };
+
 interface ConversationSystemEvent {
   type: "system";
   key: string;
   entry: SessionEntry;
+  state?: SystemEntryState;
 }
 
 type ConversationPart =
