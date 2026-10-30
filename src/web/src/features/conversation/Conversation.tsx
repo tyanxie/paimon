@@ -1,4 +1,4 @@
-import { Brain, ChevronRight, Layers, Loader2, Sparkles } from "lucide-react";
+import { Brain, ChevronRight, Loader2 } from "lucide-react";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,7 @@ import { Collapsible } from "../../components/ui/Collapsible";
 import { ErrorCard } from "./ErrorCard";
 import { MarkdownRenderer } from "./Markdown";
 import { MessageTime } from "./MessageTime";
+import { CompactingEntry } from "./CompactingEntry";
 import { MetaEntry } from "./MetaEntry";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
@@ -37,7 +38,6 @@ export function ConversationList({
   onReEdit?: () => void;
   onBeforeToggle?: BeforeToggle;
 }) {
-  const { t } = useTranslation();
   const busy =
     status !== "compacting" && (status === "streaming" || isStreaming);
   const last = items.at(-1);
@@ -92,22 +92,7 @@ export function ConversationList({
               />
             );
           })}
-          {status === "compacting" && (
-            <div
-              className="conversation-system flex items-center gap-2 border-y border-[var(--separator)] px-3 py-3 text-[12px] text-[var(--label-secondary)]"
-              data-system-state="compacting"
-            >
-              <Layers size={14} aria-hidden="true" />
-              <span role="status" className="inline-flex items-center gap-2">
-                <Loader2
-                  size={14}
-                  aria-hidden="true"
-                  className="animate-spin motion-reduce:animate-none"
-                />
-                {t("conversation.compactingContext")}
-              </span>
-            </div>
-          )}
+          {status === "compacting" && <CompactingEntry />}
         </div>
       </MotionConfig>
     </LazyMotion>
@@ -134,73 +119,88 @@ function ReplyCard({
     .find((entry) => entry.message?.role === "assistant")?.message;
   const stopped = lastMessage?.stopReason === "aborted";
   const failed = lastMessage?.stopReason === "error";
+  const hasContent = reply.parts.some(
+    (part) => part.type !== "execution" || part.items.length > 0,
+  );
+
+  const waiting = !hasContent && active;
+  const showState = !active && (failed || stopped);
+  if (!hasContent && !active && !failed && !stopped && !onReEdit) return null;
 
   return (
-    <div className="conversation-reply-group space-y-1">
-      <article
-        className="conversation-reply rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] shadow-[0_2px_12px_rgba(0,0,0,0.035)]"
-        data-reply-key={reply.key}
-      >
-        <div
-          data-entry-key={reply.key}
-          className="flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 md:px-4"
+    <div
+      className="conversation-reply-group space-y-1"
+      data-entry-key={reply.key}
+    >
+      {(waiting || hasContent) && (
+        <article
+          className="conversation-reply rounded-surface border border-[var(--separator)] bg-[var(--fill-quaternary)] shadow-[0_2px_12px_rgba(0,0,0,0.035)]"
+          data-reply-key={reply.key}
+          aria-label={t("conversation.agentName")}
         >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control bg-[var(--fill-card)] text-[var(--label-secondary)]">
-            <Sparkles size={15} aria-hidden="true" />
-          </span>
-          <span className="text-[14px] font-semibold text-[var(--label-primary)]">
-            {t("conversation.agentName")}
-          </span>
-          {!active && (failed || stopped) && (
-            <span className="text-[11px] text-[var(--label-secondary)]">
+          {waiting && (
+            <div
+              className="conversation-reply-pending flex items-center gap-2 px-4 py-3 text-[12px] leading-5 text-[var(--label-secondary)] md:px-5 md:py-4"
+              role="status"
+            >
+              <Loader2
+                size={14}
+                aria-hidden="true"
+                className="animate-spin motion-reduce:animate-none"
+              />
+              {t("conversation.waitingReply")}
+            </div>
+          )}
+          {hasContent && (
+            <div className="space-y-2 px-4 py-3 md:px-5 md:py-4">
+              {reply.parts.map((part) => (
+                <div
+                  key={part.key}
+                  data-entry-key={part.key}
+                  className="conversation-part min-w-0"
+                >
+                  {part.type === "execution" ? (
+                    <ExecutionSummary
+                      execution={part}
+                      onBeforeToggle={onBeforeToggle}
+                    />
+                  ) : part.type === "text" ? (
+                    <MarkdownRenderer
+                      content={part.content}
+                      streaming={part.source.streaming}
+                    />
+                  ) : (
+                    <ErrorCard message={part.content} />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+      )}
+      <div className="conversation-reply-footer flex flex-wrap items-center gap-x-3 gap-y-1 px-1 md:px-2">
+        <div className="conversation-reply-time flex min-w-0 flex-1 basis-56 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] leading-5 text-[var(--label-secondary)]">
+          <MessageTime
+            timestamps={reply.entries.map((entry) => entry.timestamp)}
+            showRange
+            showDuration={settled}
+          />
+          {showState && (
+            <span className="conversation-reply-state">
               {t(failed ? "conversation.replyFailed" : "entries.aborted")}
             </span>
           )}
-          <div className="ml-auto flex items-center gap-2">
-            {onReEdit && (
-              <Button
-                size="compact"
-                type="button"
-                onClick={onReEdit}
-                className="shrink-0 px-2 py-1.5 text-[12px] text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
-              >
-                {t("reEdit.button")}
-              </Button>
-            )}
-          </div>
         </div>
-        {reply.parts.length > 0 && (
-          <div className="space-y-2 px-4 pb-3 md:px-5 md:pb-4">
-            {reply.parts.map((part) => (
-              <div
-                key={part.key}
-                data-entry-key={part.key}
-                className="conversation-part min-w-0"
-              >
-                {part.type === "execution" ? (
-                  <ExecutionSummary
-                    execution={part}
-                    onBeforeToggle={onBeforeToggle}
-                  />
-                ) : part.type === "text" ? (
-                  <MarkdownRenderer
-                    content={part.content}
-                    streaming={part.source.streaming}
-                  />
-                ) : (
-                  <ErrorCard message={part.content} />
-                )}
-              </div>
-            ))}
-          </div>
+        {!waiting && onReEdit && (
+          <Button
+            size="compact"
+            type="button"
+            onClick={onReEdit}
+            className="ml-auto shrink-0 px-2 text-[12px] text-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+          >
+            {t("reEdit.button")}
+          </Button>
         )}
-      </article>
-      <div className="conversation-reply-time px-1 md:px-2">
-        <MessageTime
-          timestamps={reply.entries.map((entry) => entry.timestamp)}
-          showRange
-          showDuration={settled}
-        />
       </div>
     </div>
   );

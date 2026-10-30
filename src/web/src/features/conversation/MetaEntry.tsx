@@ -1,10 +1,11 @@
 import { ChevronRight, GitBranch, Layers } from "lucide-react";
 import { AnimatePresence } from "motion/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ModalShell } from "../../components/ui/ModalShell";
 import { MarkdownRenderer } from "./Markdown";
 import { MessageTime } from "./MessageTime";
+import { markdownToPlainText } from "../../utils/markdown";
 
 export function MetaEntry({
   type,
@@ -17,6 +18,7 @@ export function MetaEntry({
 }) {
   const { t } = useTranslation();
   const [showDetail, setShowDetail] = useState(false);
+  const preview = useMemo(() => markdownToPlainText(summary), [summary]);
   const label =
     type === "compaction"
       ? t("entries.contextCompacted")
@@ -24,37 +26,29 @@ export function MetaEntry({
   const Icon = type === "compaction" ? Layers : GitBranch;
   return (
     <>
-      <div className="conversation-system flex flex-wrap items-start gap-2 border-y border-[var(--separator)] px-3 py-2">
-        <button
-          type="button"
-          disabled={!summary}
-          onClick={() => setShowDetail(true)}
-          className="flex min-w-0 flex-1 items-start gap-2 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
-        >
-          <Icon
-            size={14}
-            aria-hidden="true"
-            className="mt-0.5 shrink-0 text-[var(--label-secondary)]"
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[12px] font-medium text-[var(--label-secondary)]">
-              {label}
+      <div className="conversation-system-group space-y-1">
+        <div className="conversation-system" data-system-state={type}>
+          <button
+            type="button"
+            disabled={!summary}
+            onClick={() => setShowDetail(true)}
+            className="conversation-system-row w-full text-left enabled:hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+          >
+            <Icon size={14} aria-hidden="true" className="shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block">{label}</span>
+              {preview && (
+                <span className="conversation-system-preview">{preview}</span>
+              )}
             </span>
             {summary && (
-              <span className="mt-1 block truncate text-[12px] text-[var(--label-secondary)]">
-                {summary}
-              </span>
+              <ChevronRight size={14} aria-hidden="true" className="shrink-0" />
             )}
-          </span>
-          {summary && (
-            <ChevronRight
-              size={14}
-              aria-hidden="true"
-              className="mt-0.5 shrink-0 text-[var(--label-secondary)]"
-            />
-          )}
-        </button>
-        <MessageTime timestamps={[timestamp]} />
+          </button>
+        </div>
+        <div className="conversation-system-time px-1 md:px-2">
+          <MessageTime timestamps={[timestamp]} />
+        </div>
       </div>
       <AnimatePresence>
         {showDetail && (

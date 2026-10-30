@@ -52,6 +52,46 @@
   }
 }
 
+.conversation-system {
+  border-radius: var(--radius-surface);
+  background: var(--fill-quaternary);
+  color: var(--label-secondary);
+}
+
+.conversation-system-row {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.conversation-system-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin-top: 4px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 768px) {
+  .conversation-system-row {
+    padding-inline: 20px;
+  }
+}
+
+@media (pointer: coarse) {
+  .conversation-system-row {
+    min-height: 44px;
+  }
+}
+
 .conversation-tool-name {
   flex-shrink: 0;
   padding: 2px 4px;

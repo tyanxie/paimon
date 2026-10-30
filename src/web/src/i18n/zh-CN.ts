@@ -108,6 +108,7 @@ const zhCN = {
     durationHours: "{{value}} 小时",
     durationDays: "{{value}} 天",
     compactingContext: "正在整理上下文",
+    waitingReply: "等待回复",
     attachedImage: "附加图片 {{count}}",
     expandExecution: "展开工具与思考过程",
     collapseExecution: "收起工具与思考过程",
