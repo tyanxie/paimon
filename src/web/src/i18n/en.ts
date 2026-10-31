@@ -112,6 +112,7 @@ const en: LocaleResource = {
     durationHours: "{{value}} h",
     durationDays: "{{value}} d",
     compactingContext: "Compacting context",
+    waitingReply: "Waiting for reply",
     attachedImage: "Attached image {{count}}",
     expandExecution: "Expand tools and thinking",
     collapseExecution: "Collapse tools and thinking",
