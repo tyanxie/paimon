@@ -15,10 +15,12 @@ import {
   isSessionEntry,
   isSessionMessage,
 } from "./conversationData";
+import { getSessionEntryRenderKey } from "./types";
 import type {
   ConversationItem,
   ConversationLoadState,
   SessionEntry,
+  SystemEntryState,
   ToolExecutionState,
 } from "./types";
 import { useConversationDisplay } from "./useConversationDisplay";
@@ -56,6 +58,13 @@ function ensureRenderKey(
 
 // ── Hook ──
 
+interface CompactionEvent {
+  key: string;
+  afterEntryKey: string | null;
+  timestamp: number;
+  state: SystemEntryState;
+}
+
 const noop = () => {};
 
 export function useConversation(
@@ -84,6 +93,12 @@ export function useConversation(
   const [loadState, setLoadState] = useState<ConversationLoadState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [compactions, setCompactions] = useState<CompactionEvent[]>([]);
+  const compactionKeyRef = useRef<string | null>(null);
+  const compactionEndedRef = useRef(false);
+  const compactionRefreshRef = useRef(false);
+  const knownCompactionIdsRef = useRef(new Set<string>());
+  const lastEntryKeyRef = useRef<string | null>(null);
 
   // 用于 loadMore 获取当前 entries 长度（避免闭包陈旧）
   const entriesRef = useRef(entries);
@@ -96,6 +111,12 @@ export function useConversation(
   // ── 重置对话状态 ──
   const resetConversation = useCallback(() => {
     setEntries([]);
+    lastEntryKeyRef.current = null;
+    setCompactions([]);
+    compactionKeyRef.current = null;
+    compactionEndedRef.current = false;
+    compactionRefreshRef.current = false;
+    knownCompactionIdsRef.current.clear();
     setToolExecutions(new Map());
     setLiveToolCallIds(new Set());
     streamingKeyRef.current = null;
@@ -201,19 +222,57 @@ export function useConversation(
     }
   }, [instance?.sessionId, instanceId, send, resetConversation]);
 
-  // ── 监听 compacting → 非 compacting 转换 → 重新拉取 ──
+  // 压缩结束后通过历史恢复结果，并更新对应系统事件。
   const prevStatusRef = useRef(instance?.status);
   useEffect(() => {
     const currentStatus = instance?.status;
     if (
-      prevStatusRef.current === "compacting" &&
-      currentStatus !== "compacting"
+      currentStatus === "compacting" &&
+      (!compactionKeyRef.current || compactionEndedRef.current)
     ) {
-      resetConversation();
-      send({ type: "get_history", payload: { instanceId } });
+      beginCompaction();
+    }
+    if (
+      prevStatusRef.current === "compacting" &&
+      currentStatus !== "compacting" &&
+      !compactionEndedRef.current
+    ) {
+      updateCompaction({ status: "refreshing" });
+      compactionRefreshRef.current = true;
+      if (loadStateRef.current !== "loadingMore") {
+        send({ type: "get_history", payload: { instanceId } });
+      }
     }
     prevStatusRef.current = currentStatus;
-  }, [instance?.status, instanceId, send, resetConversation]);
+  }, [instance?.status, instanceId, send]);
+
+  function beginCompaction(timestamp = Date.now()) {
+    const key = nextRenderKey(instanceId, "compaction");
+    compactionKeyRef.current = key;
+    compactionEndedRef.current = false;
+    knownCompactionIdsRef.current = new Set(
+      entriesRef.current.flatMap((entry) =>
+        entry.type === "compaction" && entry.id ? [entry.id] : [],
+      ),
+    );
+    const afterEntryKey = lastEntryKeyRef.current;
+    setCompactions((current) => [
+      ...current,
+      {
+        key,
+        afterEntryKey,
+        timestamp,
+        state: { status: "compacting" },
+      },
+    ]);
+  }
+
+  function updateCompaction(state: SystemEntryState) {
+    const key = compactionKeyRef.current;
+    setCompactions((current) =>
+      current.map((event) => (event.key === key ? { ...event, state } : event)),
+    );
+  }
 
   // 当前实时 assistant 消息中的工具调用保留准备阶段，直到收到执行事件。
   function rememberLiveToolCalls(message: SessionEntry["message"]) {
@@ -244,6 +303,39 @@ export function useConversation(
     const eventTime = new Date(timestamp).toISOString();
 
     switch (event) {
+      case "session_before_compact": {
+        if (!compactionKeyRef.current || compactionEndedRef.current)
+          beginCompaction(timestamp);
+        break;
+      }
+      case "session_compact": {
+        const entry = d.compactionEntry;
+        if (!isSessionEntry(entry) || entry.type !== "compaction" || !entry.id)
+          break;
+        if (!compactionKeyRef.current) beginCompaction(timestamp);
+        compactionEndedRef.current = true;
+        updateCompaction({ status: "completed", entry });
+        lastEntryKeyRef.current = getSessionEntryRenderKey(entry);
+        setEntries((current) =>
+          current.some((value) => value.id === entry.id)
+            ? current
+            : [...current, entry],
+        );
+        compactionKeyRef.current = null;
+        break;
+      }
+      case "session_compact_failed": {
+        if (typeof d.aborted !== "boolean") break;
+        if (!compactionKeyRef.current) beginCompaction(timestamp);
+        compactionEndedRef.current = true;
+        updateCompaction({
+          status: d.aborted ? "aborted" : "failed",
+          message:
+            typeof d.errorMessage === "string" ? d.errorMessage : undefined,
+        });
+        compactionKeyRef.current = null;
+        break;
+      }
       case "tool_execution_start":
       case "tool_execution_update":
       case "tool_execution_end": {
@@ -338,6 +430,7 @@ export function useConversation(
             message,
             __renderKey: stableKey,
           };
+          lastEntryKeyRef.current = stableKey;
           setEntries((prev) => [...prev, entry]);
           if (
             message.role === "toolResult" &&
@@ -370,12 +463,62 @@ export function useConversation(
       ensureRenderKey(id, entry, "history"),
     );
 
+    const refreshingCompaction = compactionRefreshRef.current;
     if (loadStateRef.current === "loadingMore") {
-      // 追加到前面（加载更早历史）
       setEntries((prev) => [...normalized, ...prev]);
+      if (refreshingCompaction) {
+        send({ type: "get_history", payload: { instanceId } });
+      }
+    } else if (refreshingCompaction) {
+      const result = [...normalized]
+        .reverse()
+        .find(
+          (entry) =>
+            entry.type === "compaction" &&
+            entry.id !== undefined &&
+            !knownCompactionIdsRef.current.has(entry.id),
+        );
+      if (!compactionEndedRef.current) {
+        if (result) {
+          updateCompaction({ status: "completed", entry: result });
+          compactionKeyRef.current = null;
+        } else {
+          updateCompaction({ status: "unavailable" });
+        }
+        compactionEndedRef.current = true;
+      }
+      compactionRefreshRef.current = false;
+      setEntries(normalized);
+      const lastEntry = normalized.at(-1);
+      lastEntryKeyRef.current = lastEntry
+        ? getSessionEntryRenderKey(lastEntry)
+        : null;
     } else {
       // 首次加载 / 刷新
       setEntries(normalized);
+      const lastEntry = normalized.at(-1);
+      lastEntryKeyRef.current = lastEntry
+        ? getSessionEntryRenderKey(lastEntry)
+        : null;
+      if (compactionKeyRef.current && !compactionEndedRef.current) {
+        for (const entry of normalized) {
+          if (entry.type === "compaction" && entry.id)
+            knownCompactionIdsRef.current.add(entry.id);
+        }
+        const key = compactionKeyRef.current;
+        if (lastEntry) {
+          setCompactions((current) =>
+            current.map((event) =>
+              event.key === key && !event.afterEntryKey
+                ? {
+                    ...event,
+                    afterEntryKey: getSessionEntryRenderKey(lastEntry),
+                  }
+                : event,
+            ),
+          );
+        }
+      }
     }
     setToolExecutions((prev) => {
       const next = new Map(prev);
@@ -396,7 +539,12 @@ export function useConversation(
 
   // ── 加载更多历史 ──
   const loadMore = useCallback(() => {
-    if (!hasMoreRef.current || loadStateRef.current !== "idle") return;
+    if (
+      !hasMoreRef.current ||
+      loadStateRef.current !== "idle" ||
+      compactionRefreshRef.current
+    )
+      return;
     const offset = entriesRef.current.length;
     setLoadState("loadingMore");
     send({ type: "get_history", payload: { instanceId, offset } });
@@ -406,13 +554,68 @@ export function useConversation(
     () => (streamingEntry ? [...entries, streamingEntry] : entries),
     [entries, streamingEntry],
   );
-  const displayItems = useConversationDisplay(
-    visibleEntries,
+  const displayEntries = useMemo(() => {
+    const entryIds = new Set(visibleEntries.map((entry) => entry.id));
+    const pending = compactions.filter(
+      (event) =>
+        event.state.status !== "completed" ||
+        !entryIds.has(event.state.entry.id),
+    );
+    const entryIndices = new Map(
+      visibleEntries.map((entry, index) => [
+        getSessionEntryRenderKey(entry),
+        index,
+      ]),
+    );
+    const byAnchor = new Map<number, SessionEntry[]>();
+    for (const event of pending) {
+      let index = event.afterEntryKey
+        ? entryIndices.get(event.afterEntryKey)
+        : undefined;
+      if (index === undefined) {
+        const nextEntryIndex = visibleEntries.findIndex(
+          (entry) =>
+            entry.timestamp !== undefined &&
+            Date.parse(entry.timestamp) > event.timestamp,
+        );
+        index =
+          nextEntryIndex >= 0 ? nextEntryIndex - 1 : visibleEntries.length - 1;
+      }
+      const anchored = byAnchor.get(index) ?? [];
+      anchored.push({ type: "compaction", __renderKey: event.key });
+      byAnchor.set(index, anchored);
+    }
+    const combined = [...(byAnchor.get(-1) ?? [])];
+    visibleEntries.forEach((entry, index) => {
+      combined.push(entry, ...(byAnchor.get(index) ?? []));
+    });
+    return combined;
+  }, [visibleEntries, compactions]);
+  const baseItems = useConversationDisplay(
+    displayEntries,
     toolExecutions,
     streamingEntry,
     instance?.status,
     liveToolCallIds,
   );
+
+  const displayItems = useMemo(() => {
+    const byKey = new Map(compactions.map((event) => [event.key, event]));
+    const byEntryId = new Map(
+      compactions.flatMap((event) =>
+        event.state.status === "completed" && event.state.entry.id
+          ? [[event.state.entry.id, event] as const]
+          : [],
+      ),
+    );
+    return baseItems.map((item) => {
+      if (item.type !== "system") return item;
+      const event =
+        byKey.get(item.key) ??
+        (item.entry.id ? byEntryId.get(item.entry.id) : undefined);
+      return event ? { ...item, key: event.key, state: event.state } : item;
+    });
+  }, [baseItems, compactions]);
 
   return {
     entries: visibleEntries,

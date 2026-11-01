@@ -215,6 +215,9 @@ export default function (pi: ExtensionAPI) {
   // 压缩开始前更新实例状态
   pi.on("session_before_compact", async (event, ctx) => {
     currentCtx = ctx;
+    client.send(
+      serializeEvent("session_before_compact", { reason: event.reason }),
+    );
     sendState({ status: "compacting" });
     // 手动压缩取消后不会触发 agent_settled，需要在此恢复状态
     if (event.reason === "manual") {
@@ -230,6 +233,11 @@ export default function (pi: ExtensionAPI) {
   // 手动压缩完成后恢复空闲；自动压缩仍属于当前 agent 运行。
   pi.on("session_compact", async (event, ctx) => {
     currentCtx = ctx;
+    client.send(
+      serializeEvent("session_compact", {
+        compactionEntry: event.compactionEntry,
+      }),
+    );
     sendState({
       status: event.reason === "manual" ? "idle" : "streaming",
       contextUsage: getContextUsageInfo(ctx),
@@ -239,6 +247,12 @@ export default function (pi: ExtensionAPI) {
   // 压缩失败后也需要离开 compacting 状态
   pi.on("session_compact_failed", async (event, ctx) => {
     currentCtx = ctx;
+    client.send(
+      serializeEvent("session_compact_failed", {
+        aborted: event.aborted,
+        errorMessage: event.errorMessage,
+      }),
+    );
     if (event.reason !== "manual" && !event.aborted) {
       latestRunOutcome = "error";
     }
