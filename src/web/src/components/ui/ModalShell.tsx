@@ -208,11 +208,11 @@ function ModalContent({
                 id={titleId}
                 ref={titleRef}
                 tabIndex={-1}
-                className="outline-none flex min-w-0 flex-wrap items-center gap-2 text-[15px] font-semibold text-[var(--label-primary)] select-text"
+                className="outline-none flex min-w-0 flex-wrap items-center gap-2 text-[15px] font-semibold text-[var(--label-primary)] select-none"
               >
                 {title}
               </div>
-              <div className="flex shrink-0 items-center gap-2 select-text">
+              <div className="flex shrink-0 items-center gap-2 select-none">
                 {trailing}
                 <Button
                   size="icon"
@@ -233,7 +233,11 @@ function ModalContent({
             >
               {children}
             </div>
-            {footer && <footer className="ui-dialog-actions">{footer}</footer>}
+            {footer && (
+              <footer className="ui-dialog-actions select-none">
+                {footer}
+              </footer>
+            )}
           </div>
         </m.div>
       </div>

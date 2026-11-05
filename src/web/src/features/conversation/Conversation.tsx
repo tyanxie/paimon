@@ -253,7 +253,7 @@ function ExecutionSummary({
           setVisited(true);
           setExpanded(!expanded);
         }}
-        className="conversation-execution-toggle flex w-full items-center gap-2 rounded-surface px-3 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+        className="conversation-execution-toggle select-none flex w-full items-center gap-2 rounded-surface px-3 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
         <ChevronRight
           size={14}

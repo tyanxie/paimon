@@ -104,6 +104,11 @@
 .modal-content {
   overscroll-behavior: contain;
 }
+.modal-content .ui-field-label,
+.modal-content .content-toolbar {
+  -webkit-user-select: none;
+  user-select: none;
+}
 .modal-panel[data-sheet="true"] .modal-content {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);

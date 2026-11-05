@@ -41,7 +41,7 @@ export function BashDetailModal({
         {/* 命令块 */}
         <div className="px-5 pt-3 pb-3 bg-[var(--fill-quaternary)]">
           {timeout != null && (
-            <p className="mb-2 text-[11px] text-[var(--label-tertiary)]">
+            <p className="select-none mb-2 text-[11px] text-[var(--label-tertiary)]">
               {t("entries.timeout")}
               {": "}
               <span className="whitespace-nowrap">{`${timeout}\u00a0s`}</span>
@@ -52,7 +52,7 @@ export function BashDetailModal({
 
         {/* 结果块 */}
         <div className="px-5 pt-3 pb-5">
-          <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-2">
+          <h4 className="select-none text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-2">
             {t("entries.output")}
           </h4>
           {result !== null ? (

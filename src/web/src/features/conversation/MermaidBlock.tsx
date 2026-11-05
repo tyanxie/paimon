@@ -152,7 +152,7 @@ export function MermaidBlock({
   const placeholder = (
     <div className="text-[var(--label-primary)]">
       <p
-        className="flex min-h-24 items-center justify-center gap-2 px-3 py-3 text-[12px] text-[var(--label-secondary)]"
+        className="select-none flex min-h-24 items-center justify-center gap-2 px-3 py-3 text-[12px] text-[var(--label-secondary)]"
         role="status"
       >
         {!failed && (

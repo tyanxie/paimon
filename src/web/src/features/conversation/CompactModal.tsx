@@ -42,7 +42,7 @@ export function CompactModal({ onClose, onConfirm }: CompactModalProps) {
       onClose={onClose}
     >
       <div className="ui-form-content">
-        <p id={descriptionId} className="ui-form-note">
+        <p id={descriptionId} className="ui-form-note select-none">
           {t("compact.description")}
         </p>
         <TextArea

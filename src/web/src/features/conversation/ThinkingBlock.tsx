@@ -28,7 +28,7 @@ export function ThinkingBlock({
           setVisited(true);
           setExpanded(!expanded);
         }}
-        className="conversation-thinking-toggle flex w-full items-center gap-2 rounded-content px-3 text-left text-[12px] text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+        className="conversation-thinking-toggle select-none flex w-full items-center gap-2 rounded-content px-3 text-left text-[12px] text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
       >
         <ChevronRight
           size={14}
