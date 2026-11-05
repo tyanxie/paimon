@@ -155,20 +155,20 @@ async function key(options: KeyboardEventInit) {
 
 describe("输入工具栏交互", () => {
   test("More 内的模型与思考选择使用同一浮层，保留操作结果和入口焦点", async () => {
-    const original = HTMLElement.prototype.getBoundingClientRect;
-    const rect = spyOn(
-      HTMLElement.prototype,
-      "getBoundingClientRect",
-    ).mockImplementation(function (this: HTMLElement) {
-      const value = original.call(this);
-      if (this.classList.contains("adaptive-toolbar"))
-        return { ...value, width: 44, toJSON() {} };
-      if (this.hasAttribute("data-toolbar-item"))
-        return { ...value, width: 100, toJSON() {} };
-      if (this.classList.contains("adaptive-toolbar-more"))
-        return { ...value, width: 44, toJSON() {} };
-      return value;
-    });
+    const original = window.getComputedStyle;
+    const computed = spyOn(window, "getComputedStyle").mockImplementation(
+      (element, pseudo) => {
+        const style = document.createElement("div").style;
+        style.cssText = original.call(window, element, pseudo).cssText;
+        style.boxSizing = "border-box";
+        if (element.classList.contains("adaptive-toolbar"))
+          style.width = "44px";
+        if (element.hasAttribute("data-toolbar-item")) style.width = "100px";
+        if (element.classList.contains("adaptive-toolbar-more"))
+          style.width = "44px";
+        return style;
+      },
+    );
     try {
       await render();
       const more = button("更多输入选项");
@@ -203,7 +203,7 @@ describe("输入工具栏交互", () => {
       await click(button("压缩上下文", panel));
       expect(document.querySelector("dialog[open]")).not.toBeNull();
     } finally {
-      rect.mockRestore();
+      computed.mockRestore();
     }
   });
 

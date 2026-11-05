@@ -7,6 +7,43 @@ import { AdaptiveToolbar, type AdaptiveToolbarItem } from "./AdaptiveToolbar";
 import { MenuItem } from "./MenuItem";
 import i18n from "../../i18n";
 
+function mockLayoutWidths(
+  widthOf: (element: Element) => number,
+  scaleOf: (element: Element) => number = () => 1,
+) {
+  const originalStyle = window.getComputedStyle;
+  const computed = spyOn(window, "getComputedStyle").mockImplementation(
+    (element, pseudo) => {
+      const style = document.createElement("div").style;
+      style.cssText = originalStyle.call(window, element, pseudo).cssText;
+      style.boxSizing = "border-box";
+      style.width = `${widthOf(element)}px`;
+      return style;
+    },
+  );
+  const rect = spyOn(
+    HTMLElement.prototype,
+    "getBoundingClientRect",
+  ).mockImplementation(function (this: HTMLElement) {
+    const width = widthOf(this) * scaleOf(this);
+    return {
+      x: 0,
+      y: 200,
+      top: 200,
+      bottom: 230,
+      left: 0,
+      right: width,
+      width,
+      height: 30,
+      toJSON() {},
+    };
+  });
+  return () => {
+    computed.mockRestore();
+    rect.mockRestore();
+  };
+}
+
 const container = document.createElement("div");
 let cleanup = () => {};
 afterEach(async () => {
@@ -18,32 +55,18 @@ test("工具栏按优先级收纳，浮层期间保持入口稳定并恢复宽�
   await i18n.changeLanguage("zh-CN");
   let width = 400;
   let selected = 0;
-  const rect = spyOn(
-    HTMLElement.prototype,
-    "getBoundingClientRect",
-  ).mockImplementation(function (this: HTMLElement) {
-    const measured = this.classList.contains("adaptive-toolbar")
+  const restoreWidths = mockLayoutWidths((element) =>
+    element.classList.contains("adaptive-toolbar")
       ? width
-      : this.hasAttribute("data-toolbar-item")
+      : element.hasAttribute("data-toolbar-item")
         ? 80
-        : 30;
-    return {
-      x: 0,
-      y: 200,
-      top: 200,
-      bottom: 230,
-      left: 0,
-      right: measured,
-      width: measured,
-      height: 30,
-      toJSON() {},
-    };
-  });
+        : 30,
+  );
   document.body.append(container);
   const root = createRoot(container);
   cleanup = () => {
     root.unmount();
-    rect.mockRestore();
+    restoreWidths();
     disconnect.mockRestore();
   };
   const disconnect = spyOn(ResizeObserver.prototype, "disconnect");
@@ -146,60 +169,45 @@ test("工具栏按优先级收纳，浮层期间保持入口稳定并恢复宽�
   ).toBe(true);
   await act(async () => root.unmount());
   expect(disconnect).toHaveBeenCalled();
-  rect.mockRestore();
+  restoreWidths();
   disconnect.mockRestore();
   cleanup = () => {};
 });
 
-test("模型名称使用剩余空间，名称充分展示后按内容宽度排列", async () => {
+test("模型名称按内容与剩余空间排列，缩放期间重复测量保持宽度", async () => {
   let width = 230;
-  const scrollDescriptor = Object.getOwnPropertyDescriptor(
-    HTMLElement.prototype,
-    "scrollWidth",
-  );
-  Object.defineProperty(HTMLElement.prototype, "scrollWidth", {
-    configurable: true,
-    get(this: HTMLElement) {
-      return this.hasAttribute("data-toolbar-label") ? 240 : 0;
+  let contentWidth = 240;
+  let pressed = false;
+  const restoreWidths = mockLayoutWidths(
+    (element) => {
+      const model = container.querySelector<HTMLElement>(
+        '[data-toolbar-item="model"]',
+      );
+      const modelWidth =
+        Number.parseFloat(
+          model?.style.getPropertyValue("--toolbar-item-width") ?? "",
+        ) || 280;
+      if (element.classList.contains("adaptive-toolbar")) return width;
+      if (element.hasAttribute("data-toolbar-label-content"))
+        return contentWidth;
+      if (element.hasAttribute("data-toolbar-label")) return modelWidth - 40;
+      if (element === model || element === model?.querySelector("button"))
+        return modelWidth;
+      return element.classList.contains("adaptive-toolbar-more") ? 30 : 60;
     },
-  });
-  const rect = spyOn(
-    HTMLElement.prototype,
-    "getBoundingClientRect",
-  ).mockImplementation(function (this: HTMLElement) {
-    const measured = this.classList.contains("adaptive-toolbar")
-      ? width
-      : this.hasAttribute("data-toolbar-label")
-        ? 240
-        : this.getAttribute("data-toolbar-item") === "model"
-          ? 280
-          : this.classList.contains("adaptive-toolbar-more")
-            ? 30
-            : 60;
-    return {
-      x: 0,
-      y: 200,
-      top: 200,
-      bottom: 230,
-      left: 0,
-      right: measured,
-      width: measured,
-      height: 30,
-      toJSON() {},
-    };
-  });
+    (element) =>
+      pressed &&
+      (element.tagName === "BUTTON" ||
+        element.hasAttribute("data-toolbar-label") ||
+        element.hasAttribute("data-toolbar-label-content"))
+        ? 0.97
+        : 1,
+  );
   document.body.append(container);
   const root = createRoot(container);
   cleanup = () => {
     root.unmount();
-    rect.mockRestore();
-    if (scrollDescriptor)
-      Object.defineProperty(
-        HTMLElement.prototype,
-        "scrollWidth",
-        scrollDescriptor,
-      );
-    else Reflect.deleteProperty(HTMLElement.prototype, "scrollWidth");
+    restoreWidths();
   };
   const items: AdaptiveToolbarItem[] = [
     {
@@ -209,7 +217,9 @@ test("模型名称使用剩余空间，名称充分展示后按内容宽度排�
       minimumLabelWidth: 80,
       control: (
         <button>
-          <span data-toolbar-label>完整模型名称</span>
+          <span data-toolbar-label>
+            <span data-toolbar-label-content>完整模型名称</span>
+          </span>
         </button>
       ),
       menu: () => null,
@@ -253,4 +263,19 @@ test("模型名称使用剩余空间，名称充分展示后按内容宽度排�
   expect(parseFloat(model.style.getPropertyValue("--toolbar-item-width"))).toBe(
     width - 30 - gap,
   );
+  width = 400;
+  pressed = true;
+  for (let index = 0; index < 3; index++) {
+    await render();
+    expect(model.style.getPropertyValue("--toolbar-item-width")).toBe("280px");
+  }
+  model.style.setProperty("--toolbar-item-width", "296.375px");
+  await render();
+  expect(model.style.getPropertyValue("--toolbar-item-width")).toBe("280px");
+  pressed = false;
+  await render();
+  expect(model.style.getPropertyValue("--toolbar-item-width")).toBe("280px");
+  contentWidth = 64.71875;
+  await render();
+  expect(model.style.getPropertyValue("--toolbar-item-width")).toBe("105px");
 });
