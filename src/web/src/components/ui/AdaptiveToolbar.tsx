@@ -19,6 +19,22 @@ interface AdaptiveToolbarProps {
   items: AdaptiveToolbarItem[];
 }
 
+// 使用布局尺寸，保留 padding 与 border 的占用。
+function getLayoutWidth(element: HTMLElement | null | undefined): number {
+  if (!element) return 0;
+  const style = getComputedStyle(element);
+  const width = Number.parseFloat(style.width);
+  if (!Number.isFinite(width)) return element.offsetWidth;
+  if (style.boxSizing === "border-box") return width;
+  return (
+    width +
+    (Number.parseFloat(style.paddingLeft) || 0) +
+    (Number.parseFloat(style.paddingRight) || 0) +
+    (Number.parseFloat(style.borderLeftWidth) || 0) +
+    (Number.parseFloat(style.borderRightWidth) || 0)
+  );
+}
+
 export function AdaptiveToolbar({ items }: AdaptiveToolbarProps) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
@@ -35,7 +51,7 @@ export function AdaptiveToolbar({ items }: AdaptiveToolbarProps) {
     const element = ref.current;
     if (!element) return;
     const measure = () => {
-      const width = element.getBoundingClientRect().width;
+      const width = getLayoutWidth(element);
       if (!width) return;
       const gap = parseFloat(getComputedStyle(element).columnGap) || 0;
       const sizes = items.map((item) => {
@@ -43,14 +59,20 @@ export function AdaptiveToolbar({ items }: AdaptiveToolbarProps) {
         const label = item.flexible
           ? control?.querySelector<HTMLElement>("[data-toolbar-label]")
           : null;
-        const measured = control?.getBoundingClientRect().width ?? 0;
-        const natural = label
-          ? measured + label.scrollWidth - label.getBoundingClientRect().width
+        const content = label?.querySelector<HTMLElement>(
+          "[data-toolbar-label-content]",
+        );
+        const measured = getLayoutWidth(control);
+        const contentWidth = getLayoutWidth(content);
+        const fixedWidth = Math.max(0, measured - getLayoutWidth(label));
+        // 完整文字与可伸缩容器分别测量，按整数像素分配充分展示所需的空间。
+        const natural = content
+          ? Math.ceil(fixedWidth + contentWidth)
           : measured;
-        const minimum = label
-          ? natural -
-            label.scrollWidth +
-            Math.min(item.minimumLabelWidth ?? 0, label.scrollWidth)
+        const minimum = content
+          ? Math.ceil(
+              fixedWidth + Math.min(item.minimumLabelWidth ?? 0, contentWidth),
+            )
           : natural;
         return {
           id: item.id,
@@ -66,7 +88,7 @@ export function AdaptiveToolbar({ items }: AdaptiveToolbarProps) {
         Math.max(0, sizes.length - 1) * gap;
       const hidden: string[] = [];
       if (used > width) {
-        used += (moreRef.current?.getBoundingClientRect().width ?? 0) + gap;
+        used += getLayoutWidth(moreRef.current ?? undefined) + gap;
         for (const item of [...sizes].sort((a, b) => a.priority - b.priority)) {
           if (used <= width) break;
           hidden.push(item.id);
