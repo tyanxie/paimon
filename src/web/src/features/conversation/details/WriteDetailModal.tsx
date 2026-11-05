@@ -50,7 +50,7 @@ export function WriteDetailModal({
         {/* 结果 */}
         {result !== null && (
           <section>
-            <h4 className="text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
+            <h4 className="select-none text-[11px] font-semibold text-[var(--label-tertiary)] uppercase tracking-wide mb-1.5">
               {t("entries.result")}
             </h4>
             <ResultBlock error={result.isError}>{result.content}</ResultBlock>

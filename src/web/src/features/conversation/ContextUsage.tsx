@@ -47,13 +47,11 @@ export function ContextIndicator({
         >
           <Gauge size={14} aria-hidden="true" />
           {known && (
-            <span className="composer-context-detail select-text">
+            <span className="composer-context-detail">
               {fmt(tokens)} / {fmt(contextWindow)}
             </span>
           )}
-          <span className="select-text">
-            {known ? `${Math.round(percent)}%` : "—"}
-          </span>
+          <span>{known ? `${Math.round(percent)}%` : "—"}</span>
         </Button>
       )}
     >
@@ -68,7 +66,7 @@ function ContextDetails({ contextUsage }: { contextUsage: ContextUsageInfo }) {
   const format = new Intl.NumberFormat(i18n.resolvedLanguage ?? "zh-CN");
   const known = tokens != null && percent != null;
   return (
-    <div className="p-3 text-[12px] text-[var(--label-secondary)]">
+    <div className="select-none p-3 text-[12px] text-[var(--label-secondary)]">
       <h2 className="mb-3 text-[13px] font-semibold text-[var(--label-primary)]">
         {t("composer.contextUsage")}
       </h2>

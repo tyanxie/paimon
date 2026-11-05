@@ -206,8 +206,8 @@ export function AdaptiveToolbar({ items }: AdaptiveToolbarProps) {
               ref={menuRef}
               className={
                 pageItem?.page
-                  ? "ui-menu-layout"
-                  : "ui-menu-scroll scrollbar-auto"
+                  ? "ui-menu-layout select-none"
+                  : "ui-menu-scroll select-none scrollbar-auto"
               }
               style={{ maxHeight: "inherit" }}
             >

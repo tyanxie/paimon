@@ -139,7 +139,8 @@ export function Composer({
     [handleSend],
   );
 
-  const { handlePaste, handleFileSelect, handleRemoveImage } = useComposerImages(onDraftChange);
+  const { handlePaste, handleFileSelect, handleRemoveImage } =
+    useComposerImages(onDraftChange);
 
   return (
     <>
@@ -212,7 +213,7 @@ export function Composer({
           className="composer-editor block w-full resize-none overflow-hidden bg-transparent text-[16px] leading-[24px] text-[var(--label-primary)] outline-none placeholder:text-[var(--label-tertiary)] md:text-[14px] md:leading-[22px]"
         />
         <div
-          className="composer-toolbar flex min-w-0 items-center gap-2 px-3 pb-3 pt-2"
+          className="composer-toolbar select-none flex min-w-0 items-center gap-2 px-3 pb-3 pt-2"
           role="group"
           aria-label={t("composer.options")}
         >

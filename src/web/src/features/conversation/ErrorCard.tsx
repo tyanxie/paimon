@@ -125,7 +125,9 @@ function ErrorDetailRow({
 }) {
   return (
     <div>
-      <p className="mb-0.5 text-[11px] text-[var(--label-tertiary)]">{label}</p>
+      <p className="select-none mb-0.5 text-[11px] text-[var(--label-tertiary)]">
+        {label}
+      </p>
       <p
         className={`break-all whitespace-pre-wrap text-[14px] leading-[22px] text-[var(--label-primary)] ${mono ? "font-mono text-[13px] leading-[20px]" : ""}`}
       >

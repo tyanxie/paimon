@@ -31,7 +31,7 @@ export function ThinkingOptions({
     availableLevels.length > 0 ? availableLevels : DEFAULT_THINKING_LEVELS;
   return (
     <div
-      className="ui-menu-scroll scrollbar-auto"
+      className="ui-menu-scroll select-none scrollbar-auto"
       style={{ maxHeight: "inherit" }}
     >
       {levels.map((level) => {
@@ -105,7 +105,7 @@ export function ThinkingSelector({
               <span>{t("composer.thinkingLabel")}</span>
             </>
           )}
-          <span className="select-text">{valueLabel}</span>
+          <span>{valueLabel}</span>
           {canSelect && (
             <ChevronDown
               size={12}

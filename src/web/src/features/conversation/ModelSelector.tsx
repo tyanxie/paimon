@@ -29,7 +29,7 @@ export function ModelOptions({
   }
   return (
     <div
-      className="ui-menu-scroll scrollbar-auto"
+      className="ui-menu-scroll select-none scrollbar-auto"
       style={{ maxHeight: "inherit" }}
     >
       {Array.from(groups.entries()).map(([provider, models], gi) => (
@@ -52,10 +52,10 @@ export function ModelOptions({
               >
                 <ModelBrandIcon model={model.id} size={18} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-[var(--label-primary)] truncate select-text">
+                  <div className="text-[13px] text-[var(--label-primary)] truncate">
                     {model.name || model.id}
                   </div>
-                  <div className="text-[12px] text-[var(--label-secondary)] truncate select-text">
+                  <div className="text-[12px] text-[var(--label-secondary)] truncate">
                     {model.id}
                   </div>
                 </div>
@@ -107,10 +107,7 @@ export function ModelSelector({
           } text-[var(--label-secondary)] ${className}`}
         >
           <ModelBrandIcon model={currentModel.id} />
-          <span
-            data-toolbar-label
-            className="composer-model-name truncate select-text"
-          >
+          <span data-toolbar-label className="composer-model-name truncate">
             <span data-toolbar-label-content>
               {currentModel.name || currentModel.id}
             </span>

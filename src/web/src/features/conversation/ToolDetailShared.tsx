@@ -21,7 +21,7 @@ export function ToolPendingIndicator({
   const { t } = useTranslation();
   const label = useToolStatusLabel(status);
   return (
-    <div className="space-y-1 text-[12px] text-[var(--label-secondary)]">
+    <div className="select-none space-y-1 text-[12px] text-[var(--label-secondary)]">
       <p>{label}</p>
       {status === "unknown" && (
         <p>{t("conversation.toolUnavailableDescription")}</p>
