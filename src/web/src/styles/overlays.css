@@ -15,8 +15,7 @@
 }
 @media (pointer: coarse) {
   .ui-dialog-actions > .ui-button--regular {
-    min-height: 44px;
-    min-width: 44px;
+    margin-block: 8px;
   }
 }
 .modal-panel[data-size="form"] {
@@ -130,13 +129,6 @@
 .image-lightbox button {
   min-width: 32px;
   min-height: 32px;
-}
-@media (pointer: coarse) {
-  .modal-close,
-  .image-lightbox button {
-    min-width: 44px;
-    min-height: 44px;
-  }
 }
 .image-lightbox > img {
   max-width: min(

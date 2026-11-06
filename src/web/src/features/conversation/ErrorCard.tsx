@@ -51,7 +51,7 @@ export function ErrorCard({
                     size="compact"
                     type="button"
                     onClick={onReEdit}
-                    className="select-none text-[12px] text-[var(--color-accent)] hover:opacity-70"
+                    className="error-reedit-button select-none text-[12px] text-[var(--color-accent)] hover:opacity-70"
                   >
                     {t("reEdit.button")}
                   </Button>
@@ -62,7 +62,7 @@ export function ErrorCard({
                     type="button"
                     aria-label={t("error.title")}
                     onClick={() => setShowModal(true)}
-                    className="inline-flex h-8 w-8 items-center justify-center text-[var(--label-secondary)]"
+                    className="error-details-button inline-flex h-8 w-8 items-center justify-center text-[var(--label-secondary)]"
                   >
                     <ChevronRight size={14} />
                   </Button>

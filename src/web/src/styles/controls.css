@@ -113,16 +113,9 @@
     line-height: inherit;
   }
   @media (pointer: coarse) {
-    .ui-button:not(.ui-button--inline):not(.ui-button--badge) {
-      min-height: 44px;
-      min-width: 44px;
-    }
-    .ui-button--icon {
-      width: 44px;
-      height: 44px;
-    }
-    .ui-button--inline::after,
-    .ui-button--badge::after {
+    /* 透明区域提供触摸范围，可见外形保持原有尺寸。 */
+    .ui-button::after,
+    .navigation-item::after {
       content: "";
       position: absolute;
       top: 50%;
@@ -130,6 +123,15 @@
       width: max(100%, 44px);
       height: max(100%, 44px);
       transform: translate(-50%, -50%);
+    }
+    .ui-button--regular:not(.absolute) {
+      margin-block: 4px;
+    }
+    .ui-button--compact:not(.absolute) {
+      margin: 8px;
+    }
+    .ui-button--icon:not(.absolute) {
+      margin: 6px;
     }
   }
 }
@@ -365,6 +367,12 @@
   border-bottom: 0.5px solid var(--separator);
 }
 
+@media (pointer: coarse) {
+  .content-toolbar .ui-button--compact {
+    margin-inline: 0;
+  }
+}
+
 .content-toolbar-label {
   color: var(--label-secondary);
   font-size: 11px;
@@ -419,7 +427,11 @@
 }
 
 @media (pointer: coarse) {
+  .ui-segmented {
+    margin-block: 8px;
+  }
   .ui-segment {
-    min-height: 44px;
+    min-width: 44px;
+    margin: 0;
   }
 }

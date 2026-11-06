@@ -8,6 +8,7 @@
 }
 
 .navigation-item {
+  position: relative;
   display: flex;
   width: 32px;
   height: 32px;
@@ -141,8 +142,6 @@
 }
 
 @media (pointer: coarse) {
-  .navigation-item,
-  .navigation-create,
   .conversation-execution-toggle,
   .conversation-tool-row,
   .conversation-thinking-toggle {
@@ -157,13 +156,12 @@
     min-height: 44px;
   }
   .sidebar-edge-actions.ui-button--icon {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    margin: 10px;
   }
-  .navigation-item,
-  .navigation-create {
-    min-width: 44px;
+  .instance-actions {
+    right: 10px;
+  }
+  .navigation-item {
+    margin: 6px;
   }
 }
