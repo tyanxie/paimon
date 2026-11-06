@@ -1,6 +1,6 @@
 {
   "name": "@tyanxie/paimon",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Remote observation and control panel for pi coding agent",
   "type": "module",
   "bin": {
