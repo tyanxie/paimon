@@ -174,14 +174,29 @@
 }
 
 @media (pointer: coarse) {
-  .composer-toolbar .ui-button--compact,
-  .composer-toolbar .ui-button--icon {
-    min-width: 44px;
-    min-height: 44px;
-    height: 44px;
+  .composer-toolbar .ui-button {
+    margin: 0;
   }
-  .composer-toolbar .ui-button--icon {
-    width: 44px;
+  .composer-toolbar .ui-button--compact {
+    min-width: 28px;
+  }
+  /* 容器保留触摸高度，较小的入口另行预留水平点击空间。 */
+  .adaptive-toolbar-item {
+    min-width: 44px;
+    padding-block: 11px;
+  }
+  .adaptive-toolbar-more {
+    padding: 11px 8px;
+  }
+  .composer-actions .ui-button--compact {
+    margin-block: 11px;
+  }
+  .composer-actions .composer-context {
+    min-width: 44px;
+  }
+  .composer-actions .ui-button--icon {
+    margin: 8px;
+    margin-inline-start: 4px;
   }
   .composer-toolbar {
     gap: 6px;
