@@ -157,6 +157,20 @@ const en: LocaleResource = {
     instanceInfo: "Instance info",
   },
 
+  instanceDetails: {
+    title: "Instance Details",
+    status: "Status",
+    model: "Model",
+    hostname: "Host",
+    processId: "Process ID",
+    cwd: "Working directory",
+    sessionId: "Session ID",
+    sessionFile: "Session file",
+    createdAt: "Created",
+    copyValue: "Copy {{label}}",
+    copyFailed: "Copy failed",
+  },
+
   // ─── Compact Modal ───
   compact: {
     title: "Compact Context",

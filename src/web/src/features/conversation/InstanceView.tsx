@@ -1,7 +1,7 @@
 // 实例详情页：自治页面组件
 // 从 URL 获取 instanceId，内部管理所有状态和操作
 
-import { ChevronsDown } from "lucide-react";
+import { ChevronsDown, Info } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import {
   useCallback,
@@ -24,6 +24,7 @@ import { isBusy } from "../../utils/status";
 import { Composer, type ComposerHandle } from "./Composer";
 import { ConversationList } from "./Conversation";
 import { InstanceHeader } from "./InstanceHeader";
+import { InstanceDetailModal } from "./InstanceDetailModal";
 import { SessionPopover } from "./SessionPopover";
 import { useConversation } from "./useConversation";
 import { useConversationChrome } from "./useConversationChrome";
@@ -153,6 +154,9 @@ export function InstanceView() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [detailsInstanceId, setDetailsInstanceId] = useState<string | null>(
+    null,
+  );
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
 
@@ -227,18 +231,30 @@ export function InstanceView() {
     homedir: instance?.homedir,
     gitBranch: instance?.gitBranch,
     actions: (
-      <SessionPopover
-        sessions={sessionList}
-        loading={sessionListLoading}
-        hasMore={sessionHasMore}
-        total={sessionTotal}
-        disabled={isBusy(instance?.status)}
-        onOpen={handleListSessions}
-        onNewSession={handleNewSession}
-        onSwitchSession={handleSwitchSession}
-        onLoadMore={handleSessionLoadMore}
-        onFilterChange={handleSessionFilterChange}
-      />
+      <>
+        <SessionPopover
+          sessions={sessionList}
+          loading={sessionListLoading}
+          hasMore={sessionHasMore}
+          total={sessionTotal}
+          disabled={isBusy(instance?.status)}
+          onOpen={handleListSessions}
+          onNewSession={handleNewSession}
+          onSwitchSession={handleSwitchSession}
+          onLoadMore={handleSessionLoadMore}
+          onFilterChange={handleSessionFilterChange}
+        />
+        <Button
+          size="icon"
+          disabled={!instance}
+          onClick={() => setDetailsInstanceId(instanceId)}
+          title={t("instanceDetails.title")}
+          aria-label={t("instanceDetails.title")}
+          aria-haspopup="dialog"
+        >
+          <Info size={18} aria-hidden="true" />
+        </Button>
+      </>
     ),
   };
 
@@ -367,8 +383,15 @@ export function InstanceView() {
         </div>
       </main>
 
-      {/* 图片大图查看 */}
+      {/* 详情弹窗与图片查看 */}
       <AnimatePresence>
+        {detailsInstanceId === instanceId && instance && (
+          <InstanceDetailModal
+            key={`details:${instanceId}`}
+            instance={instance}
+            onClose={() => setDetailsInstanceId(null)}
+          />
+        )}
         {lightboxSrc && (
           <ImageLightbox
             key="image"

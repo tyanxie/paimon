@@ -150,6 +150,20 @@ const zhCN = {
     instanceInfo: "实例信息",
   },
 
+  instanceDetails: {
+    title: "实例详情",
+    status: "状态",
+    model: "模型",
+    hostname: "主机",
+    processId: "进程ID",
+    cwd: "工作目录",
+    sessionId: "会话ID",
+    sessionFile: "会话文件",
+    createdAt: "创建时间",
+    copyValue: "复制{{label}}",
+    copyFailed: "复制失败",
+  },
+
   // ─── 压缩弹窗 ───
   compact: {
     title: "压缩上下文",

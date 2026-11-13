@@ -195,7 +195,8 @@ class HubEdgeRegistry {
       cwd: string;
       model: ModelInfo;
       sessionId?: string;
-      sessionName?: string;
+      sessionFile?: string;
+      sessionCreatedAt?: string;
       pid: number;
       status?: InstanceStatus;
       availableModels?: ModelInfo[];
@@ -216,7 +217,8 @@ class HubEdgeRegistry {
       existing.info.homedir = edgeHomedir;
       existing.info.model = payload.model;
       existing.info.sessionId = payload.sessionId;
-      existing.info.sessionName = payload.sessionName;
+      existing.info.sessionFile = payload.sessionFile;
+      existing.info.sessionCreatedAt = payload.sessionCreatedAt;
       existing.info.pid = payload.pid;
       existing.info.status = payload.status ?? existing.info.status;
       existing.info.availableModels = payload.availableModels;
@@ -246,7 +248,8 @@ class HubEdgeRegistry {
       homedir: edgeHomedir,
       model: payload.model,
       sessionId: payload.sessionId,
-      sessionName: payload.sessionName,
+      sessionFile: payload.sessionFile,
+      sessionCreatedAt: payload.sessionCreatedAt,
       pid: payload.pid,
       status: payload.status ?? "idle",
       availableModels: payload.availableModels,
