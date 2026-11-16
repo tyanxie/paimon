@@ -1,5 +1,5 @@
-// 实例详情页：自治页面组件
-// 从 URL 获取 instanceId，内部管理所有状态和操作
+// 实例详情页：从 URL 获取 instanceId，管理对话状态和操作
+// 实例导航通过父组件提供的入口执行
 
 import { ChevronsDown, Info } from "lucide-react";
 import { AnimatePresence } from "motion/react";
@@ -158,6 +158,8 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
   const composerRef = useRef<ComposerHandle>(null);
   const handleNavigateInstance = useCallback(
     (offset: -1 | 1) => {
+      // 仅在展示侧栏的桌面布局中支持方向键导航
+      if (!window.matchMedia("(min-width: 768px)").matches) return false;
       const { instances, instanceListReady } = useInstances.getState();
       if (
         !instanceListReady ||
@@ -181,8 +183,12 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
   );
 
   useLayoutEffect(() => {
-    // 仅桌面端在进入页面或切换 session 时自动聚焦
-    if (!window.matchMedia("(min-width: 768px)").matches) return;
+    // 仅桌面布局且主指针非触摸类型时，在进入页面或切换 session 时自动聚焦
+    if (
+      !window.matchMedia("(min-width: 768px)").matches ||
+      window.matchMedia("(pointer: coarse)").matches
+    )
+      return;
     // 弹窗和菜单正在交互时，不抢走它们的焦点
     if (
       document.querySelector("dialog[open]") ||

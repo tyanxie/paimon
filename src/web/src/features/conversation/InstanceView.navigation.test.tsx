@@ -34,6 +34,7 @@ let navigate: ReturnType<typeof useNavigate>;
 let selected: string[];
 let listeners: Set<(message: HubToBrowserMessage) => void>;
 let desktop: boolean;
+let coarsePointer: boolean;
 let mediaSpy: ReturnType<typeof spyOn>;
 let socketState: ReturnType<typeof useWebSocket.getState>;
 let instancesState: ReturnType<typeof useInstances.getState>;
@@ -120,6 +121,7 @@ beforeEach(async () => {
   selected = [];
   listeners = new Set();
   desktop = true;
+  coarsePointer = false;
   overlay = undefined;
   const original = window.matchMedia.bind(window);
   const query = original("(min-width: 768px)");
@@ -127,8 +129,17 @@ beforeEach(async () => {
     configurable: true,
     get: () => desktop,
   });
+  const pointerQuery = original("(pointer: coarse)");
+  Object.defineProperty(pointerQuery, "matches", {
+    configurable: true,
+    get: () => coarsePointer,
+  });
   mediaSpy = spyOn(window, "matchMedia").mockImplementation((value) =>
-    value === query.media ? query : original(value),
+    value === query.media
+      ? query
+      : value === pointerQuery.media
+        ? pointerQuery
+        : original(value),
   );
   useInstances.setState({
     instances: [instance("one"), instance("two")],
@@ -190,8 +201,17 @@ describe("实例页面导航与自动聚焦", () => {
     expect(document.activeElement).toBe(editor());
   });
 
-  test("实例列表未确认或连接不可用时，不调用导航入口", async () => {
+  test("窄屏、实例列表未确认或连接不可用时，不调用导航入口", async () => {
     await render();
+    const currentEditor = editor();
+    desktop = false;
+    for (const value of ["ArrowUp", "ArrowDown"]) {
+      expect((await key(value)).defaultPrevented).toBe(false);
+    }
+    expect(selected).toEqual([]);
+    expect(editor()).toBe(currentEditor);
+    expect(document.activeElement).toBe(currentEditor);
+    desktop = true;
     await act(async () => useInstances.setState({ instanceListReady: false }));
     expect((await key("ArrowDown")).defaultPrevented).toBe(false);
     await act(async () => {
@@ -253,15 +273,22 @@ describe("实例页面导航与自动聚焦", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  test("移动端进入页面、切换实例和 session 不自动聚焦", async () => {
-    desktop = false;
-    await render();
-    expect(document.activeElement).toBe(trigger);
-    await act(async () => navigate("/instance/two"));
-    expect(document.activeElement).toBe(trigger);
-    await updateInstance("two", { sessionId: "new-session" });
-    expect(document.activeElement).toBe(trigger);
-  });
+  test.each([
+    { wide: false, coarse: false },
+    { wide: true, coarse: true },
+  ])(
+    "窄屏或 coarse pointer 设备进入页面、切换实例和 session 不自动聚焦：%j",
+    async ({ wide, coarse }) => {
+      desktop = wide;
+      coarsePointer = coarse;
+      await render();
+      expect(document.activeElement).toBe(trigger);
+      await act(async () => navigate("/instance/two"));
+      expect(document.activeElement).toBe(trigger);
+      await updateInstance("two", { sessionId: "new-session" });
+      expect(document.activeElement).toBe(trigger);
+    },
+  );
 
   test.each(["dialog", "menu"])(
     "%s 正在交互时，页面和 session 变化不抢焦点",

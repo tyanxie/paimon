@@ -210,39 +210,46 @@ describe("侧栏选中项滚动逻辑", () => {
     { top: 60, expected: 60 },
     { top: 140, expected: 100 },
     { top: 320, expected: 160 },
-  ])("选中项矩形 %j 只调整必要的滚动距离", async ({ top, expected }) => {
-    await render();
-    const viewport = container.querySelector<HTMLDivElement>(
-      ".instance-list > div",
-    )!;
-    const target = container.querySelector<HTMLButtonElement>(
-      '[data-instance-id="instance-1"] [data-instance-select]',
-    )!;
-    const targetRect = new DOMRect(0, top, 240, 40);
-    const viewportRect = spyOn(
-      viewport,
-      "getBoundingClientRect",
-    ).mockReturnValue(new DOMRect(0, 100, 240, 200));
-    const rowRect = spyOn(target, "getBoundingClientRect").mockReturnValue(
-      targetRect,
-    );
-    const visible = spyOn(target, "getClientRects").mockReturnValue(
-      rectList([targetRect]),
-    );
-    const input = document.createElement("input");
-    document.body.append(input);
-    input.focus();
-    viewport.scrollTop = 100;
-    try {
-      await render(instances, "instance-1");
-      expect(viewport.scrollTop).toBe(expected);
-      expect(document.activeElement).toBe(input);
-      expect(target.getAttribute("aria-current")).toBe("page");
-    } finally {
-      viewportRect.mockRestore();
-      rowRect.mockRestore();
-      visible.mockRestore();
-      input.remove();
-    }
-  });
+  ])(
+    "选中项变化时按需滚动，列表更新时保留阅读位置：%j",
+    async ({ top, expected }) => {
+      await render();
+      const viewport = container.querySelector<HTMLDivElement>(
+        ".instance-list > div",
+      )!;
+      const target = container.querySelector<HTMLButtonElement>(
+        '[data-instance-id="instance-1"] [data-instance-select]',
+      )!;
+      const targetRect = new DOMRect(0, top, 240, 40);
+      const viewportRect = spyOn(
+        viewport,
+        "getBoundingClientRect",
+      ).mockReturnValue(new DOMRect(0, 100, 240, 200));
+      const rowRect = spyOn(target, "getBoundingClientRect").mockReturnValue(
+        targetRect,
+      );
+      const visible = spyOn(target, "getClientRects").mockReturnValue(
+        rectList([targetRect]),
+      );
+      const input = document.createElement("input");
+      document.body.append(input);
+      input.focus();
+      viewport.scrollTop = 100;
+      try {
+        await render(instances, "instance-1");
+        expect(viewport.scrollTop).toBe(expected);
+        expect(document.activeElement).toBe(input);
+        expect(target.getAttribute("aria-current")).toBe("page");
+        viewport.scrollTop = 100;
+        await render([...instances].reverse(), "instance-1");
+        expect(viewport.scrollTop).toBe(100);
+        expect(document.activeElement).toBe(input);
+      } finally {
+        viewportRect.mockRestore();
+        rowRect.mockRestore();
+        visible.mockRestore();
+        input.remove();
+      }
+    },
+  );
 });
