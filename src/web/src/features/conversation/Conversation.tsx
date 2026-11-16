@@ -17,6 +17,7 @@ import {
   type ConversationExecution,
   type ConversationItem,
   type ConversationReply,
+  type SessionMessage,
 } from "./types";
 
 type ToolCounts = ConversationExecution["counts"];
@@ -45,7 +46,10 @@ export function ConversationList({
       ? {
           type: "reply",
           key: `reply:${last?.key ?? "pending"}`,
-          userEntryKey: last?.type === "user" ? last.key : undefined,
+          userEntryKey: items
+            .slice()
+            .reverse()
+            .find((item) => item.type === "user")?.key,
           entries: [],
           parts: [],
         }
@@ -55,6 +59,29 @@ export function ConversationList({
     .slice()
     .reverse()
     .find((item) => item.type === "reply")?.key;
+
+  const replyTimes = getRoundReplyTimes(visibleItems);
+  const runningRoundRef = useRef<{
+    conversationKey: string;
+    roundKey: string | undefined;
+  } | null>(null);
+  const latestReply = visibleItems
+    .slice()
+    .reverse()
+    .find((item) => item.type === "reply");
+  const latestRoundKey = latestReply?.userEntryKey ?? latestReply?.key;
+  if (status === "streaming" || isStreaming) {
+    runningRoundRef.current = { conversationKey, roundKey: latestRoundKey };
+  } else if (status !== "compacting") {
+    runningRoundRef.current = null;
+  }
+  const runningReplyKey =
+    runningRoundRef.current?.conversationKey === conversationKey &&
+    runningRoundRef.current.roundKey !== undefined &&
+    runningRoundRef.current.roundKey === latestRoundKey &&
+    visibleItems.at(-1)?.type !== "user"
+      ? latestReplyKey
+      : undefined;
 
   return (
     <LazyMotion features={domAnimation} strict>
@@ -84,8 +111,8 @@ export function ConversationList({
               <ReplyCard
                 key={item.key}
                 reply={item}
-                active={busy && item.key === latestReplyKey}
-                settled={status === "idle" && !isStreaming}
+                active={item.key === runningReplyKey}
+                timestamps={replyTimes.get(item.key)}
                 onReEdit={item.key === latestReplyKey ? onReEdit : undefined}
                 onBeforeToggle={onBeforeToggle}
               />
@@ -102,16 +129,72 @@ export function ConversationList({
   );
 }
 
+function getRoundTimestamps(
+  messages: SessionMessage[],
+): (string | undefined)[] {
+  const first = messages[0];
+  const last = messages.at(-1);
+  const start = first?.timestamp;
+  const endStart = last?.timestamp;
+  const duration = last?.durationMs;
+  const startTime =
+    typeof start === "number" && Number.isFinite(new Date(start).getTime())
+      ? new Date(start).toISOString()
+      : undefined;
+  const end =
+    typeof endStart === "number" &&
+    typeof duration === "number" &&
+    duration >= 0
+      ? endStart + duration
+      : undefined;
+  const endTime =
+    startTime &&
+    end !== undefined &&
+    end >= Date.parse(startTime) &&
+    Number.isFinite(new Date(end).getTime())
+      ? new Date(end).toISOString()
+      : undefined;
+  return [startTime, endTime];
+}
+
+function getRoundReplyTimes(
+  items: readonly ConversationItem[],
+): ReadonlyMap<string, (string | undefined)[]> {
+  const times = new Map<string, (string | undefined)[]>();
+  let replies: ConversationReply[] = [];
+  const finishRound = () => {
+    const finalReply = replies.at(-1);
+    if (!finalReply) return;
+    const messages = replies.flatMap((reply) =>
+      reply.entries.flatMap((entry) =>
+        entry.message?.role === "assistant" ? [entry.message] : [],
+      ),
+    );
+    times.set(finalReply.key, getRoundTimestamps(messages));
+  };
+  // 系统事件可以拆开回复卡片，计时仍覆盖同一条用户消息的完整轮次
+  for (const item of items) {
+    if (item.type === "user") {
+      finishRound();
+      replies = [];
+    } else if (item.type === "reply") {
+      replies.push(item);
+    }
+  }
+  finishRound();
+  return times;
+}
+
 function ReplyCard({
   reply,
   active,
-  settled,
+  timestamps,
   onReEdit,
   onBeforeToggle,
 }: {
   reply: ConversationReply;
   active: boolean;
-  settled: boolean;
+  timestamps?: (string | undefined)[];
   onReEdit?: () => void;
   onBeforeToggle?: BeforeToggle;
 }) {
@@ -183,11 +266,14 @@ function ReplyCard({
       )}
       <div className="conversation-reply-footer flex flex-wrap items-center gap-x-3 gap-y-1 px-1 md:px-2">
         <div className="conversation-reply-time flex min-w-0 flex-1 basis-56 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] leading-5 text-[var(--label-secondary)]">
-          <MessageTime
-            timestamps={reply.entries.map((entry) => entry.timestamp)}
-            showRange
-            showDuration={settled}
-          />
+          {timestamps && (
+            <MessageTime
+              timestamps={timestamps}
+              showRange
+              showDuration={!active}
+              running={active}
+            />
+          )}
           {showState && (
             <span className="conversation-reply-state">
               {t(failed ? "conversation.replyFailed" : "entries.aborted")}

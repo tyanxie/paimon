@@ -1,15 +1,31 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export function MessageTime({
   timestamps,
   showRange = false,
   showDuration = false,
+  running = false,
 }: {
   timestamps: (string | undefined)[];
   showRange?: boolean;
   showDuration?: boolean;
+  running?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const [now, setNow] = useState(Date.now);
+  const startedAt = timestamps[0] ? Date.parse(timestamps[0]) : undefined;
+  useEffect(() => {
+    if (!running || startedAt === undefined || !Number.isFinite(startedAt))
+      return;
+    const elapsed = Math.max(0, Date.now() - startedAt);
+    const baseline = performance.now();
+    const update = () =>
+      setNow(startedAt + elapsed + performance.now() - baseline);
+    update();
+    const timer = window.setInterval(update, 100);
+    return () => window.clearInterval(timer);
+  }, [running, startedAt]);
   const times = timestamps
     .filter((value): value is string => Boolean(value))
     .map((value) => ({ value, date: new Date(value) }))
@@ -17,12 +33,8 @@ export function MessageTime({
   const first = times[0];
   const last = times.at(-1);
   const range =
-    first && last && first.value !== last.value
-      ? [first, last]
-      : first
-        ? [first]
-        : [];
-  if (!range.length) return null;
+    first && last && times.length > 1 ? [first, last] : first ? [first] : [];
+  if (!range.length && !running) return null;
 
   const dateOptions: Intl.DateTimeFormatOptions = {
     year: "numeric",
@@ -33,8 +45,13 @@ export function MessageTime({
     second: "2-digit",
     hourCycle: "h23",
   };
-  const durationMs =
-    first && last ? last.date.getTime() - first.date.getTime() : 0;
+  const durationMs = first
+    ? running
+      ? Math.max(0, now - first.date.getTime())
+      : last
+        ? last.date.getTime() - first.date.getTime()
+        : 0
+    : 0;
   const formatNumber = (value: number, maximumFractionDigits = 0) =>
     new Intl.NumberFormat(i18n.resolvedLanguage, {
       maximumFractionDigits,
@@ -45,9 +62,14 @@ export function MessageTime({
       value: formatNumber(value, precision),
     });
   let duration: string | null = null;
-  if (showRange && showDuration && range.length > 1 && durationMs > 0) {
+  if (
+    showRange &&
+    first &&
+    (running || (showDuration && range.length > 1)) &&
+    durationMs >= 0
+  ) {
     if (durationMs < 1000) {
-      duration = formatUnit("Milliseconds", durationMs);
+      duration = formatUnit("Milliseconds", Math.floor(durationMs));
     } else if (durationMs < 60000) {
       duration = formatUnit(
         "Seconds",
@@ -76,30 +98,36 @@ export function MessageTime({
         .map(([unit, value]) => formatUnit(unit, value))
         .join(" ");
     }
-    duration = t("conversation.approximateDuration", { duration });
+    duration = t(
+      running ? "conversation.elapsedDuration" : "conversation.totalDuration",
+      { duration },
+    );
   }
 
   return (
     <span className="conversation-time inline-flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-left text-[11px] tabular-nums text-[var(--label-secondary)] select-text">
-      {(showRange ? range : range.slice(0, 1)).map(({ value, date }, index) => (
-        <span
-          key={value}
-          className="inline-flex flex-wrap items-baseline gap-x-1"
-        >
-          {showRange && (
-            <span>
-              {t(
-                index === 0
-                  ? "conversation.replyStart"
-                  : "conversation.replyEnd",
-              )}
-            </span>
-          )}
-          <time dateTime={value}>
-            {date.toLocaleString(i18n.resolvedLanguage, dateOptions)}
-          </time>
-        </span>
-      ))}
+      {(showRange && !running ? range : range.slice(0, 1)).map(
+        ({ value, date }, index) => (
+          <span
+            key={`${index}:${value}`}
+            className="inline-flex flex-wrap items-baseline gap-x-1"
+          >
+            {showRange && (
+              <span>
+                {t(
+                  index === 0
+                    ? "conversation.replyStart"
+                    : "conversation.replyEnd",
+                )}
+              </span>
+            )}
+            <time dateTime={value}>
+              {date.toLocaleString(i18n.resolvedLanguage, dateOptions)}
+            </time>
+          </span>
+        ),
+      )}
+      {running && <span>{t("conversation.replyRunning")}</span>}
       {duration && <span className="conversation-duration">{duration}</span>}
     </span>
   );
