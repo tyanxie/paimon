@@ -717,3 +717,117 @@ describe("输入工具栏交互", () => {
     ).toBe(true);
   });
 });
+
+describe("空草稿方向键导航", () => {
+  test("空文字且没有图片时，上下键传递前后方向并阻止默认行为", async () => {
+    const offsets: number[] = [];
+    await render({
+      draft: { text: "", images: [] },
+      onNavigateInstance: (offset) => {
+        offsets.push(offset);
+        return true;
+      },
+    });
+    container.querySelector("textarea")!.focus();
+    for (const value of ["ArrowUp", "ArrowDown"]) {
+      expect((await key({ key: value })).defaultPrevented).toBe(true);
+    }
+    expect(offsets).toEqual([-1, 1]);
+    expect(sent).toHaveLength(0);
+    expect(follows).toBe(0);
+  });
+
+  test("没有相邻目标时，不阻止默认行为", async () => {
+    const offsets: number[] = [];
+    await render({
+      draft: { text: "", images: [] },
+      onNavigateInstance: (offset) => {
+        offsets.push(offset);
+        return false;
+      },
+    });
+    for (const value of ["ArrowUp", "ArrowDown"]) {
+      expect((await key({ key: value })).defaultPrevented).toBe(false);
+    }
+    expect(offsets).toEqual([-1, 1]);
+  });
+
+  test.each(["message", " ", "\n"])(
+    "草稿 %j 不为空时，方向键用于编辑",
+    async (text) => {
+      const offsets: number[] = [];
+      await render({
+        draft: { text, images: [] },
+        onNavigateInstance: (offset) => {
+          offsets.push(offset);
+          return true;
+        },
+      });
+      for (const value of ["ArrowUp", "ArrowDown"]) {
+        expect((await key({ key: value })).defaultPrevented).toBe(false);
+      }
+      expect(offsets).toEqual([]);
+      expect(draft.text).toBe(text);
+    },
+  );
+
+  test("图片草稿阻止导航，移除最后一张图片后恢复导航", async () => {
+    const offsets: number[] = [];
+    await render({
+      draft: { text: "", images: [image] },
+      onNavigateInstance: (offset) => {
+        offsets.push(offset);
+        return true;
+      },
+    });
+    expect((await key({ key: "ArrowUp" })).defaultPrevented).toBe(false);
+    expect((await key({ key: "ArrowDown" })).defaultPrevented).toBe(false);
+    expect(offsets).toEqual([]);
+    await click(button("移除附加图片 1"));
+    expect((await key({ key: "ArrowDown" })).defaultPrevented).toBe(true);
+    expect(offsets).toEqual([1]);
+  });
+
+  test("IME 和修饰键输入不触发导航，保留默认行为", async () => {
+    const offsets: number[] = [];
+    await render({
+      draft: { text: "", images: [] },
+      onNavigateInstance: (offset) => {
+        offsets.push(offset);
+        return true;
+      },
+    });
+    for (const value of ["ArrowUp", "ArrowDown"]) {
+      for (const options of [
+        { isComposing: true },
+        { keyCode: 229 },
+        { shiftKey: true },
+        { ctrlKey: true },
+        { altKey: true },
+        { metaKey: true },
+      ]) {
+        expect((await key({ key: value, ...options })).defaultPrevented).toBe(
+          false,
+        );
+      }
+    }
+    expect(offsets).toEqual([]);
+  });
+
+  test("长按自动重复不导航，每次重新按下只调用一次", async () => {
+    const offsets: number[] = [];
+    await render({
+      draft: { text: "", images: [] },
+      onNavigateInstance: (offset) => {
+        offsets.push(offset);
+        return true;
+      },
+    });
+    await key({ key: "ArrowDown" });
+    await key({ key: "ArrowDown", repeat: true });
+    await key({ key: "ArrowDown", repeat: true });
+    expect(offsets).toEqual([1]);
+    await key({ key: "ArrowDown", repeat: false });
+    expect(offsets).toEqual([1, 1]);
+  });
+});
