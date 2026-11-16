@@ -46,8 +46,6 @@ interface SidebarProps {
   onNewInstance: () => void;
 }
 
-const LONG_PRESS_DELAY = 500;
-
 export function Sidebar({
   instances,
   selectedId,
@@ -67,39 +65,14 @@ export function Sidebar({
     position: ContextMenuPosition;
     instanceId: InstanceId;
   } | null>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressFiredRef = useRef(false);
   const [copiedEdgeId, setCopiedEdgeId] = useState<string | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const cancelLongPress = useCallback(() => {
-    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    longPressTimerRef.current = null;
-  }, []);
-
   useEffect(
     () => () => {
-      cancelLongPress();
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     },
-    [cancelLongPress],
-  );
-
-  const handleTouchStart = useCallback(
-    (event: React.TouchEvent, instanceId: InstanceId) => {
-      cancelLongPress();
-      longPressFiredRef.current = false;
-      const touch = event.touches[0];
-      if (!touch) return;
-      const position = { x: touch.clientX, y: touch.clientY };
-      longPressTimerRef.current = setTimeout(() => {
-        longPressTimerRef.current = null;
-        longPressFiredRef.current = true;
-        navigator.vibrate?.(10);
-        setContextMenu({ position, instanceId });
-      }, LONG_PRESS_DELAY);
-    },
-    [cancelLongPress],
+    [],
   );
 
   const handleCopyEdgeId = useCallback((edgeId: string) => {
@@ -285,19 +258,7 @@ export function Sidebar({
                           aria-current={
                             selectedId === instance.id ? "page" : undefined
                           }
-                          onClick={() => {
-                            if (longPressFiredRef.current) {
-                              longPressFiredRef.current = false;
-                              return;
-                            }
-                            onSelect(instance.id);
-                          }}
-                          onTouchStart={(event) =>
-                            handleTouchStart(event, instance.id)
-                          }
-                          onTouchEnd={cancelLongPress}
-                          onTouchMove={cancelLongPress}
-                          onTouchCancel={cancelLongPress}
+                          onClick={() => onSelect(instance.id)}
                           className="instance-item w-full rounded-control text-left"
                         >
                           <span
