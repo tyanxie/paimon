@@ -451,7 +451,7 @@ describe("状态、系统事件与图片", () => {
     const user = message("u1", "user", "question");
     await render([user], { status: "streaming" });
     const footer = container.querySelector(".conversation-reply-time")!;
-    expect(footer.textContent).toContain("运行中");
+    expect(footer.textContent).not.toContain("运行中");
     expect(footer.querySelector("time")).toBeNull();
     expect(footer.querySelector(".conversation-duration")).toBeNull();
     const article = container.querySelector("article");
@@ -625,7 +625,7 @@ describe("消息时间", () => {
       new Date(start + 12300).toISOString(),
     ]);
     expect(container.querySelector(".conversation-duration")!.textContent).toBe(
-      "总耗时 12.3 秒",
+      "总耗时 12 秒",
     );
   });
   test("末条模型消息缺少耗时时只展示开始时间，不使用条目时间补算", async () => {
@@ -681,9 +681,11 @@ describe("消息时间", () => {
       const currentFooter = container
         .querySelector('[data-reply-key="reply:u2"]')!
         .parentElement!.querySelector(".conversation-reply-time")!;
-      expect(currentFooter.textContent?.includes("运行中")).toBe(
-        status !== "idle",
-      );
+      expect(currentFooter.textContent).not.toContain("运行中");
+      expect(currentFooter.querySelectorAll("time")).toHaveLength(1);
+      expect(
+        currentFooter.querySelector(".conversation-duration") !== null,
+      ).toBe(status !== "idle");
     }
   });
   test("运行中耗时随单调时钟增长，结束和卸载时释放定时器", async () => {
@@ -709,17 +711,18 @@ describe("消息时间", () => {
       await render([entry], { status: "streaming" });
       const footer = container.querySelector(".conversation-reply-time")!;
       expect(footer.querySelectorAll("time")).toHaveLength(1);
-      expect(footer.textContent).toContain("运行中");
+      expect(footer.textContent).not.toContain("运行中");
       expect(footer.querySelector(".conversation-duration")!.textContent).toBe(
-        "已耗时 1 秒",
+        "总耗时 1 秒",
       );
       expect(interval).toHaveBeenCalledTimes(1);
+      expect(interval.mock.calls[0]?.[1]).toBe(1000);
       expect(tick).toBeDefined();
       wallClock.mockReturnValue(start - 100000);
       monotonic += 1500;
       await act(async () => tick?.());
       expect(footer.querySelector(".conversation-duration")!.textContent).toBe(
-        "已耗时 2.5 秒",
+        "总耗时 2 秒",
       );
       await render([entry]);
       expect(footer.querySelectorAll("time")).toHaveLength(2);
@@ -740,12 +743,17 @@ describe("消息时间", () => {
       clear.mockRestore();
     }
   });
-  test("总耗时按时长选择单位并省略零值", async () => {
+  test("总耗时显示整数秒且最小为一秒，长耗时省略零值单位", async () => {
     const start = Date.parse("2026-01-01T00:00:00Z");
     for (const [milliseconds, expected] of [
-      [350, "350 毫秒"],
-      [12300, "12.3 秒"],
-      [59999, "59.9 秒"],
+      [0, "1 秒"],
+      [350, "1 秒"],
+      [999, "1 秒"],
+      [1000, "1 秒"],
+      [1999, "1 秒"],
+      [2000, "2 秒"],
+      [12300, "12 秒"],
+      [59999, "59 秒"],
       [60000, "1 分"],
       [133000, "2 分 13 秒"],
       [3600000, "1 小时"],

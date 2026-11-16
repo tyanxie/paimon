@@ -23,7 +23,7 @@ export function MessageTime({
     const update = () =>
       setNow(startedAt + elapsed + performance.now() - baseline);
     update();
-    const timer = window.setInterval(update, 100);
+    const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
   }, [running, startedAt]);
   const times = timestamps
@@ -52,14 +52,10 @@ export function MessageTime({
         ? last.date.getTime() - first.date.getTime()
         : 0
     : 0;
-  const formatNumber = (value: number, maximumFractionDigits = 0) =>
-    new Intl.NumberFormat(i18n.resolvedLanguage, {
-      maximumFractionDigits,
-    }).format(value);
-  const formatUnit = (unit: string, value: number, precision = 0) =>
+  const formatUnit = (unit: string, value: number) =>
     t(`conversation.duration${unit}`, {
       count: value,
-      value: formatNumber(value, precision),
+      value: new Intl.NumberFormat(i18n.resolvedLanguage).format(value),
     });
   let duration: string | null = null;
   if (
@@ -68,13 +64,10 @@ export function MessageTime({
     (running || (showDuration && range.length > 1)) &&
     durationMs >= 0
   ) {
-    if (durationMs < 1000) {
-      duration = formatUnit("Milliseconds", Math.floor(durationMs));
-    } else if (durationMs < 60000) {
+    if (durationMs < 60000) {
       duration = formatUnit(
         "Seconds",
-        Math.min(59.9, Math.round(durationMs / 100) / 10),
-        1,
+        Math.max(1, Math.floor(durationMs / 1000)),
       );
     } else {
       const totalSeconds = Math.floor(durationMs / 1000);
@@ -98,10 +91,7 @@ export function MessageTime({
         .map(([unit, value]) => formatUnit(unit, value))
         .join(" ");
     }
-    duration = t(
-      running ? "conversation.elapsedDuration" : "conversation.totalDuration",
-      { duration },
-    );
+    duration = t("conversation.totalDuration", { duration });
   }
 
   return (
@@ -127,7 +117,6 @@ export function MessageTime({
           </span>
         ),
       )}
-      {running && <span>{t("conversation.replyRunning")}</span>}
       {duration && <span className="conversation-duration">{duration}</span>}
     </span>
   );
