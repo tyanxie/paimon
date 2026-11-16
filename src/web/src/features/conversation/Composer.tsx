@@ -30,7 +30,7 @@ import { useComposerImages } from "./useComposerImages";
 
 /** Composer 暴露给父组件的命令式 API */
 export interface ComposerHandle {
-  focus(): void;
+  focus(options?: FocusOptions): void;
 }
 
 interface ComposerProps {
@@ -38,6 +38,7 @@ interface ComposerProps {
   instance: InstanceInfo | undefined;
   draft: InputDraft;
   onDraftChange: (value: InputDraftUpdater) => void;
+  onNavigateInstance?: (offset: -1 | 1) => boolean;
   onSendMessage: (message: string, images?: ImagePayload[]) => void;
   onAbort: () => void;
   onSetModel: (provider: string, id: string) => void;
@@ -55,6 +56,7 @@ export function Composer({
   instance,
   draft,
   onDraftChange,
+  onNavigateInstance,
   onSendMessage,
   onAbort,
   onSetModel,
@@ -75,10 +77,10 @@ export function Composer({
 
   // 暴露 focus 方法给父组件
   useImperativeHandle(ref, () => ({
-    focus() {
+    focus(options) {
       const el = textareaRef.current;
       if (!el) return;
-      el.focus();
+      el.focus(options);
       // 光标移到末尾 + 滚动到底部
       const len = el.value.length;
       el.selectionStart = el.selectionEnd = len;
@@ -126,17 +128,33 @@ export function Composer({
     startBottomFollow();
   }, [instanceStatus, onSendMessage, startBottomFollow]);
 
-  // 键盘事件：Enter 发送，Shift+Enter 换行，IME 组合输入中不触发
+  // 键盘事件：空草稿上下键切换实例，Enter 发送，Shift+Enter 换行
   // keyCode 229 用于拦截 Safari 上 IME 确认拼音时的回车（此时 isComposing 已为 false）
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+      if (
+        (e.key === "ArrowUp" || e.key === "ArrowDown") &&
+        !e.shiftKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.currentTarget.value.length === 0 &&
+        draftRef.current.images.length === 0
+      ) {
+        // 长按不连续导航，避免反复切换订阅和请求历史
+        if (e.repeat) return;
+        if (onNavigateInstance?.(e.key === "ArrowUp" ? -1 : 1)) {
+          e.preventDefault();
+        }
+        return;
+      }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
     },
-    [handleSend],
+    [handleSend, onNavigateInstance],
   );
 
   const { handlePaste, handleFileSelect, handleRemoveImage } =

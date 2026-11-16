@@ -33,14 +33,14 @@ let created: number;
 function Location() {
   return <output>{useLocation().pathname}</output>;
 }
-async function render(items = instances) {
+async function render(items = instances, selectedId = "instance-0") {
   await act(async () =>
     root.render(
       <MotionConfig reducedMotion="always">
         <MemoryRouter initialEntries={["/instance/instance-0"]}>
           <Sidebar
             instances={items}
-            selectedId="instance-0"
+            selectedId={selectedId}
             onSelect={(id) => selected.push(id)}
             onShutdown={(id) => shutdown.push(id)}
             onNewInstance={() => created++}
@@ -195,5 +195,54 @@ describe("侧栏导航与分组", () => {
     expect(button("New instance")).not.toBeNull();
     expect(button("Expand or collapse machine edge-a")).not.toBeNull();
     expect(container.textContent).toContain("Hub connected");
+  });
+});
+
+function rectList(rects: DOMRect[]): DOMRectList {
+  return Object.assign(rects, {
+    item: (index: number) => rects[index] ?? null,
+  });
+}
+
+describe("侧栏选中项滚动逻辑", () => {
+  // 固定矩形只用于验证滚动计算，不代表真实浏览器布局
+  test.each([
+    { top: 60, expected: 60 },
+    { top: 140, expected: 100 },
+    { top: 320, expected: 160 },
+  ])("选中项矩形 %j 只调整必要的滚动距离", async ({ top, expected }) => {
+    await render();
+    const viewport = container.querySelector<HTMLDivElement>(
+      ".instance-list > div",
+    )!;
+    const target = container.querySelector<HTMLButtonElement>(
+      '[data-instance-id="instance-1"] [data-instance-select]',
+    )!;
+    const targetRect = new DOMRect(0, top, 240, 40);
+    const viewportRect = spyOn(
+      viewport,
+      "getBoundingClientRect",
+    ).mockReturnValue(new DOMRect(0, 100, 240, 200));
+    const rowRect = spyOn(target, "getBoundingClientRect").mockReturnValue(
+      targetRect,
+    );
+    const visible = spyOn(target, "getClientRects").mockReturnValue(
+      rectList([targetRect]),
+    );
+    const input = document.createElement("input");
+    document.body.append(input);
+    input.focus();
+    viewport.scrollTop = 100;
+    try {
+      await render(instances, "instance-1");
+      expect(viewport.scrollTop).toBe(expected);
+      expect(document.activeElement).toBe(input);
+      expect(target.getAttribute("aria-current")).toBe("page");
+    } finally {
+      viewportRect.mockRestore();
+      rowRect.mockRestore();
+      visible.mockRestore();
+      input.remove();
+    }
   });
 });

@@ -12,14 +12,20 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
-import type { ImagePayload, ThinkingLevel } from "../../../../protocol/types";
+import type {
+  ImagePayload,
+  InstanceId,
+  ThinkingLevel,
+} from "../../../../protocol/types";
 import { Button } from "../../components/ui/Button";
 import { ImageLightbox } from "../../components/ui/ImageLightbox";
 import { MobileNavBar } from "../../components/ui/MobileNavBar";
 import { StatusMessage } from "../../components/ui/StatusMessage";
 import { EMPTY_DRAFT, useDrafts } from "../../stores/useDrafts";
 import { selectInstance, useInstances } from "../../stores/useInstances";
+import { useSidebar } from "../../stores/useSidebar";
 import { useWebSocket } from "../../stores/useWebSocket";
+import { getAdjacentInstanceId } from "../instances/instanceNavigation";
 import { isBusy } from "../../utils/status";
 import { Composer, type ComposerHandle } from "./Composer";
 import { ConversationList } from "./Conversation";
@@ -33,7 +39,11 @@ import { useScrollAnchor } from "./useScrollAnchor";
 import { useSessionList } from "./useSessionList";
 import { getComposerButtonMode } from "./utils";
 
-export function InstanceView() {
+interface InstanceViewProps {
+  onSelectInstance: (id: InstanceId) => void;
+}
+
+export function InstanceView({ onSelectInstance }: InstanceViewProps) {
   const { t } = useTranslation();
   const { id: instanceId = "" } = useParams<{ id: string }>();
 
@@ -144,8 +154,45 @@ export function InstanceView() {
     [instanceId, send],
   );
 
-  // ── 重新编辑 ──
+  // ── 键盘实例导航 ──
   const composerRef = useRef<ComposerHandle>(null);
+  const handleNavigateInstance = useCallback(
+    (offset: -1 | 1) => {
+      const { instances, instanceListReady } = useInstances.getState();
+      if (
+        !instanceListReady ||
+        useWebSocket.getState().connectionState !== "connected"
+      )
+        return false;
+
+      const targetId = getAdjacentInstanceId(
+        instances,
+        instanceId,
+        offset,
+        useSidebar.getState().collapsedEdges,
+      );
+      if (!targetId) return false;
+
+      // 与侧栏共用导航入口，订阅和历史加载仍由 useConversation 管理
+      onSelectInstance(targetId);
+      return true;
+    },
+    [instanceId, onSelectInstance],
+  );
+
+  useLayoutEffect(() => {
+    // 仅桌面端在进入页面或切换 session 时自动聚焦
+    if (!window.matchMedia("(min-width: 768px)").matches) return;
+    // 弹窗和菜单正在交互时，不抢走它们的焦点
+    if (
+      document.querySelector("dialog[open]") ||
+      document.activeElement?.closest('[role="dialog"], [role="menu"]')
+    )
+      return;
+    composerRef.current?.focus({ preventScroll: true });
+  }, [instanceId, instance?.sessionId]);
+
+  // ── 重新编辑 ──
   const onReEdit = useReEdit(instanceId, entries, instance?.status, () => {
     composerRef.current?.focus();
   });
@@ -363,6 +410,7 @@ export function InstanceView() {
               instance={instance}
               draft={draft}
               onDraftChange={handleDraftChange}
+              onNavigateInstance={handleNavigateInstance}
               onSendMessage={handleSendMessage}
               onAbort={handleAbort}
               onSetModel={handleSetModel}

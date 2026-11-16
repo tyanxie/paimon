@@ -159,7 +159,10 @@ export default function App() {
       <Routes>
         <Route element={<MainPanel />}>
           <Route path="/settings" element={<Settings />} />
-          <Route path="/instance/:id" element={<InstanceView />} />
+          <Route
+            path="/instance/:id"
+            element={<InstanceView onSelectInstance={handleSelect} />}
+          />
           <Route
             path="*"
             element={

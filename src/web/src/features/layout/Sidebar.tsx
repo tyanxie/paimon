@@ -8,6 +8,7 @@ import {
   useRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useId,
 } from "react";
 import {
@@ -37,6 +38,7 @@ import {
   type ContextMenuPosition,
 } from "../../components/ui/ContextMenu";
 import { useTranslation } from "react-i18next";
+import { groupInstancesByEdge } from "../instances/instanceNavigation";
 
 interface SidebarProps {
   instances: InstanceInfo[];
@@ -58,6 +60,7 @@ export function Sidebar({
   const { pathname } = useLocation();
   const logoSrc = useLogoSrc();
   const sidebarId = useId();
+  const instanceListRef = useRef<HTMLDivElement>(null);
   const collapsedEdges = useSidebar((s) => s.collapsedEdges);
   const toggleEdge = useSidebar((s) => s.toggleEdge);
   const connectionState = useWebSocket((s) => s.connectionState);
@@ -86,15 +89,27 @@ export function Sidebar({
     );
   }, []);
 
-  const edgeGroups = useMemo(() => {
-    const groups = new Map<string, InstanceInfo[]>();
-    for (const instance of instances) {
-      const group = groups.get(instance.edgeId);
-      if (group) group.push(instance);
-      else groups.set(instance.edgeId, [instance]);
+  const edgeGroups = useMemo(
+    () => groupInstancesByEdge(instances),
+    [instances],
+  );
+
+  useLayoutEffect(() => {
+    const container = instanceListRef.current;
+    const selected = container?.querySelector<HTMLElement>(
+      '[data-instance-select][aria-current="page"]',
+    );
+    // 隐藏的移动端或桌面侧栏不参与滚动，也不改变输入框焦点
+    if (!container || !selected || selected.getClientRects().length === 0)
+      return;
+    const containerRect = container.getBoundingClientRect();
+    const selectedRect = selected.getBoundingClientRect();
+    if (selectedRect.top < containerRect.top) {
+      container.scrollTop += selectedRect.top - containerRect.top;
+    } else if (selectedRect.bottom > containerRect.bottom) {
+      container.scrollTop += selectedRect.bottom - containerRect.bottom;
     }
-    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [instances]);
+  }, [selectedId, collapsedEdges]);
 
   return (
     <aside className="sidebar-layout select-none glass-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden md:w-[240px] md:flex-none lg:w-[260px]">
@@ -158,7 +173,10 @@ export function Sidebar({
         className="instance-list flex min-h-0 min-w-0 flex-1 flex-col"
         aria-label={t("navigation.instances")}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2 scrollbar-auto">
+        <div
+          ref={instanceListRef}
+          className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2 scrollbar-auto"
+        >
           {instances.length === 0 ? (
             <div className="px-4 py-12 text-center text-[13px] leading-[20px] text-[var(--label-secondary)]">
               <Server
