@@ -66,8 +66,10 @@ export interface InstanceInfo {
   model: ModelInfo;
   /** 当前 session ID（来自 pi sessionManager） */
   sessionId?: string;
-  /** 当前 session 名 */
-  sessionName?: string;
+  /** 当前 session 文件路径 */
+  sessionFile?: string;
+  /** 当前 session 创建时间（ISO） */
+  sessionCreatedAt?: string;
   /** pi 进程 PID */
   pid: number;
   /** 实例状态 */
@@ -151,7 +153,9 @@ export interface ExtRegisterMessage {
     model: ModelInfo;
     /** 当前 session ID（来自 pi sessionManager） */
     sessionId?: string;
-    sessionName?: string;
+    sessionFile?: string;
+    /** 当前 session 创建时间（ISO） */
+    sessionCreatedAt?: string;
     pid: number;
     /** 可用模型列表 */
     availableModels?: ModelInfo[];
@@ -668,7 +672,9 @@ export interface EdgeInstanceRegisterMessage {
     cwd: string;
     model: ModelInfo;
     sessionId?: string;
-    sessionName?: string;
+    sessionFile?: string;
+    /** 当前 session 创建时间（ISO） */
+    sessionCreatedAt?: string;
     pid: number;
     status?: InstanceStatus;
     availableModels?: ModelInfo[];

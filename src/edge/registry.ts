@@ -66,7 +66,8 @@ class EdgeRegistry {
       cwd: string;
       model: ModelInfo;
       sessionId?: string;
-      sessionName?: string;
+      sessionFile?: string;
+      sessionCreatedAt?: string;
       pid: number;
       availableModels?: ModelInfo[];
       contextUsage?: ContextUsageInfo;
@@ -94,7 +95,8 @@ class EdgeRegistry {
       existing.info.homedir = homedir();
       existing.info.model = payload.model;
       existing.info.sessionId = payload.sessionId;
-      existing.info.sessionName = payload.sessionName;
+      existing.info.sessionFile = payload.sessionFile;
+      existing.info.sessionCreatedAt = payload.sessionCreatedAt;
       existing.info.pid = payload.pid;
       existing.info.availableModels = payload.availableModels;
       existing.info.contextUsage = payload.contextUsage;
@@ -124,7 +126,8 @@ class EdgeRegistry {
       homedir: homedir(),
       model: payload.model,
       sessionId: payload.sessionId,
-      sessionName: payload.sessionName,
+      sessionFile: payload.sessionFile,
+      sessionCreatedAt: payload.sessionCreatedAt,
       pid: payload.pid,
       status: "idle",
       availableModels: payload.availableModels,
