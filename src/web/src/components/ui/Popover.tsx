@@ -38,6 +38,7 @@ interface PopoverProps {
   placement?: PopoverPlacement;
   /** 水平对齐：left（左对齐锚点）或 right（右对齐锚点，默认） */
   align?: PopoverAlign;
+  closeOnScroll?: boolean;
 }
 
 interface PopoverPosition {
@@ -98,6 +99,7 @@ export function Popover({
   placement = "top",
   align = "right",
   onOpenChange,
+  closeOnScroll = false,
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
   const onOpenChangeRef = useRef(onOpenChange);
@@ -208,7 +210,22 @@ export function Popover({
     };
   }, [open]);
 
-  // resize 时关闭（锚点在固定定位面板上，scroll 不影响其位置，无需关闭）
+  useEffect(() => {
+    if (!open || !closeOnScroll) return;
+    const handleScroll = (event: Event) => {
+      // 面板内部滚动不影响锚点，外部滚动时关闭以免浮层脱离入口
+      if (
+        event.target instanceof Node &&
+        popoverRef.current?.contains(event.target)
+      )
+        return;
+      setOpen(false);
+    };
+    document.addEventListener("scroll", handleScroll, true);
+    return () => document.removeEventListener("scroll", handleScroll, true);
+  }, [open, closeOnScroll]);
+
+  // 视口尺寸变化时关闭，避免继续使用旧的锚点位置
   useEffect(() => {
     if (!open) return;
     const closeOnResize = () => setOpen(false);

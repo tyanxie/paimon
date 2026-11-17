@@ -68,7 +68,7 @@ export function UserBubble({
           )}
           {!text && images.length > 0 && <div className="h-2" />}
         </div>
-        <MessageTime timestamps={[timestamp]} />
+        <MessageTime timestamp={timestamp} />
       </div>
       <AnimatePresence>
         {lightboxSrc && (

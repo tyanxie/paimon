@@ -46,6 +46,11 @@
   }
 }
 
+.conversation-reply-time-trigger:hover:not(:disabled) {
+  background: transparent;
+  color: var(--label-primary);
+}
+
 .conversation-system {
   border-radius: var(--radius-surface);
   background: var(--fill-quaternary);

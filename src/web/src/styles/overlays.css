@@ -100,6 +100,9 @@
   max-height: calc(100% - max(12px, env(safe-area-inset-top)));
   border-radius: var(--radius-panel) var(--radius-panel) 0 0;
 }
+.modal-panel[data-sheet="true"][data-sheet-sizing="content"] {
+  height: auto;
+}
 .modal-content {
   overscroll-behavior: contain;
 }
