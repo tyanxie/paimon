@@ -95,6 +95,20 @@ function executionButton(index = 0) {
 function contentOf(button: HTMLButtonElement) {
   return document.getElementById(button.getAttribute("aria-controls")!)!;
 }
+function replyTimeButton(scope: ParentNode = container) {
+  return scope.querySelector<HTMLButtonElement>(
+    `button[aria-label^="${i18n.t("conversation.viewReplyTime")}:"]`,
+  )!;
+}
+async function openReplyTime(scope: ParentNode = container) {
+  await click(replyTimeButton(scope));
+  return document.querySelector<HTMLElement>('[role="dialog"]:not([inert])')!;
+}
+function detailValue(details: HTMLElement, label: string) {
+  return Array.from(details.querySelectorAll("dt"))
+    .find((term) => term.textContent === label)!
+    .parentElement!.querySelector("dd")!;
+}
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
   container = document.createElement("div");
@@ -129,10 +143,14 @@ describe("回复与执行汇总", () => {
     ).not.toBeNull();
     expect(container.querySelectorAll("[data-execution-key]")).toHaveLength(2);
     expect(
-      container.querySelectorAll(".conversation-reply-time .conversation-time"),
+      container.querySelectorAll(
+        '.conversation-reply-time button[aria-label^="查看回复时间:"]',
+      ),
     ).toHaveLength(1);
     expect(
-      container.querySelector(".conversation-part .conversation-time"),
+      container.querySelector(
+        '.conversation-part button[aria-label^="查看回复时间:"]',
+      ),
     ).toBeNull();
     expect(
       container.querySelector(".conversation-part")!.className,
@@ -149,7 +167,9 @@ describe("回复与执行汇总", () => {
       "execution:a1:block:2",
       "a1:block:3",
     ]);
-    expect(container.querySelector("article .conversation-time")).toBeNull();
+    expect(
+      container.querySelector('article button[aria-label^="查看回复时间:"]'),
+    ).toBeNull();
     expect(executionButton().textContent).toContain("bash");
     expect(executionButton().textContent).not.toContain("工具与思考");
     expect(container.textContent).toContain("body A");
@@ -553,16 +573,14 @@ describe("状态、系统事件与图片", () => {
 
 describe("消息时间", () => {
   test("常显日期与时分秒，时间采用可选择的静态文字", async () => {
-    const values = ["2026-01-01T00:00:00Z", "2026-01-01T00:01:00Z"];
-    await act(async () =>
-      root.render(<MessageTime timestamps={values} showRange />),
-    );
+    const timestamp = "2026-01-01T00:00:00Z";
+    await act(async () => root.render(<MessageTime timestamp={timestamp} />));
     const time = container.querySelector(".conversation-time")!;
     expect(
       Array.from(time.querySelectorAll("time")).map((value) => value.dateTime),
-    ).toEqual(values);
+    ).toEqual([timestamp]);
     expect(time.textContent).toContain(
-      new Date(values[0]!).toLocaleString("zh-CN", {
+      new Date(timestamp).toLocaleString("zh-CN", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -581,6 +599,12 @@ describe("消息时间", () => {
     await click(time);
     expect(document.querySelector('[role="tooltip"]')).toBeNull();
   });
+  test("缺少或无效静态时间时不显示时间文字", async () => {
+    for (const timestamp of [undefined, "invalid"]) {
+      await act(async () => root.render(<MessageTime timestamp={timestamp} />));
+      expect(container.querySelector(".conversation-time")).toBeNull();
+    }
+  });
   test("回复时间使用首条模型消息开始和末条模型消息结束，覆盖中间间隔", async () => {
     const start = Date.parse("2026-01-01T00:00:00Z");
     const first = message("a1", "assistant", [call("one")], {
@@ -595,20 +619,23 @@ describe("消息时间", () => {
     last.timestamp = new Date(start + 80000).toISOString();
     await render([first, result("one"), last]);
     const footer = container.querySelector(".conversation-reply-time")!;
+    expect(footer.querySelector("time")).toBeNull();
+    expect(replyTimeButton(footer).textContent).toBe("耗时 1 分 13 秒");
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    const details = await openReplyTime(footer);
     expect(
-      Array.from(footer.querySelectorAll("time")).map((time) => time.dateTime),
+      Array.from(details.querySelectorAll("time")).map((time) => time.dateTime),
     ).toEqual([
       new Date(start).toISOString(),
       new Date(start + 73000).toISOString(),
     ]);
-    expect(footer.textContent).toContain("开始");
-    expect(footer.textContent).toContain("结束");
-    expect(footer.textContent).not.toContain("运行中");
-    expect(footer.querySelector(".conversation-duration")!.textContent).toBe(
-      "总耗时 1 分 13 秒",
-    );
+    expect(detailValue(details, "耗时").textContent).toBe("1 分 13 秒");
+    expect(replyTimeButton(footer).getAttribute("aria-expanded")).toBe("true");
+    await click(replyTimeButton(footer));
+    expect(document.querySelector('[role="dialog"]:not([inert])')).toBeNull();
+    expect(replyTimeButton(footer).getAttribute("aria-expanded")).toBe("false");
   });
-  test("纯文本单条回复也展示结束时间和总耗时", async () => {
+  test("纯文本单条回复显示耗时摘要，详情提供完整起止时间", async () => {
     const start = Date.parse("2026-01-01T00:00:00Z");
     await render([
       message("a1", "assistant", [text("answer")], {
@@ -616,19 +643,107 @@ describe("消息时间", () => {
         durationMs: 12300,
       }),
     ]);
+    expect(replyTimeButton().textContent).toBe("耗时 12 秒");
+    const details = await openReplyTime();
     expect(
-      Array.from(container.querySelectorAll("time")).map(
-        (time) => time.dateTime,
-      ),
+      Array.from(details.querySelectorAll("time")).map((time) => time.dateTime),
     ).toEqual([
       new Date(start).toISOString(),
       new Date(start + 12300).toISOString(),
     ]);
-    expect(container.querySelector(".conversation-duration")!.textContent).toBe(
-      "总耗时 12 秒",
+    const options: Intl.DateTimeFormatOptions = {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    };
+    expect(detailValue(details, "开始").textContent).toBe(
+      new Date(start).toLocaleString("zh-CN", options),
     );
+    expect(detailValue(details, "结束").textContent).toBe(
+      new Date(start + 12300).toLocaleString("zh-CN", options),
+    );
+    expect(detailValue(details, "耗时").textContent).toBe("12 秒");
   });
-  test("末条模型消息缺少耗时时只展示开始时间，不使用条目时间补算", async () => {
+  test("运行中打开的时间详情在本轮结束后保持打开并同步最终计时", async () => {
+    const start = Date.parse("2026-01-01T00:00:00Z");
+    await render(
+      [message("a1", "assistant", [text("working")], { timestamp: start })],
+      { status: "streaming" },
+    );
+    const details = await openReplyTime();
+    expect(detailValue(details, "开始").querySelector("time")!.dateTime).toBe(
+      new Date(start).toISOString(),
+    );
+    expect(detailValue(details, "结束").textContent).toBe("尚未结束");
+    await render([
+      message("a1", "assistant", [text("answer")], {
+        timestamp: start,
+        durationMs: 12300,
+      }),
+    ]);
+    expect(document.querySelector('[role="dialog"]')).toBe(details);
+    expect(detailValue(details, "结束").querySelector("time")!.dateTime).toBe(
+      new Date(start + 12300).toISOString(),
+    );
+    expect(detailValue(details, "耗时").textContent).toBe("12 秒");
+  });
+  test("手机耗时入口打开内容高度的 sheet，关闭后恢复入口焦点", async () => {
+    const original = window.matchMedia.bind(window);
+    const media = original("(max-width: 767px)");
+    Object.defineProperty(media, "matches", {
+      configurable: true,
+      value: true,
+    });
+    const mediaSpy = spyOn(window, "matchMedia").mockImplementation((query) =>
+      query === media.media ? media : original(query),
+    );
+    const start = Date.parse("2026-01-01T00:00:00Z");
+    try {
+      await render([
+        message("a1", "assistant", [text("answer")], {
+          timestamp: start,
+          durationMs: 12300,
+        }),
+      ]);
+      const trigger = replyTimeButton();
+      expect(trigger.textContent).toBe("耗时 12 秒");
+      expect(container.querySelector("time")).toBeNull();
+      trigger.focus();
+      const details = await openReplyTime();
+      expect(details.getAttribute("aria-modal")).toBe("true");
+      expect(
+        details.querySelector(
+          '[data-sheet="true"][data-sheet-sizing="content"]',
+        ),
+      ).not.toBeNull();
+      expect(
+        Array.from(details.querySelectorAll("time")).map(
+          (time) => time.dateTime,
+        ),
+      ).toEqual([
+        new Date(start).toISOString(),
+        new Date(start + 12300).toISOString(),
+      ]);
+      expect(detailValue(details, "耗时").textContent).toBe("12 秒");
+      await click(details.querySelector('[aria-label="关闭"]')!);
+      for (let frame = 0; frame < 10 && details.isConnected; frame++) {
+        await act(async () => {
+          await new Promise<void>((resolve) => setTimeout(resolve, 20));
+        });
+      }
+      expect(details.isConnected).toBe(false);
+      expect(document.activeElement).toBe(trigger);
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    } finally {
+      await act(async () => root.render(null));
+      mediaSpy.mockRestore();
+    }
+  });
+  test("末条模型消息缺少耗时时保留时间详情入口，不使用条目时间补算", async () => {
     const start = Date.parse("2026-01-01T00:00:00Z");
     const first = message("a1", "assistant", [text("first")], {
       timestamp: start,
@@ -639,14 +754,14 @@ describe("消息时间", () => {
     });
     last.timestamp = new Date(start + 15000).toISOString();
     await render([first, last]);
-    expect(container.querySelectorAll("time")).toHaveLength(1);
-    expect(container.querySelector("time")!.dateTime).toBe(
+    expect(replyTimeButton().textContent).toBe("时间信息");
+    const details = await openReplyTime();
+    expect(details.querySelectorAll("time")).toHaveLength(1);
+    expect(detailValue(details, "开始").querySelector("time")!.dateTime).toBe(
       new Date(start).toISOString(),
     );
-    expect(container.querySelector(".conversation-duration")).toBeNull();
-    expect(
-      container.querySelector(".conversation-reply-time")!.textContent,
-    ).not.toContain("结束");
+    expect(detailValue(details, "结束").textContent).toBe("暂无数据");
+    expect(detailValue(details, "耗时").textContent).toBe("暂无数据");
   });
   test("新轮次运行和自动压缩时历史轮次的结束时间与总耗时保持固定", async () => {
     const start = Date.parse("2026-01-01T00:00:00Z");
@@ -674,18 +789,27 @@ describe("消息时间", () => {
     for (const status of ["streaming", "compacting", "idle"] as const) {
       await render(next, { status });
       expect(historyFooter().textContent).toBe(fixedText);
-      expect(historyFooter().querySelectorAll("time")).toHaveLength(2);
+      expect(replyTimeButton(historyFooter()).textContent).toBe("耗时 3 秒");
+      const details = await openReplyTime(historyFooter());
       expect(
-        historyFooter().querySelector(".conversation-duration")!.textContent,
-      ).toBe("总耗时 3 秒");
+        Array.from(details.querySelectorAll("time")).map(
+          (time) => time.dateTime,
+        ),
+      ).toEqual([
+        new Date(start).toISOString(),
+        new Date(start + 3000).toISOString(),
+      ]);
+      expect(detailValue(details, "耗时").textContent).toBe("3 秒");
+      await click(replyTimeButton(historyFooter()));
       const currentFooter = container
         .querySelector('[data-reply-key="reply:u2"]')!
         .parentElement!.querySelector(".conversation-reply-time")!;
-      expect(currentFooter.textContent).not.toContain("运行中");
-      expect(currentFooter.querySelectorAll("time")).toHaveLength(1);
-      expect(
-        currentFooter.querySelector(".conversation-duration") !== null,
-      ).toBe(status !== "idle");
+      expect(currentFooter.querySelector("time")).toBeNull();
+      if (status === "idle") {
+        expect(replyTimeButton(currentFooter).textContent).toBe("时间信息");
+      } else {
+        expect(replyTimeButton(currentFooter).textContent).toStartWith("耗时 ");
+      }
     }
   });
   test("运行中耗时随单调时钟增长，结束和卸载时释放定时器", async () => {
@@ -710,26 +834,16 @@ describe("消息时间", () => {
     try {
       await render([entry], { status: "streaming" });
       const footer = container.querySelector(".conversation-reply-time")!;
-      expect(footer.querySelectorAll("time")).toHaveLength(1);
-      expect(footer.textContent).not.toContain("运行中");
-      expect(footer.querySelector(".conversation-duration")!.textContent).toBe(
-        "总耗时 1 秒",
-      );
+      expect(replyTimeButton(footer).textContent).toBe("耗时 1 秒");
       expect(interval).toHaveBeenCalledTimes(1);
       expect(interval.mock.calls[0]?.[1]).toBe(1000);
       expect(tick).toBeDefined();
       wallClock.mockReturnValue(start - 100000);
       monotonic += 1500;
       await act(async () => tick?.());
-      expect(footer.querySelector(".conversation-duration")!.textContent).toBe(
-        "总耗时 2 秒",
-      );
+      expect(replyTimeButton(footer).textContent).toBe("耗时 2 秒");
       await render([entry]);
-      expect(footer.querySelectorAll("time")).toHaveLength(2);
-      expect(footer.textContent).not.toContain("运行中");
-      expect(footer.querySelector(".conversation-duration")!.textContent).toBe(
-        "总耗时 3 秒",
-      );
+      expect(replyTimeButton(footer).textContent).toBe("耗时 3 秒");
       expect(clear).toHaveBeenCalledTimes(1);
       await render([entry], { status: "streaming" });
       expect(interval).toHaveBeenCalledTimes(2);
@@ -743,7 +857,7 @@ describe("消息时间", () => {
       clear.mockRestore();
     }
   });
-  test("总耗时显示整数秒且最小为一秒，长耗时省略零值单位", async () => {
+  test("耗时摘要显示整数秒且最小为一秒，长耗时省略零值单位", async () => {
     const start = Date.parse("2026-01-01T00:00:00Z");
     for (const [milliseconds, expected] of [
       [0, "1 秒"],
@@ -761,31 +875,24 @@ describe("消息时间", () => {
       [86400000, "1 天"],
       [97200000, "1 天 3 小时"],
     ] as const) {
-      await act(async () =>
-        root.render(
-          <MessageTime
-            timestamps={[
-              new Date(start).toISOString(),
-              new Date(start + milliseconds).toISOString(),
-            ]}
-            showRange
-            showDuration
-          />,
-        ),
-      );
-      expect(
-        container.querySelector(".conversation-duration")!.textContent,
-      ).toBe(`总耗时 ${expected}`);
+      await render([
+        message("a1", "assistant", [text("answer")], {
+          timestamp: start,
+          durationMs: milliseconds,
+        }),
+      ]);
+      expect(replyTimeButton().textContent).toBe(`耗时 ${expected}`);
     }
     await act(async () => i18n.changeLanguage("en"));
-    expect(container.querySelector(".conversation-duration")!.textContent).toBe(
-      "Total 1 d 3 h",
-    );
+    expect(replyTimeButton().textContent).toBe("Duration 1 d 3 h");
   });
-  test("缺少或无效时间时省略时间入口", async () => {
-    await act(async () =>
-      root.render(<MessageTime timestamps={[undefined, "invalid"]} />),
-    );
-    expect(container.querySelector("button")).toBeNull();
+  test("缺少或无效回复时间时省略时间入口", async () => {
+    for (const timestamp of [undefined, NaN]) {
+      await render([
+        message("a1", "assistant", [text("answer")], { timestamp }),
+      ]);
+      expect(replyTimeButton()).toBeNull();
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    }
   });
 });

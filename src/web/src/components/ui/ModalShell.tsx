@@ -21,6 +21,7 @@ interface ModalShellProps {
   onClose: () => void;
   children: React.ReactNode;
   mobileSheet?: boolean;
+  sheetSizing?: "full" | "content";
   size?: "detail" | "form";
   footer?: React.ReactNode;
 }
@@ -56,6 +57,7 @@ function ModalContent({
   onClose,
   children,
   mobileSheet = true,
+  sheetSizing = "full",
   size = "detail",
   footer,
 }: ModalShellProps) {
@@ -143,6 +145,7 @@ function ModalContent({
           data-size={size}
           className="modal-panel flex min-h-0 flex-col overflow-hidden"
           data-sheet={sheet}
+          data-sheet-sizing={sheetSizing}
           style={{ y }}
           initial={
             reducedMotion

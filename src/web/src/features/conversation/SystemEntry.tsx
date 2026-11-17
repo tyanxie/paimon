@@ -82,7 +82,7 @@ export function SystemEntry({ state }: { state: SystemEntryState }) {
         </div>
         {entry && (
           <div className="conversation-system-time px-1 md:px-2">
-            <MessageTime timestamps={[entry.timestamp]} />
+            <MessageTime timestamp={entry.timestamp} />
           </div>
         )}
       </div>

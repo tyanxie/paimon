@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { Collapsible } from "../../components/ui/Collapsible";
 import { ErrorCard } from "./ErrorCard";
 import { MarkdownRenderer } from "./Markdown";
-import { MessageTime } from "./MessageTime";
+import { ReplyTime } from "./ReplyTime";
 import { SystemEntry } from "./SystemEntry";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCallCard } from "./ToolCallCard";
@@ -265,15 +265,8 @@ function ReplyCard({
         </article>
       )}
       <div className="conversation-reply-footer flex flex-wrap items-center gap-x-3 gap-y-1 px-1 md:px-2">
-        <div className="conversation-reply-time flex min-w-0 flex-1 basis-56 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] leading-5 text-[var(--label-secondary)]">
-          {timestamps && (
-            <MessageTime
-              timestamps={timestamps}
-              showRange
-              showDuration={!active}
-              running={active}
-            />
-          )}
+        <div className="conversation-reply-time flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] leading-5 text-[var(--label-secondary)]">
+          {timestamps && <ReplyTime timestamps={timestamps} running={active} />}
           {showState && (
             <span className="conversation-reply-state">
               {t(failed ? "conversation.replyFailed" : "entries.aborted")}
