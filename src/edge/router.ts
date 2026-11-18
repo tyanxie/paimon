@@ -1,8 +1,8 @@
 // Edge 消息路由：处理来自 pi extension 和 Hub 的消息
 //
 // 两个方向：
-// - pi → Edge（本地 WS）：注册、心跳、事件、状态、历史、session 列表、quit
-// - Hub → Edge（上游 WS）：指令转发到本地 pi
+// - pi → Edge（本地 WS）：注册、心跳、事件、状态、历史、quit
+// - Hub → Edge（上游 WS）：本机查询与指令转发
 
 import type { ServerWebSocket } from "bun";
 import type { EdgeWsData } from "./registry";
@@ -17,6 +17,7 @@ import { resolveSpawn, spawnInstance, validateCwd } from "./spawner";
 import { browsePath } from "./browser";
 import * as log from "./logger";
 import type { UpstreamClient } from "./upstream";
+import type { SessionList } from "./sessions/list";
 
 /** 处理 pi extension 发来的消息 */
 export function handleExtensionMessage(
@@ -97,20 +98,6 @@ export function handleExtensionMessage(
       });
       break;
     }
-    case "session_list": {
-      const id = edgeRegistry.findInstanceByWs(ws);
-      if (!id) return;
-      upstream.send({
-        type: "instance_session_list",
-        payload: {
-          instanceId: id,
-          sessions: msg.payload.sessions,
-          total: msg.payload.total,
-          hasMore: msg.payload.hasMore,
-        },
-      });
-      break;
-    }
     case "error": {
       const id = edgeRegistry.findInstanceByWs(ws);
       if (!id) return;
@@ -135,10 +122,11 @@ export function handleExtensionMessage(
   }
 }
 
-/** 处理 Hub 下发的消息（转发给本地 pi 实例） */
+/** 处理 Hub 下发的消息 */
 export function handleUpstreamMessage(
   msg: HubToEdgeMessage,
   upstream: UpstreamClient,
+  sessionList: SessionList,
 ): void {
   switch (msg.type) {
     case "edge_registered": {
@@ -209,11 +197,32 @@ export function handleUpstreamMessage(
       break;
     }
     case "list_sessions": {
-      const { instanceId, ...payload } = msg.payload;
-      forwardToLocalInstance(instanceId, {
-        type: "list_sessions",
-        payload,
-      });
+      const { instanceId, ...params } = msg.payload;
+      const sessionFile = edgeRegistry.getInstance(instanceId)?.sessionFile;
+      sessionList
+        .query(sessionFile, params)
+        .then((result) => {
+          upstream.send({
+            type: "instance_session_list",
+            payload: {
+              instanceId,
+              ...result,
+              sessions: result.sessions.map((session) => ({
+                ...session,
+                isCurrent: session.path === sessionFile,
+              })),
+            },
+          });
+        })
+        .catch((error: unknown) => {
+          log.warn(
+            `Failed to query sessions for ${instanceId}: ${String(error)}`,
+          );
+          upstream.send({
+            type: "instance_session_list",
+            payload: { instanceId, sessions: [], total: 0, hasMore: false },
+          });
+        });
       break;
     }
     case "new_session": {

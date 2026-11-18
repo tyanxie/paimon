@@ -13,6 +13,10 @@ const projectRoot = resolve(import.meta.dirname!, "..");
 const distExeDir = join(projectRoot, "dist/exe");
 const distWebDir = join(projectRoot, "dist/web");
 const entrypoint = join(projectRoot, "src/cli/index.ts");
+const sessionWorkerEntrypoint = join(
+  projectRoot,
+  "src/edge/sessions/worker.ts",
+);
 
 // 支持的目标平台
 const PLATFORMS = [
@@ -78,7 +82,7 @@ async function main(): Promise<void> {
 
     console.log(`  ▸ ${name} (${target})`);
     run(
-      `bun build --compile --target=${target} ${entrypoint} --outfile ${outfile}`,
+      `bun build --compile --target=${target} ${entrypoint} ${sessionWorkerEntrypoint} --outfile ${outfile}`,
     );
 
     // 拷贝 web 产物到平台目录（与 bin/ 同级）

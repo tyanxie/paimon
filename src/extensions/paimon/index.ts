@@ -13,7 +13,6 @@ import { DEFAULTS } from "../../protocol/types";
 import type {
   EdgeToExtensionMessage,
   ExtHistoryMessage,
-  ExtSessionListMessage,
   ExtStateMessage,
   ContextUsageInfo,
   InstanceStatus,
@@ -24,7 +23,6 @@ import type {
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
 import * as sessionControlPatch from "./session_control_patch";
-import { querySessionList, emptySessionListMessage } from "./session_list";
 
 // Hub spawn 实例时注入的一次性 token（仅页面创建的实例有）。
 // 注册时回传给 Hub，用于将 spawn 请求与注册成功的实例对应起来。
@@ -448,29 +446,6 @@ function handleHubMessage(
         if (ctx.mode === "rpc" && ctx.isIdle?.()) {
           process.kill(process.pid, "SIGTERM");
         }
-      }
-      break;
-    }
-    case "list_sessions": {
-      const ctx = getCurrentCtx();
-      if (ctx?.cwd) {
-        querySessionList(
-          ctx.cwd,
-          ctx.sessionManager.getSessionFile(),
-          msg.payload,
-        )
-          .then((result) => {
-            const response: ExtSessionListMessage = {
-              type: "session_list",
-              payload: result,
-            };
-            client.send(response);
-          })
-          .catch(() => {
-            client.send(emptySessionListMessage());
-          });
-      } else {
-        client.send(emptySessionListMessage());
       }
       break;
     }

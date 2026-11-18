@@ -7,6 +7,9 @@ dist/
 # 运行时状态
 .paimon/
 
+# 测试临时产物
+.test-artifacts/
+
 # 编辑器
 .vscode/
 *.swp
