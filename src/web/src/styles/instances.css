@@ -1,0 +1,113 @@
+.instance-create-modal {
+  container: instance-create / size;
+}
+
+.instance-create-modal[data-sheet="false"] {
+  height: min(560px, 80%);
+}
+
+.instance-create-form {
+  flex: 1;
+  min-height: 0;
+}
+
+.instance-create-edge {
+  flex-shrink: 0;
+}
+
+.instance-create-edge .ui-form-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.instance-create-edge .ui-field-label {
+  flex-shrink: 0;
+}
+
+.instance-create-edge-control {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-height: 36px;
+  min-width: 0;
+}
+
+.instance-create-form > .ui-status {
+  flex-shrink: 0;
+}
+
+.instance-directory-browser {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.instance-directory-browser > .ui-form-field {
+  flex-shrink: 0;
+}
+
+.instance-directory-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0;
+  scroll-padding-block: 4px;
+  border-radius: var(--radius-control);
+  outline: none;
+}
+
+.instance-directory-list:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.instance-directory-list .ui-menu-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.instance-directory-status,
+.instance-directory-error {
+  padding: 14px 8px;
+}
+
+.instance-directory-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.instance-directory-hint {
+  padding: 10px;
+  border-top: 0.5px solid var(--separator);
+  color: var(--label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+@media (pointer: coarse) {
+  .instance-create-edge-control {
+    min-height: 44px;
+  }
+}
+
+/* 键盘或横屏压缩可用高度时，改为单一正文滚动，避免目录区被挤到无法操作 */
+@container instance-create (max-height: 400px) {
+  .instance-create-form {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .instance-directory-browser {
+    flex: none;
+  }
+
+  .instance-directory-list {
+    flex: none;
+    min-height: 120px;
+    overflow: visible;
+  }
+}

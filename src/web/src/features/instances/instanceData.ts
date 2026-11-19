@@ -1,4 +1,4 @@
-import type { BrowseEntry } from "@protocol/types";
+import type { BrowseEntry, BrowseResult } from "@protocol/types";
 import { isRecord } from "../../utils/typeGuards";
 import type { InstanceCreationEdge } from "./types";
 
@@ -24,4 +24,17 @@ export function isInstanceCreationEdgesResponse(
 
 export function isBrowseEntry(value: unknown): value is BrowseEntry {
   return isRecord(value) && typeof value.name === "string";
+}
+
+/** 浏览结果的 parent 用于导航和拼接子目录，必须是带末尾斜杠的绝对路径 */
+export function isBrowseResult(value: unknown): value is BrowseResult {
+  return (
+    isRecord(value) &&
+    typeof value.parent === "string" &&
+    value.parent.startsWith("/") &&
+    value.parent.endsWith("/") &&
+    Array.isArray(value.entries) &&
+    value.entries.every(isBrowseEntry) &&
+    typeof value.truncated === "boolean"
+  );
 }

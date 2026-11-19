@@ -1,7 +1,7 @@
-// 新建实例弹窗：选择 Edge + 输入工作目录（带目录自动补全），在指定 Edge 上 spawn 一个 pi 实例
+// 新建实例弹窗：选择 Edge 并持续浏览工作目录，在指定 Edge 上启动 Pi 实例
 
 import { FolderPlus } from "lucide-react";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { InstanceId } from "../../../../protocol/types";
 import { Button } from "../../components/ui/Button";
@@ -12,7 +12,7 @@ import { authFetch } from "../../utils/authFetch";
 import { isRecord } from "../../utils/typeGuards";
 import { isInstanceCreationEdgesResponse } from "./instanceData";
 import type { InstanceCreationEdge } from "./types";
-import { PathAutocomplete } from "./PathAutocomplete";
+import { DirectoryBrowser } from "./DirectoryBrowser";
 
 // ─── NewInstanceModal ────────────────────────────────────────────────────────
 
@@ -22,6 +22,12 @@ interface NewInstanceModalProps {
   onCreated: (id: InstanceId) => void;
 }
 
+function getEdgeLabel(edge: InstanceCreationEdge): string {
+  return edge.hostname === edge.edgeId
+    ? edge.hostname
+    : `${edge.hostname} (${edge.edgeId})`;
+}
+
 export function NewInstanceModal({
   onClose,
   onCreated,
@@ -29,6 +35,7 @@ export function NewInstanceModal({
   const { t } = useTranslation();
   const edgeFieldId = useId();
   const pathFieldId = useId();
+  const formScrollRef = useRef<HTMLDivElement>(null);
   const [cwd, setCwd] = useState("");
   const [edges, setEdges] = useState<InstanceCreationEdge[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
@@ -38,9 +45,14 @@ export function NewInstanceModal({
 
   // 加载可用的 Edge 列表
   useEffect(() => {
-    authFetch("/api/edges")
-      .then((res) => res.json())
+    const controller = new AbortController();
+    authFetch("/api/edges", { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch Edge list");
+        return res.json();
+      })
       .then((value: unknown) => {
+        if (controller.signal.aborted) return;
         if (!isInstanceCreationEdgesResponse(value)) {
           throw new Error("Invalid Edge list response");
         }
@@ -57,22 +69,26 @@ export function NewInstanceModal({
         setLoadingEdges(false);
       })
       .catch(() => {
+        if (controller.signal.aborted) return;
         setLoadingEdges(false);
         setError(t("newInstance.fetchEdgeError"));
       });
+    return () => controller.abort();
   }, []);
 
   // Edge 切换时更新默认路径
   const handleEdgeChange = useCallback(
     (edgeId: string) => {
       setSelectedEdgeId(edgeId);
+      setError(null);
       const edge = edges.find((e) => e.edgeId === edgeId);
-      if (edge?.homedir) {
-        const defaultPath = edge.homedir.endsWith("/")
-          ? edge.homedir
-          : edge.homedir + "/";
-        setCwd(defaultPath);
-      }
+      setCwd(
+        edge?.homedir
+          ? edge.homedir.endsWith("/")
+            ? edge.homedir
+            : edge.homedir + "/"
+          : "",
+      );
     },
     [edges],
   );
@@ -117,12 +133,14 @@ export function NewInstanceModal({
       setError(message);
       setSubmitting(false);
     }
-  }, [cwd, submitting, selectedEdgeId, onCreated]);
+  }, [cwd, submitting, selectedEdgeId, onCreated, t]);
 
   return (
     <ModalShell
-      mobileSheet={false}
       size="form"
+      className="instance-create-modal"
+      contentLayout="contained"
+      dismissible={!submitting}
       footer={
         <>
           <Button
@@ -150,52 +168,66 @@ export function NewInstanceModal({
       }
       onClose={onClose}
     >
-      <div className="ui-form-content">
-        {/* Edge 选择 */}
-        <FormField label={t("newInstance.edgeNode")} htmlFor={edgeFieldId}>
-          {loadingEdges ? (
-            <StatusMessage compact tone="loading">
-              {t("common.loading")}
-            </StatusMessage>
-          ) : edges.length === 0 ? (
-            <StatusMessage compact tone="error">
-              {t("newInstance.noEdges")}
-            </StatusMessage>
-          ) : edges.length === 1 ? (
-            <div id={edgeFieldId} className="ui-form-note">
-              {edges[0].hostname}
-              <span className="text-[var(--label-tertiary)] ml-1.5">
-                ({edges[0].edgeId})
-              </span>
+      <div
+        ref={formScrollRef}
+        className="ui-form-content instance-create-form scrollbar-auto"
+      >
+        <div className="instance-create-edge">
+          <FormField label={t("newInstance.edgeNode")} htmlFor={edgeFieldId}>
+            <div className="instance-create-edge-control">
+              {loadingEdges ? (
+                <StatusMessage compact tone="loading">
+                  {t("common.loading")}
+                </StatusMessage>
+              ) : edges.length === 0 ? (
+                <StatusMessage compact tone="error">
+                  {t("newInstance.noEdges")}
+                </StatusMessage>
+              ) : edges.length === 1 ? (
+                <div
+                  id={edgeFieldId}
+                  className="ui-form-note truncate"
+                  title={getEdgeLabel(edges[0])}
+                >
+                  {edges[0].hostname}
+                  {edges[0].hostname !== edges[0].edgeId && (
+                    <span className="text-[var(--label-tertiary)] ml-1.5">
+                      ({edges[0].edgeId})
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <SelectField
+                  id={edgeFieldId}
+                  value={selectedEdgeId}
+                  onChange={(e) => handleEdgeChange(e.target.value)}
+                  disabled={submitting}
+                >
+                  {edges.map((edge) => (
+                    <option key={edge.edgeId} value={edge.edgeId}>
+                      {getEdgeLabel(edge)}
+                    </option>
+                  ))}
+                </SelectField>
+              )}
             </div>
-          ) : (
-            <SelectField
-              id={edgeFieldId}
-              value={selectedEdgeId}
-              onChange={(e) => handleEdgeChange(e.target.value)}
-              disabled={submitting}
-            >
-              {edges.map((edge) => (
-                <option key={edge.edgeId} value={edge.edgeId}>
-                  {edge.hostname} ({edge.edgeId})
-                </option>
-              ))}
-            </SelectField>
-          )}
-        </FormField>
+          </FormField>
+        </div>
 
-        {/* 工作目录 */}
-        <FormField label={t("newInstance.workingDir")} htmlFor={pathFieldId}>
-          <PathAutocomplete
-            id={pathFieldId}
-            value={cwd}
-            onChange={setCwd}
-            edgeId={selectedEdgeId}
-            disabled={submitting || loadingEdges}
-            autoFocus={!loadingEdges}
-            onSubmit={handleSubmit}
-          />
-        </FormField>
+        <DirectoryBrowser
+          id={pathFieldId}
+          value={cwd}
+          onChange={(path) => {
+            setCwd(path);
+            setError(null);
+          }}
+          edgeId={selectedEdgeId}
+          scrollContainerRef={formScrollRef}
+          disabled={submitting || loadingEdges}
+          loadingEdge={loadingEdges}
+          autoFocus={!loadingEdges && edges.length > 0}
+          onSubmit={handleSubmit}
+        />
 
         {error && (
           <StatusMessage compact tone="error">

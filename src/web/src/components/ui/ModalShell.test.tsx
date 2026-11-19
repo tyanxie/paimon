@@ -54,11 +54,17 @@ async function render({
   content = <p>tool output</p>,
   mobileSheet = true,
   strict = false,
+  className,
+  contentLayout = "scroll",
+  dismissible = true,
 }: {
   open?: boolean;
   content?: ReactNode;
   mobileSheet?: boolean;
   strict?: boolean;
+  className?: string;
+  contentLayout?: "scroll" | "contained";
+  dismissible?: boolean;
 } = {}) {
   const view = (
     <MotionConfig reducedMotion="always">
@@ -68,6 +74,9 @@ async function render({
           trailing={<span>1.2 s</span>}
           onClose={() => closeCount++}
           mobileSheet={mobileSheet}
+          className={className}
+          contentLayout={contentLayout}
+          dismissible={dismissible}
         >
           {content}
         </ModalShell>
@@ -308,6 +317,46 @@ describe("详情窗口功能", () => {
     expect(document.body.style.overflow).toBe("hidden");
     await render({ open: false });
     expect(document.body.style.overflow).toBe("auto");
+  });
+  test("内部浏览布局使用指定面板样式，不启用外层内容滚动", async () => {
+    await render({
+      className: "instance-create-modal",
+      contentLayout: "contained",
+    });
+    expect(
+      dialog()
+        .querySelector(".modal-panel")!
+        .classList.contains("instance-create-modal"),
+    ).toBe(true);
+    const content = dialog().querySelector(".modal-content")!;
+    expect(content.classList.contains("overflow-hidden")).toBe(true);
+    expect(content.classList.contains("overflow-auto")).toBe(false);
+    await render();
+    expect(content.classList.contains("overflow-auto")).toBe(true);
+  });
+  test("禁止关闭时拦截按钮、遮罩和原生 cancel，恢复后仍可关闭", async () => {
+    mobile = true;
+    await render({ dismissible: false });
+    const close = dialog().querySelector<HTMLButtonElement>(".modal-close")!;
+    expect(close.disabled).toBe(true);
+    await click(close);
+    const cancel = new Event("cancel", { cancelable: true });
+    await act(async () => dialog().dispatchEvent(cancel));
+    const positioner =
+      dialog().querySelector<HTMLDivElement>(".modal-positioner")!;
+    await act(async () =>
+      positioner.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true }),
+      ),
+    );
+    await click(positioner);
+    expect(cancel.defaultPrevented).toBe(true);
+    expect(closeCount).toBe(0);
+    expect(dialog().open).toBe(true);
+    await render({ dismissible: true });
+    expect(close.disabled).toBe(false);
+    await click(close);
+    expect(closeCount).toBe(1);
   });
   test("关闭与内容说明提供英文文本", async () => {
     await i18n.changeLanguage("en");
