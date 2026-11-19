@@ -124,7 +124,6 @@ export type ExtensionToEdgeMessage =
   | ExtEventMessage
   | ExtStateMessage
   | ExtHistoryMessage
-  | ExtSessionListMessage
   | ExtErrorMessage
   | ExtQuitMessage;
 
@@ -247,18 +246,6 @@ export interface ExtHistoryMessage {
   };
 }
 
-/** Session 列表响应 */
-export interface ExtSessionListMessage {
-  type: "session_list";
-  payload: {
-    sessions: SessionListItem[];
-    /** 过滤后的总数 */
-    total: number;
-    /** 是否还有更多 */
-    hasMore: boolean;
-  };
-}
-
 // ============================================================
 // Edge → Extension 消息
 // ============================================================
@@ -274,7 +261,6 @@ export type EdgeToExtensionMessage =
   | HubShutdownMessage
   | PongMessage
   | HubGetHistoryMessage
-  | HubListSessionsMessage
   | HubNewSessionMessage
   | HubSwitchSessionMessage;
 
@@ -352,19 +338,6 @@ export interface HubGetHistoryMessage {
     offset?: number;
     /** 本次请求的最大条目数（按 turn 对齐） */
     limit?: number;
-  };
-}
-
-/** 请求 session 列表 */
-export interface HubListSessionsMessage {
-  type: "list_sessions";
-  payload?: {
-    /** 跳过的条目数（默认 0） */
-    offset?: number;
-    /** 单页大小（默认 20） */
-    limit?: number;
-    /** 搜索关键字（匹配 name/firstMessage） */
-    filter?: string;
   };
 }
 
@@ -720,7 +693,7 @@ export interface EdgeInstanceHistoryMessage {
   };
 }
 
-/** 转发：pi session 列表 */
+/** 实例 session 列表 */
 export interface EdgeInstanceSessionListMessage {
   type: "instance_session_list";
   payload: {
@@ -896,7 +869,7 @@ export interface HubEdgeGetHistoryMessage {
   };
 }
 
-/** 转发到 pi：请求 session 列表 */
+/** 查询实例的 session 列表 */
 export interface HubEdgeListSessionsMessage {
   type: "list_sessions";
   payload: {

@@ -19,7 +19,19 @@ import { edgeRegistry, type EdgeWsData } from "./registry";
 import { UpstreamClient } from "./upstream";
 import { handleExtensionMessage, handleUpstreamMessage } from "./router";
 import { startLogCleanup, stopLogCleanup } from "./log-cleanup";
+import { MemorySessionIndex } from "./sessions/index";
+import { SessionList } from "./sessions/list";
 import * as log from "./logger";
+
+const sessionList = new SessionList(
+  new MemorySessionIndex(),
+  (directory, error) => {
+    log.warn(
+      `Failed to refresh session directory ${directory}: ${String(error)}`,
+    );
+  },
+);
+sessionList.start();
 
 const port = parseInt(
   process.env.PAIMON_EDGE_PORT || String(DEFAULTS.EDGE_PORT),
@@ -74,7 +86,7 @@ const upstream = new UpstreamClient({
     log.warn("Lost connection to Hub, will reconnect...");
   },
   onMessage(msg) {
-    handleUpstreamMessage(msg, upstream);
+    handleUpstreamMessage(msg, upstream, sessionList);
   },
 });
 
@@ -85,6 +97,11 @@ edgeRegistry.setChangeCallback(
     instanceId: InstanceId,
     info?: InstanceInfo,
   ) => {
+    if (event === "registered" && info) {
+      sessionList.register(instanceId, info.sessionFile);
+    } else if (event === "unregistered") {
+      sessionList.unregister(instanceId);
+    }
     if (!upstream.connected) return;
 
     switch (event) {
@@ -212,6 +229,7 @@ async function shutdown(signal: string): Promise<never> {
   stopLogCleanup();
   upstream.disconnect();
   await server.stop(true);
+  await sessionList.stop();
   await log.shutdown();
   process.exit(0);
 }
