@@ -24,6 +24,9 @@ interface ModalShellProps {
   sheetSizing?: "full" | "content";
   size?: "detail" | "form";
   footer?: React.ReactNode;
+  className?: string;
+  contentLayout?: "scroll" | "contained";
+  dismissible?: boolean;
 }
 
 const loadFeatures = () =>
@@ -60,6 +63,9 @@ function ModalContent({
   sheetSizing = "full",
   size = "detail",
   footer,
+  className = "",
+  contentLayout = "scroll",
+  dismissible = true,
 }: ModalShellProps) {
   const { t } = useTranslation();
   const titleId = useId();
@@ -90,7 +96,7 @@ function ModalContent({
   }, [dragControls, y]);
 
   function requestClose() {
-    if (present) onClose();
+    if (present && dismissible) onClose();
   }
 
   const transition = {
@@ -143,7 +149,7 @@ function ModalContent({
         <m.div
           ref={panelRef}
           data-size={size}
-          className="modal-panel flex min-h-0 flex-col overflow-hidden"
+          className={`modal-panel flex min-h-0 flex-col overflow-hidden ${className}`}
           data-sheet={sheet}
           data-sheet-sizing={sheetSizing}
           style={{ y }}
@@ -164,7 +170,7 @@ function ModalContent({
             transition: exitTransition,
           }}
           transition={transition}
-          drag={sheet && present && !reducedMotion ? "y" : false}
+          drag={sheet && present && dismissible && !reducedMotion ? "y" : false}
           dragControls={dragControls}
           dragListener={false}
           dragConstraints={{ top: 0, bottom: 0 }}
@@ -189,6 +195,7 @@ function ModalContent({
                 aria-hidden="true"
                 onPanEnd={(event, info) => {
                   if (
+                    dismissible &&
                     reducedMotion &&
                     event.type !== "pointercancel" &&
                     shouldDismissSheet(
@@ -199,7 +206,12 @@ function ModalContent({
                     requestClose();
                 }}
                 onPointerDown={(event) => {
-                  if (!reducedMotion && event.isPrimary && event.button === 0)
+                  if (
+                    dismissible &&
+                    !reducedMotion &&
+                    event.isPrimary &&
+                    event.button === 0
+                  )
                     dragControls.start(event, { distanceThreshold: 10 });
                 }}
               >
@@ -221,6 +233,7 @@ function ModalContent({
                   size="icon"
                   type="button"
                   onClick={requestClose}
+                  disabled={!dismissible}
                   aria-label={t("common.close")}
                   className="modal-close select-none flex items-center justify-center text-[var(--label-secondary)] transition-colors hover:bg-[var(--fill-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none"
                 >
@@ -229,7 +242,7 @@ function ModalContent({
               </div>
             </header>
             <div
-              className="modal-content min-h-0 flex-1 overflow-auto scrollbar-auto"
+              className={`modal-content min-h-0 flex-1 ${contentLayout === "contained" ? "flex flex-col overflow-hidden" : "overflow-auto scrollbar-auto"}`}
               tabIndex={0}
               role="region"
               aria-label={t("modal.content")}

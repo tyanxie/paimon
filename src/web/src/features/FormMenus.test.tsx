@@ -29,7 +29,7 @@ beforeEach(async () => {
     fakeFetch(async (input) =>
       Response.json(
         String(input).includes("browse")
-          ? { parent: "/first", entries: [], truncated: false }
+          ? { parent: "/first/", entries: [], truncated: false }
           : { edges },
       ),
     ),
@@ -71,14 +71,54 @@ async function input(
     element.dispatchEvent(new Event("input", { bubbles: true })),
   );
 }
-async function newInstance(onCreated: (id: string) => void = () => {}) {
+async function newInstance(
+  onCreated: (id: string) => void = () => {},
+  onClose: () => void = () => {},
+) {
   await act(async () =>
     root.render(
       <MotionConfig reducedMotion="always">
-        <NewInstanceModal onClose={() => {}} onCreated={onCreated} />
+        <NewInstanceModal onClose={onClose} onCreated={onCreated} />
       </MotionConfig>,
     ),
   );
+}
+
+async function waitForBrowse() {
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 320)));
+}
+
+function directoryList() {
+  return document.querySelector<HTMLDivElement>(".instance-directory-list")!;
+}
+
+function mockDirectories(names: string[] = ["project", "second"]) {
+  fetchSpy.mockImplementation(
+    fakeFetch(async (url) => {
+      if (!String(url).includes("browse")) return Response.json({ edges });
+      const path = new URL(String(url), "http://localhost").searchParams.get(
+        "path",
+      )!;
+      const parent = path.endsWith("/")
+        ? path
+        : path.slice(0, path.lastIndexOf("/") + 1);
+      return Response.json({
+        parent,
+        entries: names.map((name) => ({ name })),
+        truncated: false,
+      });
+    }),
+  );
+}
+
+async function key(element: HTMLElement, key: string) {
+  const event = new KeyboardEvent("keydown", {
+    key,
+    bubbles: true,
+    cancelable: true,
+  });
+  await act(async () => element.dispatchEvent(event));
+  return event;
 }
 
 describe("表单功能", () => {
@@ -108,7 +148,7 @@ describe("表单功能", () => {
     const original = window.matchMedia.bind(window);
     const mediaSpy = spyOn(window, "matchMedia").mockImplementation((query) => {
       const result = original(query);
-      if (query === "(pointer: coarse)") {
+      if (query === "(pointer: coarse)" || query === "(max-width: 767px)") {
         Object.defineProperty(result, "matches", {
           configurable: true,
           value: true,
@@ -119,6 +159,10 @@ describe("表单功能", () => {
     try {
       await newInstance();
       const dialog = document.querySelector("dialog")!;
+      expect(
+        dialog.querySelector(".modal-panel")!.getAttribute("data-sheet"),
+      ).toBe("true");
+      await waitForBrowse();
       expect(
         document.activeElement ===
           document.getElementById(dialog.getAttribute("aria-labelledby")!),
@@ -170,12 +214,12 @@ describe("表单功能", () => {
       "permission denied",
     );
   });
-  test("目录补全继续支持点击选择与输入焦点", async () => {
+  test("目录选择更新路径并将焦点留在持续浏览区", async () => {
     fetchSpy.mockImplementation(
       fakeFetch(async (url) =>
         String(url).includes("browse")
           ? Response.json({
-              parent: "/first",
+              parent: "/first/",
               entries: [{ name: "project" }],
               truncated: false,
             })
@@ -183,11 +227,316 @@ describe("表单功能", () => {
       ),
     );
     await newInstance();
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 320)));
+    await waitForBrowse();
+    const list = directoryList();
     await click(button("project"));
     const field = document.querySelector<HTMLInputElement>("dialog input")!;
     expect(field.value).toBe("/first/project/");
-    expect(document.activeElement === field).toBe(true);
+    expect(directoryList()).toBe(list);
+    expect(document.activeElement).toBe(list);
+  });
+  test("失焦、重新聚焦和滚动不会隐藏已加载的目录", async () => {
+    mockDirectories();
+    await newInstance();
+    await waitForBrowse();
+    const list = directoryList();
+    list.scrollTop = 120;
+    await act(async () => {
+      button("取消").focus();
+      list.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 180)));
+    expect(directoryList()).toBe(list);
+    expect(list.contains(button("project"))).toBe(true);
+    expect(list.scrollTop).toBe(120);
+    await act(async () =>
+      document.querySelector<HTMLInputElement>("dialog input")!.focus(),
+    );
+    expect(directoryList()).toBe(list);
+    expect(list.scrollTop).toBe(120);
+  });
+  test("上一级按输入路径计算，整行保留可访问名称，根目录不显示", async () => {
+    await newInstance();
+    const field = document.querySelector<HTMLInputElement>("dialog input")!;
+    for (const path of ["/home/pro", "/home/pro/", " /home/pro/// "]) {
+      await input(field, path);
+      const parent = button("上一级");
+      expect(parent.textContent).toBe("..");
+      expect(parent.title).toBe("上一级");
+      expect(directoryList().firstElementChild).toBe(parent);
+      await click(parent);
+      expect(field.value).toBe("/home/");
+      expect(document.activeElement).toBe(directoryList());
+    }
+    await click(button("上一级"));
+    expect(field.value).toBe("/");
+    expect(document.querySelector('[aria-label="上一级"]')).toBeNull();
+  });
+  test("目录键盘导航包括上一级，Tab 不拦截也不补全路径", async () => {
+    mockDirectories();
+    await newInstance();
+    await waitForBrowse();
+    const field = document.querySelector<HTMLInputElement>("dialog input")!;
+    await key(field, "ArrowDown");
+    expect(document.activeElement).toBe(button("上一级"));
+    await key(button("上一级"), "ArrowDown");
+    expect(document.activeElement).toBe(button("project"));
+    await key(button("project"), "End");
+    expect(document.activeElement).toBe(button("second"));
+    expect(
+      [
+        ...directoryList().querySelectorAll<HTMLButtonElement>(".ui-menu-item"),
+      ].filter((item) => item.tabIndex === 0),
+    ).toHaveLength(1);
+    await key(button("second"), "Home");
+    expect(document.activeElement).toBe(button("上一级"));
+    await act(async () => field.focus());
+    expect((await key(field, "Tab")).defaultPrevented).toBe(false);
+    expect(field.value).toBe("/first/");
+  });
+  test("键盘滚动使用显式正文容器，并优先滚动溢出的目录列表", async () => {
+    mockDirectories();
+    await newInstance();
+    await waitForBrowse();
+    const list = directoryList();
+    const form = document.querySelector<HTMLDivElement>(
+      ".instance-create-form",
+    )!;
+    const field = document.querySelector<HTMLInputElement>("dialog input")!;
+    const parent = button("上一级");
+    const project = button("project");
+    form.classList.remove("instance-create-form");
+    Object.defineProperties(list, {
+      scrollHeight: { configurable: true, value: 100 },
+      clientHeight: { configurable: true, value: 100 },
+    });
+    const formRect = spyOn(form, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 200, 100),
+    );
+    const listRect = spyOn(list, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 200, 100),
+    );
+    const parentRect = spyOn(parent, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 200, 32),
+    );
+    const projectRect = spyOn(project, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 160, 200, 32),
+    );
+    try {
+      await key(field, "ArrowDown");
+      await key(parent, "ArrowDown");
+      expect(document.activeElement).toBe(project);
+      expect(form.scrollTop).toBe(92);
+      expect(list.scrollTop).toBe(0);
+
+      form.scrollTop = 0;
+      Object.defineProperty(list, "scrollHeight", {
+        configurable: true,
+        value: 400,
+      });
+      await key(project, "Home");
+      await key(parent, "ArrowDown");
+      expect(list.scrollTop).toBe(92);
+      expect(form.scrollTop).toBe(0);
+
+      parentRect.mockReturnValue(new DOMRect(0, -40, 200, 32));
+      await key(project, "Home");
+      expect(list.scrollTop).toBe(52);
+      expect(form.scrollTop).toBe(0);
+    } finally {
+      formRect.mockRestore();
+      listRect.mockRestore();
+      parentRect.mockRestore();
+      projectRect.mockRestore();
+    }
+  });
+  test("路径变化立即移除旧目录，输入无效路径时保持浏览区和说明", async () => {
+    mockDirectories();
+    await newInstance();
+    await waitForBrowse();
+    const list = directoryList();
+    const field = document.querySelector<HTMLInputElement>("dialog input")!;
+    await input(field, "/other/");
+    expect(list.textContent).not.toContain("project");
+    expect(list.getAttribute("aria-busy")).toBe("true");
+    await input(field, "relative");
+    expect(directoryList()).toBe(list);
+    expect(list.textContent).toContain("输入绝对路径以浏览目录");
+    expect(list.getAttribute("aria-busy")).toBe("false");
+    expect(list.querySelector(".ui-menu-item")).toBeNull();
+  });
+  test("防抖期间取消旧请求，晚到的旧结果不能覆盖当前路径", async () => {
+    let oldSignal: AbortSignal | undefined;
+    let resolveOld: ((response: Response) => void) | undefined;
+    fetchSpy.mockImplementation(
+      fakeFetch((url, options) => {
+        if (!String(url).includes("browse"))
+          return Promise.resolve(Response.json({ edges }));
+        const path = new URL(String(url), "http://localhost").searchParams.get(
+          "path",
+        );
+        if (path === "/first/") {
+          oldSignal = options?.signal ?? undefined;
+          return new Promise<Response>((resolve) => {
+            resolveOld = resolve;
+          });
+        }
+        return Promise.resolve(
+          Response.json({
+            parent: path,
+            entries: [{ name: "current" }],
+            truncated: false,
+          }),
+        );
+      }),
+    );
+    await newInstance();
+    await waitForBrowse();
+    expect(resolveOld).toBeDefined();
+    await input(document.querySelector("dialog input")!, "/other/");
+    expect(oldSignal?.aborted).toBe(true);
+    await act(async () =>
+      resolveOld?.(
+        Response.json({
+          parent: "/first/",
+          entries: [{ name: "outdated" }],
+          truncated: false,
+        }),
+      ),
+    );
+    expect(directoryList().textContent).not.toContain("outdated");
+    expect(directoryList().getAttribute("aria-busy")).toBe("true");
+    await waitForBrowse();
+    expect(directoryList().contains(button("current"))).toBe(true);
+    expect(directoryList().textContent).not.toContain("outdated");
+  });
+  test("空浏览结果和没有匹配项保留浏览区并提供不同说明", async () => {
+    await newInstance();
+    await waitForBrowse();
+    const list = directoryList();
+    expect(list.querySelector('[role="status"]')!.textContent).toBe(
+      "没有可显示的子目录，可在当前工作目录创建实例",
+    );
+    expect(list.contains(button("上一级"))).toBe(true);
+    await input(document.querySelector("dialog input")!, "/first/missing");
+    await waitForBrowse();
+    expect(directoryList()).toBe(list);
+    expect(list.textContent).toContain("没有匹配的目录");
+    expect(button("创建").disabled).toBe(false);
+  });
+  test("英文空浏览结果不声称实际不存在子目录", async () => {
+    await i18n.changeLanguage("en");
+    await newInstance();
+    await waitForBrowse();
+    expect(directoryList().querySelector('[role="status"]')!.textContent).toBe(
+      "No subdirectories to display. You can create an instance in the current working directory.",
+    );
+  });
+  test("目录读取失败显示原因，允许重试和返回上一级", async () => {
+    let browseCount = 0;
+    fetchSpy.mockImplementation(
+      fakeFetch(async (url) => {
+        if (!String(url).includes("browse")) return Response.json({ edges });
+        browseCount++;
+        return browseCount === 1
+          ? Response.json({ error: "permission denied" }, { status: 403 })
+          : Response.json({
+              parent: "/first/",
+              entries: [{ name: "recovered" }],
+              truncated: false,
+            });
+      }),
+    );
+    await newInstance();
+    await waitForBrowse();
+    const list = directoryList();
+    expect(list.querySelector('[role="alert"]')!.textContent).toContain(
+      "permission denied",
+    );
+    expect(button("上一级").disabled).toBe(false);
+    await click(button("重试"));
+    await waitForBrowse();
+    expect(directoryList()).toBe(list);
+    expect(list.querySelector('[role="alert"]')).toBeNull();
+    expect(list.contains(button("recovered"))).toBe(true);
+    expect(browseCount).toBe(2);
+  });
+  test("Edge 名称和 ID 相同时不重复展示", async () => {
+    fetchSpy.mockImplementation(
+      fakeFetch(async () =>
+        Response.json({
+          edges: [{ edgeId: "same", hostname: "same", homedir: "/home" }],
+        }),
+      ),
+    );
+    await newInstance();
+    const note = document.querySelector<HTMLElement>(".ui-form-note")!;
+    expect(note.textContent).toBe("same");
+    expect(note.title).toBe("same");
+  });
+  test("创建中禁止所有关闭入口，失败后恢复操作", async () => {
+    let resolveCreation: ((response: Response) => void) | undefined;
+    let closed = 0;
+    fetchSpy.mockImplementation(
+      fakeFetch((_, options) =>
+        options?.method === "POST"
+          ? new Promise<Response>((resolve) => {
+              resolveCreation = resolve;
+            })
+          : Promise.resolve(Response.json({ edges })),
+      ),
+    );
+    await newInstance(
+      () => {},
+      () => closed++,
+    );
+    await click(button("创建"));
+    expect(resolveCreation).toBeDefined();
+    expect(button("取消").disabled).toBe(true);
+    expect(button("关闭").disabled).toBe(true);
+    expect(button("上一级").disabled).toBe(true);
+    const dialog = document.querySelector("dialog")!;
+    const cancel = new Event("cancel", { cancelable: true });
+    await act(async () => dialog.dispatchEvent(cancel));
+    await click(dialog.querySelector<HTMLElement>(".modal-positioner")!);
+    expect(cancel.defaultPrevented).toBe(true);
+    expect(closed).toBe(0);
+    await act(async () =>
+      resolveCreation?.(
+        Response.json({ error: "spawn failed" }, { status: 500 }),
+      ),
+    );
+    expect(button("取消").disabled).toBe(false);
+    expect(button("关闭").disabled).toBe(false);
+    expect(button("上一级").disabled).toBe(false);
+    expect(dialog.querySelector('[role="alert"]')!.textContent).toBe(
+      "spawn failed",
+    );
+  });
+  test("卸载浏览区会取消正在进行的目录请求", async () => {
+    let signal: AbortSignal | undefined;
+    let finish: ((response: Response) => void) | undefined;
+    fetchSpy.mockImplementation(
+      fakeFetch((url, options) => {
+        if (!String(url).includes("browse"))
+          return Promise.resolve(Response.json({ edges }));
+        signal = options?.signal ?? undefined;
+        return new Promise<Response>((resolve) => {
+          finish = resolve;
+        });
+      }),
+    );
+    await newInstance();
+    await waitForBrowse();
+    expect(signal?.aborted).toBe(false);
+    await act(async () => root.render(null));
+    expect(signal?.aborted).toBe(true);
+    await act(async () =>
+      finish?.(
+        Response.json({ parent: "/first/", entries: [], truncated: false }),
+      ),
+    );
+    expect(document.querySelector("dialog")).toBeNull();
   });
   test("压缩确认保留自定义说明与空输入语义", async () => {
     const confirmed: (string | undefined)[] = [];

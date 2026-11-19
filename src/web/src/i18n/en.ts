@@ -222,6 +222,16 @@ const en: LocaleResource = {
     create: "Create",
     creating: "Creating…",
     truncatedHint: "Type more to narrow results…",
+    directories: "Directory browser",
+    parentDirectory: "Up one level",
+    loadingDirectories: "Loading directories…",
+    absolutePathHint: "Enter an absolute path to browse directories",
+    noSubdirectories:
+      "No subdirectories to display. You can create an instance in the current working directory.",
+    noMatchingDirectories:
+      "No matching directories. Adjust the last part of the path.",
+    browseError: "Unable to read directory",
+    retry: "Retry",
     fetchEdgeError: "Failed to fetch edge list",
     noEdgeSelected: "No edge selected",
     requestTimeout: "Request timed out",
