@@ -62,6 +62,9 @@ const en: LocaleResource = {
 
   composer: {
     options: "Input options",
+    stopHint: "Press Esc to stop the current task",
+    stopWithShortcut: "Stop (Esc)",
+    sendWithShortcut: "Send (Enter)",
     more: "More input options",
     backToOptions: "Back to input options",
     images: "Images",

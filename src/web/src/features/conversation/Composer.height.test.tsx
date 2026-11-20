@@ -24,6 +24,7 @@ let container: HTMLDivElement;
 let viewportHeight: number;
 let previousHeight: PropertyDescriptor | undefined;
 let sent: string[];
+let aborts: number;
 
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
@@ -34,6 +35,7 @@ beforeEach(async () => {
     get: () => viewportHeight,
   });
   sent = [];
+  aborts = 0;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -45,33 +47,37 @@ afterEach(async () => {
     Object.defineProperty(window, "innerHeight", previousHeight);
   else Reflect.deleteProperty(window, "innerHeight");
 });
-function Probe() {
+function Probe({ buttonMode }: { buttonMode: "send" | "stop" }) {
   const [draft, setDraft] = useState<InputDraft>({ text: "", images: [] });
   return (
     <Composer
-      instance={instance}
+      instance={
+        buttonMode === "stop" ? { ...instance, status: "streaming" } : instance
+      }
       draft={draft}
       onDraftChange={setDraft}
       onSendMessage={(text) => {
         sent.push(text);
         setDraft({ text: "", images: [] });
       }}
-      onAbort={() => {}}
+      onAbort={() => {
+        aborts += 1;
+      }}
       onSetModel={() => {}}
       onSetThinkingLevel={() => {}}
       onCompact={() => {}}
-      buttonMode="send"
+      buttonMode={buttonMode}
       showCompactButton
       compactDisabled={false}
       onImageLightbox={() => {}}
     />
   );
 }
-async function render(session = "one") {
+async function render(session = "one", buttonMode: "send" | "stop" = "send") {
   await act(async () =>
     root.render(
       <MotionConfig reducedMotion="always">
-        <Probe key={session} />
+        <Probe key={session} buttonMode={buttonMode} />
       </MotionConfig>,
     ),
   );
@@ -103,13 +109,13 @@ async function pointer(
     ),
   );
 }
-async function key(value: string) {
+async function key(value: string, target: EventTarget = handle()) {
   const event = new KeyboardEvent("keydown", {
     key: value,
     bubbles: true,
     cancelable: true,
   });
-  await act(async () => handle().dispatchEvent(event));
+  await act(async () => target.dispatchEvent(event));
   return event;
 }
 async function text(value: string) {
@@ -244,6 +250,30 @@ describe("输入区高度调节", () => {
       handle().dispatchEvent(new MouseEvent("dblclick", { bubbles: true })),
     );
     expect(editor().style.height).toBe(initial);
+  });
+
+  test("运行中输入框 Esc 优先取消拖动，结束后才调用停止", async () => {
+    await render("one", "stop");
+    await text("调整要求");
+    editor().focus();
+    const initial = editor().style.height;
+    await pointer(handle(), "pointerdown", 300);
+    await pointer(window, "pointermove", 200);
+    expect(editor().style.height).not.toBe(initial);
+    expect(document.activeElement).toBe(editor());
+    expect((await key("Escape", editor())).defaultPrevented).toBe(true);
+    expect(editor().style.height).toBe(initial);
+    expect(handle().dataset.dragging).toBeUndefined();
+    expect(aborts).toBe(0);
+    expect(editor().value).toBe("调整要求");
+    expect(document.activeElement).toBe(editor());
+    await pointer(window, "pointermove", 100);
+    expect(editor().style.height).toBe(initial);
+    expect((await key("Escape", editor())).defaultPrevented).toBe(true);
+    expect(aborts).toBe(1);
+    expect(sent).toEqual([]);
+    expect(editor().value).toBe("调整要求");
+    expect(document.activeElement).toBe(editor());
   });
 
   test("视口缩小时限制显示高度，恢复后保留手动选择", async () => {

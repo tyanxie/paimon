@@ -7,6 +7,7 @@ import type {
   InstanceInfo,
   ThinkingLevel,
 } from "../../../../protocol/types";
+import { ContextMenu } from "../../components/ui/ContextMenu";
 import i18n from "../../i18n";
 import type { InputDraft } from "../../stores/useDrafts";
 import { Composer, type ComposerHandle } from "./Composer";
@@ -723,6 +724,240 @@ describe("输入工具栏交互", () => {
       container.querySelector('[aria-label="Resize input area"]') !== null,
     ).toBe(true);
   });
+});
+
+describe("Esc 停止与快捷键提示", () => {
+  test.each(["streaming", "compacting"] as const)(
+    "%s 期间 Esc 调用停止，结束后恢复默认行为",
+    async (status) => {
+      await render({ instance: { ...instance, status } });
+      const textarea = container.querySelector("textarea")!;
+      textarea.focus();
+      expect((await key({ key: "Escape" })).defaultPrevented).toBe(true);
+      expect(aborts).toBe(1);
+      expect(sent).toEqual([]);
+      expect(document.activeElement).toBe(textarea);
+      await render({ instance });
+      expect((await key({ key: "Escape" })).defaultPrevented).toBe(false);
+      expect(aborts).toBe(1);
+    },
+  );
+
+  test("实例信息未确认时 Esc 不调用停止", async () => {
+    await render({ instance: undefined });
+    expect((await key({ key: "Escape" })).defaultPrevented).toBe(false);
+    expect(aborts).toBe(0);
+  });
+
+  const stopDrafts: InputDraft[] = [
+    { text: "", images: [] },
+    { text: "调整要求", images: [] },
+    { text: "", images: [image] },
+    { text: "调整要求", images: [image] },
+  ];
+  test.each(stopDrafts)("Esc 保留草稿 %j 和编辑焦点", async (value) => {
+    await render({
+      instance: { ...instance, status: "streaming" },
+      draft: value,
+    });
+    const textarea = container.querySelector("textarea")!;
+    textarea.focus();
+    textarea.setSelectionRange(0, 0);
+    await key({ key: "Escape" });
+    expect(aborts).toBe(1);
+    expect(draft).toEqual(value);
+    expect(sent).toEqual([]);
+    expect(document.activeElement).toBe(textarea);
+    expect(textarea.selectionStart).toBe(0);
+    expect(textarea.selectionEnd).toBe(0);
+  });
+
+  test("IME、修饰键与长按重复保留默认行为，不调用停止", async () => {
+    await render({ instance: { ...instance, status: "streaming" } });
+    for (const options of [
+      { isComposing: true },
+      { keyCode: 229 },
+      { shiftKey: true },
+      { ctrlKey: true },
+      { altKey: true },
+      { metaKey: true },
+      { repeat: true },
+    ]) {
+      expect((await key({ key: "Escape", ...options })).defaultPrevented).toBe(
+        false,
+      );
+    }
+    expect(aborts).toBe(0);
+    await key({ key: "Escape" });
+    await key({ key: "Escape", repeat: true });
+    expect(aborts).toBe(1);
+    await key({ key: "Escape" });
+    expect(aborts).toBe(2);
+  });
+
+  test("已经阻止默认行为的 Esc 不调用停止", async () => {
+    await render({ instance: { ...instance, status: "streaming" } });
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    event.preventDefault();
+    await act(async () =>
+      container.querySelector("textarea")!.dispatchEvent(event),
+    );
+    expect(aborts).toBe(0);
+  });
+
+  test("输入框外的 Esc 不调用停止", async () => {
+    await render({ instance: { ...instance, status: "streaming" } });
+    await act(async () =>
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        }),
+      ),
+    );
+    expect(aborts).toBe(0);
+  });
+
+  test.each([false, true])(
+    "选择器打开时 Esc 只关闭浮层，焦点回到输入框：%j",
+    async (focusEditor) => {
+      await render({ instance: { ...instance, status: "streaming" } });
+      const trigger = button("思考等级: high");
+      await click(trigger);
+      const panel = document.querySelector(
+        '[role="dialog"][aria-label="思考等级"]',
+      )!;
+      if (focusEditor) container.querySelector("textarea")!.focus();
+      const event = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      });
+      await act(async () =>
+        (focusEditor
+          ? container.querySelector("textarea")!
+          : panel
+        ).dispatchEvent(event),
+      );
+      expect(
+        document.querySelector(
+          '[role="dialog"][aria-label="思考等级"]:not([inert])',
+        ),
+      ).toBeNull();
+      expect(document.activeElement).toBe(trigger);
+      expect(aborts).toBe(0);
+    },
+  );
+
+  test("上下文菜单打开且焦点回到输入框时 Esc 只关闭菜单", async () => {
+    function MenuProbe() {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          <Probe options={{ instance: { ...instance, status: "streaming" } }} />
+          {open && (
+            <ContextMenu
+              position={{ x: 0, y: 0 }}
+              onClose={() => setOpen(false)}
+            >
+              <button type="button">菜单操作</button>
+            </ContextMenu>
+          )}
+        </>
+      );
+    }
+    await act(async () =>
+      root.render(
+        <MotionConfig reducedMotion="always">
+          <MenuProbe />
+        </MotionConfig>,
+      ),
+    );
+    expect(document.querySelector('[role="menu"]')).not.toBeNull();
+    container.querySelector("textarea")!.focus();
+    await key({ key: "Escape" });
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(aborts).toBe(0);
+    await key({ key: "Escape" });
+    expect(aborts).toBe(1);
+  });
+
+  test("原生 dialog 打开时，即使 Esc 来自输入框也不调用停止", async () => {
+    await render({ instance: { ...instance, status: "streaming" } });
+    const dialog = document.createElement("dialog");
+    dialog.open = true;
+    document.body.append(dialog);
+    try {
+      container.querySelector("textarea")!.focus();
+      expect((await key({ key: "Escape" })).defaultPrevented).toBe(false);
+      expect(aborts).toBe(0);
+    } finally {
+      dialog.remove();
+    }
+    await key({ key: "Escape" });
+    expect(aborts).toBe(1);
+  });
+
+  test.each(["streaming", "compacting"] as const)(
+    "%s 期间 hint 随文字、图片和停止状态更新",
+    async (status) => {
+      await render({
+        instance: { ...instance, status },
+        draft: { text: "", images: [image] },
+      });
+      const textarea = container.querySelector("textarea")!;
+      expect(textarea.placeholder).toBe("发送消息…");
+      await click(button("移除附加图片 1"));
+      expect(textarea.placeholder).toBe("按 Esc 停止当前执行");
+      await change(textarea, "调整要求");
+      expect(textarea.placeholder).toBe("发送消息…");
+      await change(textarea, " ");
+      expect(textarea.placeholder).toBe("发送消息…");
+      await change(textarea, "");
+      expect(textarea.placeholder).toBe("按 Esc 停止当前执行");
+      await render({ instance });
+      expect(textarea.placeholder).toBe("发送消息…");
+      await render({ instance: undefined });
+      expect(textarea.placeholder).toBe("发送消息…");
+    },
+  );
+
+  test.each([
+    [
+      "zh-CN",
+      "发送",
+      "发送（Enter）",
+      "停止",
+      "停止（Esc）",
+      "按 Esc 停止当前执行",
+    ],
+    [
+      "en",
+      "Send",
+      "Send (Enter)",
+      "Stop",
+      "Stop (Esc)",
+      "Press Esc to stop the current task",
+    ],
+  ])(
+    "%s 提供快捷键文案并保留按钮无障碍名称",
+    async (language, sendLabel, sendTitle, stopLabel, stopTitle, hint) => {
+      await i18n.changeLanguage(language);
+      await render({ draft: { text: "", images: [] } });
+      expect(button(sendLabel).title).toBe(sendTitle);
+      await render({ instance: { ...instance, status: "streaming" } });
+      expect(button(stopLabel).title).toBe(stopTitle);
+      expect(button(stopLabel).getAttribute("aria-keyshortcuts")).toBe(
+        "Escape",
+      );
+      expect(container.querySelector("textarea")!.placeholder).toBe(hint);
+    },
+  );
 });
 
 describe("空草稿方向键导航", () => {
