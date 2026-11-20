@@ -130,11 +130,32 @@ export function Composer({
     onSendMessage(current.text.trim(), images);
   }, [instanceStatus, sendDisabled, onSendMessage]);
 
-  // 键盘事件：空草稿上下键切换实例，Enter 发送，Shift+Enter 换行
+  // 键盘事件：Esc 停止，空草稿上下键切换实例，Enter 发送，Shift+Enter 换行
   // keyCode 229 用于拦截 Safari 上 IME 确认拼音时的回车（此时 isComposing 已为 false）
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+      if (e.key === "Escape") {
+        if (
+          buttonMode !== "stop" ||
+          e.defaultPrevented ||
+          e.repeat ||
+          e.shiftKey ||
+          e.ctrlKey ||
+          e.altKey ||
+          e.metaKey ||
+          editorHeight.dragging
+        )
+          return;
+        // 浮层可通过 Tab 将焦点移回输入框，Esc 仍应优先关闭浮层
+        if (
+          document.querySelector('dialog[open], [role="dialog"], [role="menu"]')
+        )
+          return;
+        e.preventDefault();
+        onAbort();
+        return;
+      }
       if (
         (e.key === "ArrowUp" || e.key === "ArrowDown") &&
         !e.shiftKey &&
@@ -156,7 +177,13 @@ export function Composer({
         handleSend();
       }
     },
-    [handleSend, onNavigateInstance],
+    [
+      buttonMode,
+      editorHeight.dragging,
+      handleSend,
+      onAbort,
+      onNavigateInstance,
+    ],
   );
 
   const { handlePaste, handleFileSelect, handleRemoveImage } =
@@ -225,7 +252,13 @@ export function Composer({
           ref={textareaRef}
           rows={2}
           aria-label={t("eventStream.sendPlaceholder")}
-          placeholder={t("eventStream.sendPlaceholder")}
+          placeholder={t(
+            buttonMode === "stop" &&
+              draft.text.length === 0 &&
+              draft.images.length === 0
+              ? "composer.stopHint"
+              : "eventStream.sendPlaceholder",
+          )}
           value={draft.text}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
@@ -272,8 +305,9 @@ export function Composer({
                 type="button"
                 onClick={onAbort}
                 className="select-none shrink-0 rounded-full bg-[var(--toast-icon-error)] text-white transition-[opacity,transform] hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none motion-reduce:transform-none"
-                title={t("eventStream.stop")}
+                title={t("composer.stopWithShortcut")}
                 aria-label={t("eventStream.stop")}
+                aria-keyshortcuts="Escape"
               >
                 <Square size={12} fill="currentColor" aria-hidden="true" />
               </Button>
@@ -284,7 +318,7 @@ export function Composer({
                 onClick={handleSend}
                 disabled={!canSend}
                 className={`select-none shrink-0 rounded-full transition-[opacity,transform] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] motion-reduce:transition-none motion-reduce:transform-none ${canSend ? "bg-[var(--color-accent)] text-white hover:opacity-90 active:scale-95" : "bg-[var(--fill-secondary)] text-[var(--label-tertiary)] opacity-50 cursor-default"}`}
-                title={t("eventStream.send")}
+                title={t("composer.sendWithShortcut")}
                 aria-label={t("eventStream.send")}
               >
                 <ArrowUp size={16} strokeWidth={2.5} aria-hidden="true" />

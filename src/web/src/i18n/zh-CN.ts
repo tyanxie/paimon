@@ -60,6 +60,9 @@ const zhCN = {
 
   composer: {
     options: "输入选项",
+    stopHint: "按 Esc 停止当前执行",
+    stopWithShortcut: "停止（Esc）",
+    sendWithShortcut: "发送（Enter）",
     more: "更多输入选项",
     backToOptions: "返回输入选项",
     images: "图片",
