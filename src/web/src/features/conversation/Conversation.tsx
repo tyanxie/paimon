@@ -14,9 +14,11 @@ import { ToolCallCard } from "./ToolCallCard";
 import { ToolStatusIndicator } from "./ToolStatus";
 import { UserBubble } from "./UserBubble";
 import {
+  getSessionEntryRenderKey,
   type ConversationExecution,
   type ConversationItem,
   type ConversationReply,
+  type SessionEntry,
   type SessionMessage,
 } from "./types";
 
@@ -28,6 +30,8 @@ export function ConversationList({
   conversationKey,
   status,
   isStreaming,
+  pendingUserEntry,
+  isAwaitingReply = false,
   onReEdit,
   onBeforeToggle,
 }: {
@@ -35,18 +39,31 @@ export function ConversationList({
   conversationKey: string;
   status?: InstanceStatus;
   isStreaming: boolean;
+  pendingUserEntry?: SessionEntry | null;
+  isAwaitingReply?: boolean;
   onReEdit?: () => void;
   onBeforeToggle?: BeforeToggle;
 }) {
   const busy =
-    status !== "compacting" && (status === "streaming" || isStreaming);
-  const last = items.at(-1);
+    isAwaitingReply ||
+    (status !== "compacting" && (status === "streaming" || isStreaming));
+  const displayedItems: ConversationItem[] = pendingUserEntry
+    ? [
+        ...items,
+        {
+          type: "user",
+          key: getSessionEntryRenderKey(pendingUserEntry),
+          entry: pendingUserEntry,
+        },
+      ]
+    : items;
+  const last = displayedItems.at(-1);
   const pending: ConversationReply | null =
     busy && last?.type !== "reply"
       ? {
           type: "reply",
           key: `reply:${last?.key ?? "pending"}`,
-          userEntryKey: items
+          userEntryKey: displayedItems
             .slice()
             .reverse()
             .find((item) => item.type === "user")?.key,
@@ -54,7 +71,7 @@ export function ConversationList({
           parts: [],
         }
       : null;
-  const visibleItems = pending ? [...items, pending] : items;
+  const visibleItems = pending ? [...displayedItems, pending] : displayedItems;
   const latestReplyKey = visibleItems
     .slice()
     .reverse()
@@ -70,7 +87,7 @@ export function ConversationList({
     .reverse()
     .find((item) => item.type === "reply");
   const latestRoundKey = latestReply?.userEntryKey ?? latestReply?.key;
-  if (status === "streaming" || isStreaming) {
+  if (busy) {
     runningRoundRef.current = { conversationKey, roundKey: latestRoundKey };
   } else if (status !== "compacting") {
     runningRoundRef.current = null;

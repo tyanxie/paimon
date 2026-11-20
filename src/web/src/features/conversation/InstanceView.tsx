@@ -49,6 +49,7 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
 
   // ── 全局 stores ──
   const send = useWebSocket((s) => s.send);
+  const connected = useWebSocket((s) => s.connectionState === "connected");
   const instance = useInstances(selectInstance(instanceId));
   const draft = useDrafts((s) => s.drafts.get(instanceId) ?? EMPTY_DRAFT);
   const setDraft = useDrafts((s) => s.setDraft);
@@ -66,6 +67,9 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
   const {
     entries,
     displayItems,
+    pendingUserEntry,
+    isAwaitingReply,
+    prepareSend,
     isStreaming,
     loadState,
     errorMessage,
@@ -82,21 +86,6 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
   );
 
   // ── 操作方法 ──
-  const handleSendMessage = useCallback(
-    (message: string, images?: ImagePayload[]) => {
-      send({
-        type: "prompt",
-        payload: {
-          instanceId,
-          message,
-          images: images?.length ? images : undefined,
-        },
-      });
-      setDraft(instanceId, { text: "", images: [] });
-    },
-    [instanceId, send, setDraft],
-  );
-
   const handleAbort = useCallback(() => {
     send({ type: "abort", payload: { instanceId } });
   }, [instanceId, send]);
@@ -217,7 +206,7 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
   const composerButtonMode = getComposerButtonMode(instance?.status);
   const lastEntryIsCompaction =
     entries.length > 0 && entries[entries.length - 1].type === "compaction";
-  const compactDisabled = isBusy(instance?.status);
+  const compactDisabled = isBusy(instance?.status) || isAwaitingReply;
 
   // shouldScrollToBottom 逻辑：首次加载 / session 切换后滚到底部
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
@@ -266,6 +255,32 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
     bottomSafeGap,
   });
 
+  const [scrollAfterSend, setScrollAfterSend] = useState(false);
+  const handleSendMessage = useCallback(
+    (message: string, images?: ImagePayload[]) => {
+      if (!prepareSend(message, images)) return;
+      send({
+        type: "prompt",
+        payload: {
+          instanceId,
+          message,
+          images: images?.length ? images : undefined,
+        },
+      });
+      setDraft(instanceId, { text: "", images: [] });
+      setScrollAfterSend(true);
+    },
+    [instanceId, send, setDraft, prepareSend],
+  );
+
+  useLayoutEffect(() => {
+    if (!scrollAfterSend) return;
+    // 占位用户消息和等待区域进入 DOM 后再定位，避免先跳到旧内容底部
+    scrollToBottom();
+    startBottomFollow();
+    setScrollAfterSend(false);
+  }, [scrollAfterSend, scrollToBottom, startBottomFollow]);
+
   const scrollStyle: CSSProperties & {
     "--conversation-top-edge": string;
     "--conversation-bottom-edge": string;
@@ -290,7 +305,7 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
           loading={sessionListLoading}
           hasMore={sessionHasMore}
           total={sessionTotal}
-          disabled={isBusy(instance?.status)}
+          disabled={isBusy(instance?.status) || isAwaitingReply}
           onOpen={handleListSessions}
           onNewSession={handleNewSession}
           onSwitchSession={handleSwitchSession}
@@ -369,7 +384,8 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
             ) : displayItems.length === 0 &&
               !hasMore &&
               !isBusy(instance?.status) &&
-              !isStreaming ? (
+              !isStreaming &&
+              !isAwaitingReply ? (
               <StatusMessage className="pt-8">
                 {t("conversation.noMessages")}
               </StatusMessage>
@@ -379,7 +395,9 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
                 conversationKey={`${instanceId}:${instance?.sessionId ?? ""}`}
                 status={instance?.status}
                 isStreaming={isStreaming}
-                onReEdit={onReEdit}
+                pendingUserEntry={pendingUserEntry}
+                isAwaitingReply={isAwaitingReply}
+                onReEdit={isAwaitingReply ? undefined : onReEdit}
                 onBeforeToggle={prepareForContentResize}
               />
             )}
@@ -425,8 +443,13 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
               buttonMode={composerButtonMode}
               showCompactButton={!lastEntryIsCompaction}
               compactDisabled={compactDisabled}
+              sendDisabled={
+                !connected ||
+                isAwaitingReply ||
+                isRefreshing ||
+                loadState === "error"
+              }
               onImageLightbox={setLightboxSrc}
-              startBottomFollow={startBottomFollow}
             />
             <div
               ref={bottomSafeGapRef}

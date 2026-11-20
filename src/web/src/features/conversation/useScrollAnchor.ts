@@ -664,6 +664,10 @@ export function useScrollAnchor({
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
       stopAnchorPin();
+      // 主动回到底部后不再恢复旧阅读锚点，历史请求和数据仍由 useConversation 管理
+      loadingMoreRef.current = false;
+      loadMoreAnchorRef.current = null;
+      firstEntryKeyBeforeLoadRef.current = undefined;
       runProgrammaticScroll(() => {
         scrollRef.current!.scrollTop = scrollRef.current!.scrollHeight;
       });

@@ -1,4 +1,8 @@
-import type { HubToBrowserMessage, InstanceInfo } from "@protocol/types";
+import type {
+  BrowserToHubMessage,
+  HubToBrowserMessage,
+  InstanceInfo,
+} from "@protocol/types";
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { MotionConfig } from "motion/react";
 import { act } from "react";
@@ -32,6 +36,7 @@ let container: HTMLDivElement;
 let trigger: HTMLButtonElement;
 let navigate: ReturnType<typeof useNavigate>;
 let selected: string[];
+let sentMessages: BrowserToHubMessage[];
 let listeners: Set<(message: HubToBrowserMessage) => void>;
 let desktop: boolean;
 let coarsePointer: boolean;
@@ -119,6 +124,7 @@ beforeEach(async () => {
   language = i18n.language;
   await i18n.changeLanguage("zh-CN");
   selected = [];
+  sentMessages = [];
   listeners = new Set();
   desktop = true;
   coarsePointer = false;
@@ -149,7 +155,9 @@ beforeEach(async () => {
   useSidebar.setState({ collapsedEdges: {} });
   useWebSocket.setState({
     connectionState: "connected",
-    send: () => {},
+    send: (message) => {
+      sentMessages.push(message);
+    },
     subscribe: (listener) => {
       listeners.add(listener);
       return () => {
@@ -317,5 +325,145 @@ describe("实例页面导航与自动聚焦", () => {
     expect(document.activeElement).toBe(trigger);
     await updateInstance("one", { sessionId: "new-session" });
     expect(document.activeElement).toBe(trigger);
+  });
+});
+
+describe("实例页面发送与滚动", () => {
+  async function prepareReadingPosition() {
+    await render();
+    await emit({
+      type: "history",
+      payload: {
+        instanceId: "one",
+        messages: [
+          {
+            type: "message",
+            id: "old",
+            message: { role: "user", content: "previous" },
+          },
+        ],
+        hasMore: false,
+      },
+    });
+    await act(
+      async () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+    const scroll = container.querySelector<HTMLDivElement>(
+      ".conversation-scroll",
+    )!;
+    const writes: { questionVisible: boolean; waitingVisible: boolean }[] = [];
+    let scrollTop = 300;
+    Object.defineProperties(scroll, {
+      scrollHeight: { configurable: true, value: 2000 },
+      clientHeight: { configurable: true, value: 500 },
+      scrollTop: {
+        configurable: true,
+        get: () => scrollTop,
+        set: (value: number) => {
+          scrollTop = Math.max(
+            0,
+            Math.min(value, scroll.scrollHeight - scroll.clientHeight),
+          );
+          writes.push({
+            questionVisible:
+              container.textContent?.includes("new question") ?? false,
+            waitingVisible:
+              container.querySelector(".conversation-reply-pending") !== null,
+          });
+        },
+      },
+    });
+    await act(async () =>
+      scroll.dispatchEvent(new Event("scroll", { bubbles: true })),
+    );
+    return { scroll, writes };
+  }
+
+  test("主动发送在用户占位与等待进入 DOM 后定位，并阻止待确认期间重复发送", async () => {
+    const { scroll, writes } = await prepareReadingPosition();
+    await act(async () =>
+      useDrafts
+        .getState()
+        .setDraft("one", { text: "new question", images: [] }),
+    );
+    await key("Enter");
+    expect(sentMessages.filter((message) => message.type === "prompt")).toEqual(
+      [
+        {
+          type: "prompt",
+          payload: {
+            instanceId: "one",
+            message: "new question",
+            images: undefined,
+          },
+        },
+      ],
+    );
+    expect(writes.length).toBeGreaterThan(0);
+    expect(
+      writes.every((write) => write.questionVisible && write.waitingVisible),
+    ).toBe(true);
+    expect(scroll.scrollTop).toBe(1500);
+    expect(editor().value).toBe("");
+    await act(async () =>
+      useDrafts.getState().setDraft("one", { text: "duplicate", images: [] }),
+    );
+    await key("Enter");
+    expect(
+      sentMessages.filter((message) => message.type === "prompt"),
+    ).toHaveLength(1);
+    expect(editor().value).toBe("duplicate");
+  });
+
+  test("只收到用户消息和流式输出时保留历史阅读位置", async () => {
+    const { scroll, writes } = await prepareReadingPosition();
+    await emit({
+      type: "forwarded_event",
+      payload: {
+        instanceId: "one",
+        event: "message_end",
+        data: { message: { role: "user", content: "new question" } },
+        timestamp: 1,
+      },
+    });
+    await updateInstance("one", { status: "streaming" });
+    await emit({
+      type: "forwarded_event",
+      payload: {
+        instanceId: "one",
+        event: "message_start",
+        data: {
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "answer" }],
+          },
+        },
+        timestamp: 2,
+      },
+    });
+    expect(container.textContent).toContain("answer");
+    expect(scroll.scrollTop).toBe(300);
+    expect(writes).toHaveLength(0);
+  });
+
+  test("连接不可用时不发送、不清空草稿，也不触发发送定位", async () => {
+    const { scroll, writes } = await prepareReadingPosition();
+    await act(async () => {
+      useDrafts
+        .getState()
+        .setDraft("one", { text: "new question", images: [] });
+      useWebSocket.setState({ connectionState: "disconnected" });
+    });
+    await key("Enter");
+    expect(
+      sentMessages.filter((message) => message.type === "prompt"),
+    ).toHaveLength(0);
+    expect(editor().value).toBe("new question");
+    expect(scroll.scrollTop).toBe(300);
+    expect(writes).toHaveLength(0);
+    expect(container.querySelector(".conversation-reply-pending")).toBeNull();
   });
 });

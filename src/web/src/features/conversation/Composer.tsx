@@ -47,8 +47,8 @@ interface ComposerProps {
   buttonMode: "send" | "stop";
   showCompactButton: boolean;
   compactDisabled: boolean;
+  sendDisabled?: boolean;
   onImageLightbox: (src: string) => void;
-  startBottomFollow: () => void;
 }
 
 export function Composer({
@@ -65,8 +65,8 @@ export function Composer({
   buttonMode,
   showCompactButton,
   compactDisabled,
+  sendDisabled = false,
   onImageLightbox,
-  startBottomFollow,
 }: ComposerProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -108,12 +108,15 @@ export function Composer({
 
   // 发送条件
   const canSend =
-    !isBusy(instanceStatus) && (!!draft.text.trim() || draft.images.length > 0);
+    !sendDisabled &&
+    !isBusy(instanceStatus) &&
+    (!!draft.text.trim() || draft.images.length > 0);
 
   // 发送消息
   const handleSend = useCallback(() => {
     const current = draftRef.current;
     if (
+      sendDisabled ||
       isBusy(instanceStatus) ||
       (!current.text.trim() && current.images.length === 0)
     )
@@ -125,8 +128,7 @@ export function Composer({
         }))
       : undefined;
     onSendMessage(current.text.trim(), images);
-    startBottomFollow();
-  }, [instanceStatus, onSendMessage, startBottomFollow]);
+  }, [instanceStatus, sendDisabled, onSendMessage]);
 
   // 键盘事件：空草稿上下键切换实例，Enter 发送，Shift+Enter 换行
   // keyCode 229 用于拦截 Safari 上 IME 确认拼音时的回车（此时 isComposing 已为 false）
