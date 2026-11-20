@@ -50,6 +50,8 @@ interface Options {
   conversationKey?: string;
   onReEdit?: () => void;
   onBeforeToggle?: (element: HTMLElement) => void;
+  pendingUserEntry?: SessionEntry | null;
+  isAwaitingReply?: boolean;
 }
 function Probe({
   entries,
@@ -72,6 +74,8 @@ function Probe({
       conversationKey={options.conversationKey ?? "instance:session"}
       onReEdit={options.onReEdit}
       onBeforeToggle={options.onBeforeToggle}
+      pendingUserEntry={options.pendingUserEntry}
+      isAwaitingReply={options.isAwaitingReply}
     />
   );
 }
@@ -467,6 +471,41 @@ describe("回复与执行汇总", () => {
 });
 
 describe("状态、系统事件与图片", () => {
+  test("idle 时同时显示本地气泡与等待，真实消息和正文接替时保留 DOM 身份", async () => {
+    const user: SessionEntry = {
+      type: "message",
+      __renderKey: "local-user",
+      message: { role: "user", content: [text("question")] },
+    };
+    await render([], { pendingUserEntry: user, isAwaitingReply: true });
+    const bubble = container.querySelector('[data-entry-key="local-user"]');
+    const article = container.querySelector("article");
+    expect(bubble?.textContent).toContain("question");
+    expect(article?.textContent).toContain("等待回复");
+    const confirmedUser: SessionEntry = {
+      ...user,
+      message: { role: "user", content: "question" },
+    };
+    await render([confirmedUser], { isAwaitingReply: true });
+    expect(
+      container.querySelectorAll('[data-entry-key="local-user"]'),
+    ).toHaveLength(1);
+    expect(container.querySelector('[data-entry-key="local-user"]')).toBe(
+      bubble,
+    );
+    expect(container.querySelector("article")).toBe(article);
+    expect(article?.textContent).toContain("等待回复");
+    await render(
+      [confirmedUser, message("a1", "assistant", [text("answer")])],
+      {
+        status: "streaming",
+      },
+    );
+    expect(container.querySelector("article")).toBe(article);
+    expect(article?.textContent).toContain("answer");
+    expect(article?.textContent).not.toContain("等待回复");
+  });
+
   test("等待内容与正文到达保持回复身份，压缩独立于回复", async () => {
     const user = message("u1", "user", "question");
     await render([user], { status: "streaming" });

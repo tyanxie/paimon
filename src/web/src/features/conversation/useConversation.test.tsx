@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type {
   HubToBrowserMessage,
   InstanceId,
+  InstanceInfo,
 } from "../../../../protocol/types";
 import "../../i18n";
 import { useWebSocket } from "../../stores/useWebSocket";
@@ -17,8 +18,8 @@ let container: HTMLDivElement;
 let sentMessages: unknown[];
 const originalSocketState = useWebSocket.getState();
 
-function Probe() {
-  state = useConversation(instanceId, undefined);
+function Probe({ instance }: { instance?: InstanceInfo } = {}) {
+  state = useConversation(instanceId, instance);
   return null;
 }
 
@@ -68,6 +69,138 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   useWebSocket.setState(originalSocketState);
+});
+
+describe("本地发送记录", () => {
+  test("文本与图片只进入占位，连续发送受限且不影响分页", async () => {
+    const user = {
+      type: "message",
+      id: "existing",
+      message: { role: "user", content: "previous" },
+    };
+    await history([user], true);
+    const images = [{ data: "AA==", mimeType: "image/png" }];
+    await act(async () => {
+      expect(state.prepareSend("question", images)).toBe(true);
+      expect(state.prepareSend("duplicate")).toBe(false);
+    });
+    expect(state.pendingUserEntry?.message?.content).toEqual([
+      { type: "text", text: "question" },
+      { type: "image", ...images[0] },
+    ]);
+    expect(state.isAwaitingReply).toBe(true);
+    expect(state.entries).toEqual([user]);
+    await act(async () => state.loadMore());
+    expect(sentMessages).toContainEqual({
+      type: "get_history",
+      payload: { instanceId, offset: 1 },
+    });
+  });
+
+  test("只由当前实例的真实用户消息接替，占位 key 与等待状态保持连续", async () => {
+    await act(async () => {
+      state.prepareSend("question");
+    });
+    const placeholder = state.pendingUserEntry;
+    await event(
+      "message_end",
+      {
+        message: { role: "user", content: "other" },
+      },
+      "other-instance" as InstanceId,
+    );
+    await event("message_end", {
+      message: { role: "toolResult", content: [] },
+    });
+    expect(state.pendingUserEntry).toBe(placeholder);
+    const message = { role: "user", content: "question", timestamp: 123 };
+    await event("message_end", { message });
+    expect(state.pendingUserEntry).toBeNull();
+    expect(
+      state.entries.filter((entry) => entry.message?.role === "user"),
+    ).toHaveLength(1);
+    expect(state.entries.at(-1)?.message).toBe(message);
+    expect(state.entries.at(-1)?.__renderKey).toBe(placeholder?.__renderKey);
+    expect(state.isAwaitingReply).toBe(true);
+    await act(async () => {
+      expect(state.prepareSend("duplicate")).toBe(false);
+    });
+    await event("message_start", {
+      message: { role: "assistant", content: [] },
+    });
+    expect(state.isAwaitingReply).toBe(false);
+  });
+
+  test("断线清除本地记录，离线拒绝发送，重连后可重新准备", async () => {
+    await act(async () => {
+      state.prepareSend("question");
+    });
+    await act(async () =>
+      useWebSocket.setState({ connectionState: "disconnected" }),
+    );
+    expect(state.pendingUserEntry).toBeNull();
+    expect(state.isAwaitingReply).toBe(false);
+    await act(async () => {
+      expect(state.prepareSend("offline")).toBe(false);
+    });
+    await act(async () =>
+      useWebSocket.setState({ connectionState: "connected" }),
+    );
+    await history();
+    await act(async () => {
+      expect(state.prepareSend("next")).toBe(true);
+    });
+  });
+
+  test("session 切换清除本地用户占位与等待状态", async () => {
+    const instance: InstanceInfo = {
+      id: instanceId,
+      edgeId: "edge",
+      hostname: "host",
+      cwd: "/project",
+      homedir: "/home",
+      pid: 1,
+      status: "idle",
+      model: { provider: "provider", id: "model" },
+      connectedAt: 0,
+      lastHeartbeat: 0,
+      sessionId: "session-one",
+    };
+    await act(async () => root.render(<Probe instance={instance} />));
+    await act(async () => {
+      state.prepareSend("question");
+    });
+    await act(async () =>
+      root.render(
+        <Probe instance={{ ...instance, sessionId: "session-two" }} />,
+      ),
+    );
+    expect(state.pendingUserEntry).toBeNull();
+    expect(state.isAwaitingReply).toBe(false);
+    expect(state.loadState).toBe("refreshing");
+  });
+
+  test("发送错误清除本地状态，其他操作错误不清除", async () => {
+    await act(async () => {
+      state.prepareSend("question");
+    });
+    const placeholder = state.pendingUserEntry;
+    await act(async () =>
+      handler({
+        type: "instance_error",
+        payload: { instanceId, action: "set_model", message: "unavailable" },
+      }),
+    );
+    expect(state.pendingUserEntry).toBe(placeholder);
+    await act(async () =>
+      handler({
+        type: "instance_error",
+        payload: { instanceId, action: "prompt", message: "rejected" },
+      }),
+    );
+    expect(state.pendingUserEntry).toBeNull();
+    expect(state.isAwaitingReply).toBe(false);
+  });
 });
 
 describe("useConversation tool lifecycle", () => {

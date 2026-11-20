@@ -64,7 +64,6 @@ function Probe() {
       showCompactButton
       compactDisabled={false}
       onImageLightbox={() => {}}
-      startBottomFollow={() => {}}
     />
   );
 }

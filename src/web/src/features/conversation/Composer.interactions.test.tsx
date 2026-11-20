@@ -50,7 +50,6 @@ let levels: ThinkingLevel[];
 let models: [string, string][];
 let compacted: (string | undefined)[];
 let aborts: number;
-let follows: number;
 let previews: string[];
 let handle: ReturnType<typeof createRef<ComposerHandle>>;
 
@@ -66,7 +65,6 @@ beforeEach(async () => {
   compacted = [];
   previews = [];
   aborts = 0;
-  follows = 0;
 });
 
 afterEach(async () => {
@@ -95,9 +93,6 @@ function Probe({ options }: { options: Partial<Props> }) {
       onSetThinkingLevel={(level) => levels.push(level)}
       onCompact={(instructions) => compacted.push(instructions)}
       onImageLightbox={(src) => previews.push(src)}
-      startBottomFollow={() => {
-        follows += 1;
-      }}
       {...options}
       ref={handle}
       draft={value}
@@ -284,13 +279,25 @@ describe("输入工具栏交互", () => {
     ).toBeNull();
   });
 
-  test("输入更新草稿，发送读取最新内容并开始底部跟随", async () => {
+  test("输入更新草稿，发送读取最新内容", async () => {
     await render();
     await change(container.querySelector("textarea")!, " next message ");
     expect(draft.text).toBe(" next message ");
     await click(button("发送"));
     expect(sent).toEqual([{ text: "next message", images: undefined }]);
-    expect(follows).toBe(1);
+  });
+
+  test("外部发送限制同时阻止按钮和 Enter，解除后恢复发送", async () => {
+    await render({ sendDisabled: true });
+    expect(button("发送").disabled).toBe(true);
+    await click(button("发送"));
+    await key({ key: "Enter" });
+    expect(sent).toHaveLength(0);
+    expect(draft.text).toBe(" hello ");
+    await render({ sendDisabled: false });
+    expect(button("发送").disabled).toBe(false);
+    await key({ key: "Enter" });
+    expect(sent).toEqual([{ text: "hello", images: undefined }]);
   });
 
   test("Enter 发送，Shift+Enter 保留默认换行行为", async () => {
@@ -734,7 +741,6 @@ describe("空草稿方向键导航", () => {
     }
     expect(offsets).toEqual([-1, 1]);
     expect(sent).toHaveLength(0);
-    expect(follows).toBe(0);
   });
 
   test("没有相邻目标时，不阻止默认行为", async () => {

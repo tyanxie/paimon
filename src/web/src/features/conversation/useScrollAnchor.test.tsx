@@ -13,8 +13,24 @@ let button: HTMLButtonElement;
 let api: UseScrollAnchorReturn;
 let buttonTop: number;
 let loads: number;
+let options: Parameters<typeof useScrollAnchor>[0];
+let elementsFromPointDescriptor: PropertyDescriptor | undefined;
+
+function Probe() {
+  api = useScrollAnchor(options);
+  return null;
+}
 
 beforeEach(async () => {
+  elementsFromPointDescriptor = Object.getOwnPropertyDescriptor(
+    document,
+    "elementsFromPoint",
+  );
+  // happy-dom 不提供布局命中查询，此处使用条目级锚点
+  Object.defineProperty(document, "elementsFromPoint", {
+    configurable: true,
+    value: () => [],
+  });
   mount = document.createElement("div");
   scroll = document.createElement("div");
   content = document.createElement("div");
@@ -27,7 +43,7 @@ beforeEach(async () => {
   const entries: SessionEntry[] = [
     { type: "message", id: "a1", message: { role: "assistant", content: [] } },
   ];
-  const options = {
+  options = {
     scrollRef: { current: scroll },
     contentRef: { current: content },
     bottomChromeRef: { current: chrome },
@@ -44,10 +60,6 @@ beforeEach(async () => {
     bottomSafeGap: 0,
   };
   loads = 0;
-  function Probe() {
-    api = useScrollAnchor(options);
-    return null;
-  }
   root = createRoot(mount);
   await act(async () => root.render(<Probe />));
   Object.defineProperty(scroll, "scrollHeight", {
@@ -57,6 +69,18 @@ beforeEach(async () => {
   Object.defineProperty(scroll, "clientHeight", {
     value: 500,
     configurable: true,
+  });
+  let scrollTop = 0;
+  // 模拟浏览器对 scrollTop 的范围限制
+  Object.defineProperty(scroll, "scrollTop", {
+    configurable: true,
+    get: () => scrollTop,
+    set: (value: number) => {
+      scrollTop = Math.max(
+        0,
+        Math.min(value, scroll.scrollHeight - scroll.clientHeight),
+      );
+    },
   });
   scroll.getBoundingClientRect = () => new DOMRect(0, 0, 300, 500);
   buttonTop = 500;
@@ -73,6 +97,15 @@ afterEach(async () => {
   mount.remove();
   scroll.remove();
   chrome.remove();
+  if (elementsFromPointDescriptor) {
+    Object.defineProperty(
+      document,
+      "elementsFromPoint",
+      elementsFromPointDescriptor,
+    );
+  } else {
+    Reflect.deleteProperty(document, "elementsFromPoint");
+  }
 });
 
 async function frames() {
@@ -85,6 +118,41 @@ async function frames() {
       }),
   );
 }
+
+describe("历史加载与主动定位", () => {
+  test.each([{ jumpToBottom: false }, { jumpToBottom: true }])(
+    "历史响应遵循最新阅读选择：%j",
+    async ({ jumpToBottom }) => {
+      await frames();
+      buttonTop = 100;
+      scroll.scrollTop = 0;
+      await act(async () => api.handleScroll());
+      expect(loads).toBe(1);
+      if (jumpToBottom) {
+        await act(async () => api.scrollToBottom());
+        expect(api.showScrollBtn).toBe(false);
+      }
+      buttonTop += 500;
+      Object.defineProperty(scroll, "scrollHeight", {
+        value: 2500,
+        configurable: true,
+      });
+      options.entries = [
+        {
+          type: "message",
+          id: "older",
+          message: { role: "user", content: "old" },
+        },
+        ...options.entries,
+      ];
+      options.entriesRef.current = options.entries;
+      await act(async () => root.render(<Probe />));
+      await frames();
+      expect(scroll.scrollTop).toBe(jumpToBottom ? 2000 : 500);
+      expect(loads).toBe(1);
+    },
+  );
+});
 
 describe("折叠阅读位置", () => {
   test("内容高度变化时保持点击入口在视口中的位置", async () => {

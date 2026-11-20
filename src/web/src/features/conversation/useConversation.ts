@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   HubToBrowserMessage,
+  ImagePayload,
   InstanceId,
   InstanceInfo,
 } from "../../../../protocol/types";
@@ -30,6 +31,9 @@ import { useConversationDisplay } from "./useConversationDisplay";
 export interface ConversationState {
   entries: SessionEntry[];
   displayItems: ConversationItem[];
+  pendingUserEntry: SessionEntry | null;
+  isAwaitingReply: boolean;
+  prepareSend: (message: string, images?: ImagePayload[]) => boolean;
   toolExecutions: ReadonlyMap<string, ToolExecutionState>;
   streamingEntry: SessionEntry | null;
   isStreaming: boolean;
@@ -65,6 +69,12 @@ interface CompactionEvent {
   state: SystemEntryState;
 }
 
+interface LocalSendState {
+  instanceId: InstanceId;
+  sessionId: string | undefined;
+  userEntry: SessionEntry | null;
+}
+
 const noop = () => {};
 
 export function useConversation(
@@ -78,6 +88,44 @@ export function useConversation(
   const connected = useWebSocket((s) => s.connectionState === "connected");
 
   const [entries, setEntries] = useState<SessionEntry[]>([]);
+  const [localSend, setLocalSend] = useState<LocalSendState | null>(null);
+  const localSendRef = useRef<LocalSendState | null>(null);
+  const updateLocalSend = useCallback((value: LocalSendState | null) => {
+    localSendRef.current = value;
+    setLocalSend(value);
+  }, []);
+  const prepareSend = useCallback(
+    (message: string, images?: ImagePayload[]) => {
+      if (
+        useWebSocket.getState().connectionState !== "connected" ||
+        localSendRef.current
+      )
+        return false;
+      // 本地内容只用于展示，不计入原始 entries 和历史分页
+      updateLocalSend({
+        instanceId,
+        sessionId: instance?.sessionId,
+        userEntry: {
+          type: "message",
+          __renderKey: nextRenderKey(instanceId, "local"),
+          message: {
+            role: "user",
+            content: [
+              { type: "text", text: message },
+              ...(images ?? []).map((image) => ({ type: "image", ...image })),
+            ],
+          },
+        },
+      });
+      return true;
+    },
+    [instanceId, instance?.sessionId, updateLocalSend],
+  );
+  const currentLocalSend =
+    localSend?.instanceId === instanceId &&
+    localSend.sessionId === instance?.sessionId
+      ? localSend
+      : null;
   const [toolExecutions, setToolExecutions] = useState<
     Map<string, ToolExecutionState>
   >(new Map());
@@ -110,6 +158,7 @@ export function useConversation(
 
   // ── 重置对话状态 ──
   const resetConversation = useCallback(() => {
+    updateLocalSend(null);
     setEntries([]);
     lastEntryKeyRef.current = null;
     setCompactions([]);
@@ -126,7 +175,7 @@ export function useConversation(
     setErrorMessage(null);
     setHasMore(false);
     onReset();
-  }, [onReset]);
+  }, [onReset, updateLocalSend]);
 
   // ── WS 订阅：接收对话相关消息 ──
   useEffect(() => {
@@ -156,6 +205,7 @@ export function useConversation(
           break;
         }
         case "error": {
+          updateLocalSend(null);
           console.error("[Paimon]", msg.payload.message);
           setLoadState("error");
           setErrorMessage(msg.payload.message);
@@ -163,6 +213,9 @@ export function useConversation(
         }
         case "instance_error": {
           if (msg.payload.instanceId !== instanceId) return;
+          if (!msg.payload.action || msg.payload.action === "prompt") {
+            updateLocalSend(null);
+          }
           const actionKey = msg.payload.action
             ? `error.action.${msg.payload.action}`
             : null;
@@ -177,11 +230,14 @@ export function useConversation(
         }
       }
     });
-  }, [instanceId, subscribe]);
+  }, [instanceId, subscribe, updateLocalSend]);
 
   // ── 实例订阅生命周期：进入页面订阅，离开页面取消 ──
   useEffect(() => {
-    if (!connected) return;
+    if (!connected) {
+      updateLocalSend(null);
+      return;
+    }
 
     resetConversation();
     send({ type: "subscribe", payload: { instanceId } });
@@ -190,7 +246,7 @@ export function useConversation(
     return () => {
       send({ type: "unsubscribe", payload: { instanceId } });
     };
-  }, [instanceId, connected, send, resetConversation]);
+  }, [instanceId, connected, send, resetConversation, updateLocalSend]);
 
   // ── 监听 sessionId 变化 → 重新拉取 history ──
   const prevSessionIdRef = useRef(instance?.sessionId);
@@ -226,6 +282,9 @@ export function useConversation(
   const prevStatusRef = useRef(instance?.status);
   useEffect(() => {
     const currentStatus = instance?.status;
+    if (prevStatusRef.current === "streaming" && currentStatus === "idle") {
+      updateLocalSend(null);
+    }
     if (
       currentStatus === "compacting" &&
       (!compactionKeyRef.current || compactionEndedRef.current)
@@ -244,7 +303,7 @@ export function useConversation(
       }
     }
     prevStatusRef.current = currentStatus;
-  }, [instance?.status, instanceId, send]);
+  }, [instance?.status, instanceId, send, updateLocalSend]);
 
   function beginCompaction(timestamp = Date.now()) {
     const key = nextRenderKey(instanceId, "compaction");
@@ -383,6 +442,7 @@ export function useConversation(
       case "message_start": {
         const message = d.message;
         if (!isSessionMessage(message) || message.role !== "assistant") break;
+        updateLocalSend(null);
         rememberLiveToolCalls(message);
         const entry = ensureRenderKey(
           id,
@@ -397,6 +457,7 @@ export function useConversation(
       case "message_update": {
         const message = d.message;
         if (!isSessionMessage(message)) break;
+        if (message.role === "assistant") updateLocalSend(null);
         rememberLiveToolCalls(message);
         const stableKey =
           streamingKeyRef.current ?? nextRenderKey(id, "streaming");
@@ -421,9 +482,21 @@ export function useConversation(
         const message = d.message;
         if (isSessionMessage(message)) {
           rememberLiveToolCalls(message);
-          // 复用 streamingEntry 的 key，避免 React 重建组件导致弹窗状态丢失
-          const stableKey =
-            streamingKeyRef.current ?? nextRenderKey(id, "live");
+          const pendingSend = localSendRef.current;
+          const pendingUserEntry =
+            message.role === "user" && pendingSend?.instanceId === id
+              ? pendingSend.userEntry
+              : null;
+          // 真实用户消息接替占位时保留 key，回复卡片也沿用这一轮的身份
+          const stableKey = pendingUserEntry
+            ? getSessionEntryRenderKey(pendingUserEntry)
+            : (streamingKeyRef.current ?? nextRenderKey(id, "live"));
+          if (pendingUserEntry && pendingSend) {
+            // 用户消息已确认后仍显示等待，直到真实 assistant 消息开始
+            updateLocalSend({ ...pendingSend, userEntry: null });
+          } else if (message.role === "assistant") {
+            updateLocalSend(null);
+          }
           const entry: SessionEntry = {
             type: "message",
             timestamp: streamingTimestampRef.current ?? eventTime,
@@ -620,6 +693,9 @@ export function useConversation(
   return {
     entries: visibleEntries,
     displayItems,
+    pendingUserEntry: currentLocalSend?.userEntry ?? null,
+    isAwaitingReply: currentLocalSend !== null,
+    prepareSend,
     toolExecutions,
     streamingEntry,
     isStreaming: streamingEntry !== null,
