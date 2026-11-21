@@ -34,6 +34,7 @@ import { InstanceDetailModal } from "./InstanceDetailModal";
 import { SessionPopover } from "./SessionPopover";
 import { useConversation } from "./useConversation";
 import { useConversationChrome } from "./useConversationChrome";
+import { useConversationCopy } from "./useConversationCopy";
 import { useReEdit } from "./useReEdit";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { useSessionList } from "./useSessionList";
@@ -195,6 +196,7 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
   // ── 滚动管理 ──
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  useConversationCopy(contentRef);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [detailsInstanceId, setDetailsInstanceId] = useState<string | null>(
     null,
