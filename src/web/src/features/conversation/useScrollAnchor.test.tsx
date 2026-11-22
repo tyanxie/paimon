@@ -15,6 +15,30 @@ let buttonTop: number;
 let loads: number;
 let options: Parameters<typeof useScrollAnchor>[0];
 let elementsFromPointDescriptor: PropertyDescriptor | undefined;
+let observers: TestResizeObserver[];
+const originalResizeObserver = globalThis.ResizeObserver;
+
+class TestResizeObserver extends ResizeObserver {
+  targets = new Set<Element>();
+  disconnected = false;
+
+  constructor(private callback: ResizeObserverCallback) {
+    super(callback);
+    observers.push(this);
+  }
+
+  observe(target: Element) {
+    this.targets.add(target);
+  }
+
+  disconnect() {
+    this.disconnected = true;
+  }
+
+  notify() {
+    if (!this.disconnected) this.callback([], this);
+  }
+}
 
 function Probe() {
   api = useScrollAnchor(options);
@@ -22,6 +46,8 @@ function Probe() {
 }
 
 beforeEach(async () => {
+  observers = [];
+  globalThis.ResizeObserver = TestResizeObserver;
   elementsFromPointDescriptor = Object.getOwnPropertyDescriptor(
     document,
     "elementsFromPoint",
@@ -94,6 +120,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await act(async () => root.unmount());
+  globalThis.ResizeObserver = originalResizeObserver;
   mount.remove();
   scroll.remove();
   chrome.remove();
@@ -119,7 +146,31 @@ async function frames() {
   );
 }
 
+async function resizeContent(height: number) {
+  Object.defineProperty(scroll, "scrollHeight", {
+    value: height,
+    configurable: true,
+  });
+  // 内容缩短时浏览器会限制现有滚动位置，不依赖额外的 scroll 事件
+  scroll.scrollTop = scroll.scrollTop;
+  await act(async () => {
+    observers
+      .filter((observer) => observer.targets.has(content))
+      .forEach((observer) => observer.notify());
+  });
+  await frames();
+}
+
 describe("历史加载与主动定位", () => {
+  test("等待历史响应时尺寸通知不改变按钮或触发重复加载", async () => {
+    scroll.scrollTop = 0;
+    await act(async () => api.handleScroll());
+    expect(loads).toBe(1);
+    await resizeContent(500);
+    expect(api.showScrollBtn).toBe(true);
+    expect(loads).toBe(1);
+  });
+
   test.each([{ jumpToBottom: false }, { jumpToBottom: true }])(
     "历史响应遵循最新阅读选择：%j",
     async ({ jumpToBottom }) => {
@@ -162,6 +213,58 @@ describe("折叠阅读位置", () => {
     await frames();
     expect(scroll.scrollTop).toBe(260);
     expect(button.getBoundingClientRect().top).toBe(200);
+    expect(api.showScrollBtn).toBe(true);
+  });
+
+  test("收起后被滚动范围限制在底部时隐藏按钮，后续展开仍保留阅读锚点", async () => {
+    await act(async () => api.prepareForContentResize(button));
+    // 等待锚点预热结束，覆盖后续动画帧的 ResizeObserver 通知
+    await frames();
+    await frames();
+    await resizeContent(700);
+    expect(scroll.scrollTop).toBe(200);
+    expect(api.showScrollBtn).toBe(false);
+    expect(loads).toBe(0);
+
+    await act(async () => api.prepareForContentResize(button));
+    await resizeContent(2000);
+    expect(scroll.scrollTop).toBe(200);
+    expect(button.getBoundingClientRect().top).toBe(300);
+    expect(api.showScrollBtn).toBe(true);
+    expect(loads).toBe(0);
+  });
+
+  test("收起后内容不足一屏时隐藏按钮且不加载历史", async () => {
+    await act(async () => api.prepareForContentResize(button));
+    await resizeContent(400);
+    expect(scroll.scrollTop).toBe(0);
+    expect(api.showScrollBtn).toBe(false);
+    expect(loads).toBe(0);
+  });
+
+  test("没有阅读锚点的内容缩短也同步按钮", async () => {
+    await resizeContent(800);
+    expect(scroll.scrollTop).toBe(300);
+    expect(api.showScrollBtn).toBe(false);
+    expect(loads).toBe(0);
+  });
+
+  test("锚点恢复后仍未到底部时不误隐藏按钮", async () => {
+    await act(async () => api.prepareForContentResize(button));
+    buttonTop = 400;
+    await resizeContent(800);
+    expect(scroll.scrollTop).toBe(200);
+    expect(api.showScrollBtn).toBe(true);
+    expect(loads).toBe(0);
+  });
+
+  test("原本在底部时内容增长仍自动跟随", async () => {
+    await act(async () => api.scrollToBottom());
+    await frames();
+    await resizeContent(2400);
+    expect(scroll.scrollTop).toBe(1900);
+    expect(api.showScrollBtn).toBe(false);
+    expect(loads).toBe(0);
   });
 
   test("用户继续滚动时结束固定阅读位置", async () => {
