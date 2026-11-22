@@ -17,6 +17,7 @@ const ENTRY_KEY_ATTR = "data-entry-key";
 const ANCHOR_RESTORE_EPSILON = 0.5;
 const ANCHOR_WARMUP_FRAMES = 3;
 const BOTTOM_FOLLOW_MS = 2000;
+const BOTTOM_THRESHOLD = 60;
 
 // ─── 类型 ───────────────────────────────────────────────────────
 
@@ -269,6 +270,15 @@ export function useScrollAnchor({
     });
   }, []);
 
+  const syncScrollButton = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || loadingMoreRef.current) return;
+    // 只同步按钮，不改变底部跟随意图或阅读锚点
+    const distanceToBottom =
+      el.scrollHeight - getSafeScrollTop(el.scrollTop) - el.clientHeight;
+    setShowScrollBtn(distanceToBottom >= BOTTOM_THRESHOLD);
+  }, [scrollRef]);
+
   const stopAnchorPin = useCallback(() => {
     const session = anchorPinRef.current;
     if (!session) return;
@@ -364,10 +374,12 @@ export function useScrollAnchor({
 
     const observer = new ResizeObserver(() => {
       pinToBottom();
+      // 有阅读锚点时由恢复流程测量最终位置，避免使用恢复前的布局
+      if (!anchorPinRef.current) syncScrollButton();
     });
     observer.observe(contentEl);
     return () => observer.disconnect();
-  }, [instanceId, contentRef, pinToBottom]);
+  }, [instanceId, contentRef, pinToBottom, syncScrollButton]);
 
   const restorePinnedAnchor = useCallback(() => {
     const el = scrollRef.current;
@@ -384,7 +396,8 @@ export function useScrollAnchor({
     if (result.mode === "none") {
       stopAnchorPin();
     }
-  }, [scrollRef, runProgrammaticScroll, stopAnchorPin]);
+    syncScrollButton();
+  }, [scrollRef, runProgrammaticScroll, stopAnchorPin, syncScrollButton]);
 
   const schedulePinnedAnchorRestore = useCallback(() => {
     const session = anchorPinRef.current;
@@ -623,7 +636,8 @@ export function useScrollAnchor({
     }
 
     // 检测是否在底部（60px 容差）
-    const atBottom = el.scrollHeight - safeScrollTop - el.clientHeight < 60;
+    const atBottom =
+      el.scrollHeight - safeScrollTop - el.clientHeight < BOTTOM_THRESHOLD;
     isAtBottomRef.current = atBottom;
     if (!atBottom) {
       stopBottomFollow();
