@@ -1,12 +1,25 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { ServerWebSocket } from "bun";
 import type {
   EdgeInstanceRegisterMessage,
   HubToBrowserMessage,
   InstanceStatus,
+  Task,
 } from "../protocol/types";
-import { hubRegistry, type WsData } from "./edge";
-import { handleEdgeMessage } from "./router";
+import type { WsData } from "./edge";
+import * as logger from "../utils/logger";
+
+// 导入 Hub 模块前隔离文件日志，不启动真实服务
+const loggerSpy = spyOn(logger, "createLogger").mockReturnValue({
+  info() {},
+  warn() {},
+  error() {},
+  debug() {},
+  async shutdown() {},
+});
+const { hubRegistry } = await import("./edge");
+const { handleEdgeMessage } = await import("./router");
+loggerSpy.mockRestore();
 
 const instanceId = "registration-status-test";
 let broadcasts: HubToBrowserMessage[];
@@ -16,7 +29,7 @@ const edge = {
   data: { role: "edge", edgeId: "test-edge" },
 } as ServerWebSocket<WsData>;
 
-function registerInstance(status?: InstanceStatus): void {
+function registerInstance(status?: InstanceStatus, tasks?: Task[]): void {
   const message: EdgeInstanceRegisterMessage = {
     type: "instance_register",
     payload: {
@@ -26,6 +39,7 @@ function registerInstance(status?: InstanceStatus): void {
       model: { provider: "test", id: "model" },
       pid: 1234,
       status,
+      tasks,
     },
   };
   handleEdgeMessage(edge, JSON.stringify(message));
@@ -46,6 +60,53 @@ beforeEach(() => {
 afterEach(() => {
   hubRegistry.removeBrowser(browser);
   hubRegistry.unregisterInstance(instanceId);
+});
+
+describe("任务快照同步", () => {
+  const tasks: Task[] = [{ name: "one", status: "in_progress" }];
+  test("注册及回复开始重新注册均保存并广播任务", () => {
+    registerInstance("idle", tasks);
+    expect(hubRegistry.getInstance(instanceId)?.tasks).toEqual(tasks);
+    expect(broadcasts[0]).toMatchObject({
+      payload: { action: "connected", instance: { tasks } },
+    });
+    broadcasts.length = 0;
+    registerInstance("streaming", tasks);
+    expect(hubRegistry.getInstance(instanceId)?.tasks).toEqual(tasks);
+    expect(broadcasts[0]).toMatchObject({
+      payload: { action: "updated", instance: { tasks } },
+    });
+  });
+  test("普通状态更新保留任务，新快照和空数组同步替换", () => {
+    registerInstance("idle", tasks);
+    for (const state of [
+      { status: "streaming" },
+      { tasks: [{ name: "one", status: "complete" as const }] },
+      { tasks: [] },
+    ]) {
+      broadcasts.length = 0;
+      handleEdgeMessage(
+        edge,
+        JSON.stringify({
+          type: "instance_state",
+          payload: { instanceId, ...state },
+        }),
+      );
+      const expected = "tasks" in state ? state.tasks : tasks;
+      expect(hubRegistry.getInstance(instanceId)?.tasks).toEqual(expected);
+      expect(broadcasts[0]).toMatchObject({
+        payload: { instance: { tasks: expected } },
+      });
+    }
+  });
+  test("重新注册的空计划清除旧任务", () => {
+    registerInstance("idle", tasks);
+    registerInstance("idle", []);
+    expect(hubRegistry.getInstance(instanceId)?.tasks).toEqual([]);
+    expect(broadcasts.at(-1)).toMatchObject({
+      payload: { instance: { tasks: [] } },
+    });
+  });
 });
 
 describe("实例注册状态同步", () => {

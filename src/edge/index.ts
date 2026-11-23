@@ -78,6 +78,7 @@ const upstream = new UpstreamClient({
           contextUsage: inst.contextUsage,
           gitBranch: inst.gitBranch ?? undefined,
           thinkingLevel: inst.thinkingLevel,
+          tasks: inst.tasks,
         },
       });
     }
@@ -123,6 +124,7 @@ edgeRegistry.setChangeCallback(
             contextUsage: info.contextUsage,
             gitBranch: info.gitBranch ?? undefined,
             thinkingLevel: info.thinkingLevel,
+            tasks: info.tasks,
           },
         });
         break;

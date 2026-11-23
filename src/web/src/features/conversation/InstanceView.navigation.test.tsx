@@ -190,6 +190,59 @@ afterEach(async () => {
   await i18n.changeLanguage(language);
 });
 
+describe("实例页面任务快照", () => {
+  test("服务端确认前展示缓存任务，确认后的空计划移除任务区域", async () => {
+    useInstances.setState({
+      instances: [
+        {
+          ...instance("one"),
+          tasks: [{ name: "cached task", status: "in_progress" }],
+        },
+      ],
+      instanceListReady: false,
+    });
+    await render();
+    expect(container.querySelector(".composer-task-current")?.textContent).toBe(
+      "cached task",
+    );
+    await act(async () =>
+      useInstances
+        .getState()
+        .handleMessage({
+          type: "instance_list",
+          payload: { instances: [{ ...instance("one"), tasks: [] }] },
+        }),
+    );
+    expect(container.querySelector(".composer-task-plan")).toBeNull();
+  });
+  test("切换实例直接展示各自快照，普通状态和草稿更新不移除计划", async () => {
+    useInstances.setState({
+      instances: [
+        {
+          ...instance("one"),
+          tasks: [{ name: "one task", status: "in_progress" }],
+        },
+        {
+          ...instance("two"),
+          tasks: [{ name: "two task", status: "in_progress" }],
+        },
+      ],
+    });
+    await render();
+    await updateInstance("one", { status: "streaming" });
+    await act(async () =>
+      useDrafts.getState().setDraft("one", { text: "draft", images: [] }),
+    );
+    expect(container.querySelector(".composer-task-current")?.textContent).toBe(
+      "one task",
+    );
+    await act(async () => navigate("/instance/two"));
+    expect(container.querySelector(".composer-task-current")?.textContent).toBe(
+      "two task",
+    );
+  });
+});
+
 describe("实例页面导航与自动聚焦", () => {
   test("上下键使用传入的实例导航入口，切换后恢复焦点和草稿", async () => {
     useDrafts.getState().setDraft("two", { text: "saved draft", images: [] });

@@ -69,7 +69,7 @@ export const useInstances = create<InstancesState>()(
     }),
     {
       name: "paimon:instances",
-      // 只持久化 instances 数组；instanceListReady 和函数不写入 localStorage
+      // 缓存实例及任务快照以保持首屏连续，收到 instance_list 后以服务端状态替换
       partialize: (state) => ({ instances: state.instances }),
     },
   ),

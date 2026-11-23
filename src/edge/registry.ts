@@ -13,6 +13,7 @@ import type {
   ModelInfo,
   ContextUsageInfo,
   ThinkingLevel,
+  Task,
 } from "../protocol/types";
 import { DEFAULTS } from "../protocol/types";
 import { edgeId } from "./config";
@@ -73,6 +74,7 @@ class EdgeRegistry {
       contextUsage?: ContextUsageInfo;
       gitBranch?: string;
       thinkingLevel?: ThinkingLevel;
+      tasks?: Task[];
     },
   ): { instanceId: InstanceId; isReconnect: boolean } {
     const id = computeInstanceId(payload.hostname, payload.pid);
@@ -102,6 +104,7 @@ class EdgeRegistry {
       existing.info.contextUsage = payload.contextUsage;
       existing.info.gitBranch = payload.gitBranch;
       existing.info.thinkingLevel = payload.thinkingLevel;
+      existing.info.tasks = payload.tasks;
       existing.info.lastHeartbeat = now;
 
       if (existing.heartbeatTimer) clearTimeout(existing.heartbeatTimer);
@@ -134,6 +137,7 @@ class EdgeRegistry {
       contextUsage: payload.contextUsage,
       gitBranch: payload.gitBranch,
       thinkingLevel: payload.thinkingLevel,
+      tasks: payload.tasks,
       connectedAt: now,
       lastHeartbeat: now,
     };
@@ -205,11 +209,13 @@ class EdgeRegistry {
       gitBranch?: string | null;
       model?: ModelInfo;
       thinkingLevel?: ThinkingLevel | null;
+      tasks?: Task[];
     },
   ): void {
     const record = this.instances.get(id);
     if (!record) return;
 
+    if (state.tasks !== undefined) record.info.tasks = state.tasks;
     if (state.status !== undefined) record.info.status = state.status;
     if (state.contextUsage !== undefined)
       record.info.contextUsage = state.contextUsage;

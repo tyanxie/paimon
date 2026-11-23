@@ -434,6 +434,7 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
               key={`${instanceId}:${instance?.sessionId ?? ""}`}
               ref={composerRef}
               instance={instance}
+              tasks={instance?.tasks}
               draft={draft}
               onDraftChange={handleDraftChange}
               onNavigateInstance={handleNavigateInstance}

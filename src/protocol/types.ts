@@ -51,6 +51,15 @@ export type InstanceStatus = "idle" | "streaming" | "compacting";
 /** 一次 agent 运行完全结束后的结果 */
 export type SettledOutcome = "completed" | "aborted" | "error";
 
+/** 当前计划的步骤状态 */
+export type TaskStatus = "pending" | "in_progress" | "complete";
+
+/** 当前计划的步骤 */
+export interface Task {
+  name: string;
+  status: TaskStatus;
+}
+
 /** pi 实例信息 */
 export interface InstanceInfo {
   id: InstanceId;
@@ -82,6 +91,8 @@ export interface InstanceInfo {
   availableModels?: ModelInfo[];
   /** 当前思考等级（模型不支持 reasoning 时不存在） */
   thinkingLevel?: ThinkingLevel;
+  /** 当前任务计划，仅保存在内存中 */
+  tasks?: Task[];
   /** 注册时间 */
   connectedAt: number;
   /** 最后心跳时间 */
@@ -169,6 +180,7 @@ export interface ExtRegisterMessage {
      * 仅由页面创建的实例携带，用于 Edge 将 spawn 请求与注册成功的实例对应起来。
      */
     spawnToken?: string;
+    tasks?: Task[];
   };
 }
 
@@ -232,6 +244,8 @@ export interface ExtStateMessage {
     model?: ModelInfo;
     /** 思考等级变更（null = 清除，模型不支持 reasoning 时） */
     thinkingLevel?: ThinkingLevel | null;
+    /** 不传表示保留当前计划，空数组表示清空 */
+    tasks?: Task[];
   };
 }
 
@@ -654,6 +668,7 @@ export interface EdgeInstanceRegisterMessage {
     contextUsage?: ContextUsageInfo;
     gitBranch?: string;
     thinkingLevel?: ThinkingLevel;
+    tasks?: Task[];
   };
 }
 
@@ -680,6 +695,7 @@ export interface EdgeInstanceStateMessage {
     gitBranch?: string | null;
     model?: ModelInfo;
     thinkingLevel?: ThinkingLevel | null;
+    tasks?: Task[];
   };
 }
 

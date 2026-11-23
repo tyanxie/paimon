@@ -66,6 +66,7 @@ export function handleEdgeMessage(
         contextUsage: msg.payload.contextUsage,
         gitBranch: msg.payload.gitBranch,
         thinkingLevel: msg.payload.thinkingLevel,
+        tasks: msg.payload.tasks,
       });
       break;
     }

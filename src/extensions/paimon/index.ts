@@ -23,6 +23,7 @@ import type {
 import { HubClient } from "./client";
 import { serializeEvent, FORWARDED_EVENTS } from "./serializer";
 import * as sessionControlPatch from "./session_control_patch";
+import { registerTaskTool } from "./task";
 
 // Hub spawn 实例时注入的一次性 token（仅页面创建的实例有）。
 // 注册时回传给 Hub，用于将 spawn 请求与注册成功的实例对应起来。
@@ -78,6 +79,7 @@ export default function (pi: ExtensionAPI) {
             ? (pi.getThinkingLevel() as ThinkingLevel)
             : undefined,
           spawnToken: SPAWN_TOKEN,
+          tasks: taskTracker.getTasks(),
         },
       });
       // settlement 事件不重放，仅恢复实例当前状态
@@ -98,6 +100,10 @@ export default function (pi: ExtensionAPI) {
     if (payload.status) currentStatus = payload.status;
     if (client.connected) client.send({ type: "state", payload });
   };
+
+  const taskTracker = registerTaskTool(pi, () => {
+    sendState({ tasks: taskTracker.getTasks() });
+  });
 
   // 启动连接
   client.connect();
@@ -145,6 +151,7 @@ export default function (pi: ExtensionAPI) {
           sessionFile: ctx.sessionManager.getSessionFile() ?? undefined,
           sessionCreatedAt: ctx.sessionManager.getHeader()?.timestamp,
           pid: process.pid,
+          tasks: taskTracker.getTasks(),
           availableModels: getAvailableModels(ctx),
           thinkingLevel: ctx.model.reasoning
             ? (pi.getThinkingLevel() as ThinkingLevel)
@@ -287,6 +294,7 @@ export default function (pi: ExtensionAPI) {
           sessionFile: ctx.sessionManager.getSessionFile() ?? undefined,
           sessionCreatedAt: ctx.sessionManager.getHeader()?.timestamp,
           pid: process.pid,
+          tasks: taskTracker.getTasks(),
           availableModels: getAvailableModels(ctx),
           contextUsage: getContextUsageInfo(ctx),
           gitBranch: getGitBranch(ctx.cwd) ?? undefined,
