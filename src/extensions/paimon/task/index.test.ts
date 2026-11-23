@@ -1,10 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import type {
-  ExtensionAPI,
-  ExtensionContext,
+import {
+  SessionManager,
+  type ExtensionAPI,
+  type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import type { JsonRepresentation } from "@earendil-works/pi-ai";
 import { registerTaskTool } from "./index";
-import type { TaskStatus, TaskTrackerDetails } from "./core";
+import type { Task, TaskStatus, TaskTrackerDetails } from "./core";
+
+function appendResult(
+  session: SessionManager,
+  details: JsonRepresentation<TaskTrackerDetails>,
+): string {
+  return session.appendMessage({
+    role: "toolResult",
+    toolCallId: "test",
+    toolName: "paimon_task",
+    content: [],
+    details,
+    isError: details.error !== undefined,
+    timestamp: Date.now(),
+  });
+}
 
 type Input = {
   action: "init" | "update" | "status" | "clear";
@@ -23,9 +40,13 @@ type Tool = {
     ctx: ExtensionContext,
   ) => Promise<{ details: TaskTrackerDetails; isError?: boolean }>;
 };
-function harness(mode: "tui" | "rpc" = "rpc") {
+function harness(
+  mode: "tui" | "rpc" = "rpc",
+  session = SessionManager.inMemory(),
+) {
   let tool: Tool | undefined;
   let published = 0;
+  const snapshots: Task[][] = [];
   const widgets: unknown[][] = [];
   const handlers = new Map<
     string,
@@ -43,16 +64,27 @@ function harness(mode: "tui" | "rpc" = "rpc") {
   } as unknown as ExtensionAPI;
   const ctx = {
     mode,
+    get sessionManager() {
+      return session;
+    },
     ui: { setWidget: (...args: unknown[]) => widgets.push(args) },
   } as unknown as ExtensionContext;
   const tracker = registerTaskTool(pi, () => {
     published++;
+    snapshots.push(tracker.getTasks());
   });
   return {
     tracker,
-    handlers,
-    ctx,
     widgets,
+    snapshots,
+    useSession(next: SessionManager) {
+      session = next;
+    },
+    emit(event: "session_start" | "session_tree") {
+      const handler = handlers.get(event);
+      if (!handler) throw new Error("Missing lifecycle handler");
+      handler({}, ctx);
+    },
     get published() {
       return published;
     },
@@ -61,13 +93,15 @@ function harness(mode: "tui" | "rpc" = "rpc") {
       return tool;
     },
     async call(input: Input) {
-      return this.tool.execute(
+      const result = await this.tool.execute(
         "test",
         input,
         new AbortController().signal,
         undefined,
         ctx,
       );
+      appendResult(session, result.details);
+      return result;
     },
   };
 }
@@ -146,19 +180,101 @@ describe("paimon_task", () => {
     snapshot.push({ name: "extra", status: "pending" });
     expect(h.tracker.getTasks()).toEqual([{ name: "one", status: "pending" }]);
   });
-  test.each(["session_start", "session_tree"])(
-    "%s 清空计划并移除 TUI widget",
+  test.each(["session_start", "session_tree"] as const)(
+    "%s 目标分支没有任务记录时清空计划并移除 TUI widget",
     async (event) => {
       const h = harness("tui");
       await h.call({ action: "init", tasks: ["one"] });
       expect(h.widgets[0][0]).toBe("paimon:task");
       expect(typeof h.widgets[0][1]).toBe("function");
-      const handler = h.handlers.get(event);
-      if (!handler) throw new Error("Missing lifecycle handler");
-      handler({}, h.ctx);
+      h.useSession(SessionManager.inMemory());
+      h.emit(event);
       expect(h.tracker.getTasks()).toEqual([]);
       expect(h.widgets.at(-1)).toEqual(["paimon:task", undefined]);
+      expect(h.snapshots.at(-1)).toEqual([]);
       expect(h.published).toBe(2);
     },
   );
+  test("重新加载 Extension 后恢复计划，更新时不修改历史快照", async () => {
+    const session = SessionManager.inMemory();
+    const original = harness("rpc", session);
+    await original.call({ action: "init", tasks: ["one", "two"] });
+    const latest = await original.call({
+      action: "update",
+      index: 0,
+      status: "in_progress",
+    });
+
+    const restored = harness("rpc", session);
+    restored.emit("session_start");
+    expect(restored.tracker.getTasks()).toEqual(latest.details.tasks);
+    expect(restored.snapshots).toEqual([latest.details.tasks]);
+    expect(restored.widgets).toEqual([]);
+    await restored.call({ action: "update", index: 0, status: "complete" });
+    expect(latest.details.tasks[0].status).toBe("in_progress");
+    expect(restored.tracker.getTasks()[0].status).toBe("complete");
+  });
+  test("session 来回切换时分别恢复各自计划并同步 TUI 和快照", async () => {
+    const first = SessionManager.inMemory();
+    const second = SessionManager.inMemory();
+    const h = harness("tui", first);
+    await h.call({ action: "init", tasks: ["first"] });
+    await h.call({ action: "update", index: 0, status: "in_progress" });
+    h.useSession(second);
+    h.emit("session_start");
+    expect(h.tracker.getTasks()).toEqual([]);
+    await h.call({ action: "init", tasks: ["second"] });
+    await h.call({ action: "update", index: 0, status: "complete" });
+
+    for (const [session, expected] of [
+      [first, [{ name: "first", status: "in_progress" }]],
+      [second, [{ name: "second", status: "complete" }]],
+    ] satisfies [SessionManager, Task[]][]) {
+      h.useSession(session);
+      h.emit("session_start");
+      expect(h.tracker.getTasks()).toEqual(expected);
+      expect(h.snapshots.at(-1)).toEqual(expected);
+      expect(h.widgets.at(-1)?.[0]).toBe("paimon:task");
+      expect(typeof h.widgets.at(-1)?.[1]).toBe("function");
+    }
+  });
+  test("session_tree 只恢复当前分支，包括 clear 和回到清空前的位置", async () => {
+    const session = SessionManager.inMemory();
+    const root = appendResult(session, {
+      action: "init",
+      tasks: [{ name: "one", status: "pending" }],
+    });
+    const h = harness("tui", session);
+    h.emit("session_start");
+    await h.call({ action: "update", index: 0, status: "complete" });
+    const completed = session.getLeafId()!;
+    session.branch(root);
+    h.emit("session_tree");
+    await h.call({ action: "clear" });
+    const cleared = session.getLeafId()!;
+
+    for (const [leaf, expected] of [
+      [completed, [{ name: "one", status: "complete" }]],
+      [cleared, []],
+      [root, [{ name: "one", status: "pending" }]],
+    ] satisfies [string, Task[]][]) {
+      session.branch(leaf);
+      h.emit("session_tree");
+      expect(h.tracker.getTasks()).toEqual(expected);
+      expect(h.snapshots.at(-1)).toEqual(expected);
+      expect(typeof h.widgets.at(-1)?.[1]).toBe(
+        expected.length > 0 ? "function" : "undefined",
+      );
+    }
+  });
+  test("重新打开已 clear 的 session 不恢复旧计划", async () => {
+    const session = SessionManager.inMemory();
+    const original = harness("rpc", session);
+    await original.call({ action: "init", tasks: ["one"] });
+    await original.call({ action: "clear" });
+    const restored = harness("rpc", session);
+    restored.emit("session_start");
+    expect(restored.tracker.getTasks()).toEqual([]);
+    expect(restored.snapshots).toEqual([[]]);
+  });
 });

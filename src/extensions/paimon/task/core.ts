@@ -5,6 +5,7 @@
  * 支持 init / update / status / clear 四种操作
  */
 
+import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import type { Task, TaskStatus } from "../../../protocol/types";
 
 export type { Task, TaskStatus } from "../../../protocol/types";
@@ -92,6 +93,56 @@ export function handleClear(tasks: Task[]): ActionResult {
         : "No task list was active.",
     tasks: [],
   };
+}
+
+// 从当前分支的最后一份有效成功快照恢复，不消费其他分支或模型上下文
+export function reconstructFromBranch(
+  entries: readonly SessionEntry[],
+): Task[] {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (entry.type !== "message") continue;
+    const message = entry.message;
+    if (
+      message.role !== "toolResult" ||
+      message.toolName !== "paimon_task" ||
+      message.isError
+    )
+      continue;
+
+    const details: unknown = message.details;
+    if (
+      typeof details !== "object" ||
+      details === null ||
+      ("error" in details && details.error !== undefined) ||
+      !("tasks" in details)
+    )
+      continue;
+    const tasks = readTaskSnapshot(details.tasks);
+    if (tasks !== undefined) return tasks;
+  }
+  return [];
+}
+
+// 历史 details 没有类型保证，整份快照校验通过后复制，保持步骤 index 和历史对象不变
+function readTaskSnapshot(value: unknown): Task[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const tasks: Task[] = [];
+  for (const task of value) {
+    if (
+      typeof task !== "object" ||
+      task === null ||
+      !("name" in task) ||
+      typeof task.name !== "string" ||
+      !("status" in task) ||
+      (task.status !== "pending" &&
+        task.status !== "in_progress" &&
+        task.status !== "complete")
+    )
+      return undefined;
+    tasks.push({ name: task.name, status: task.status });
+  }
+  return tasks;
 }
 
 // 格式化

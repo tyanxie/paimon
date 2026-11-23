@@ -1,7 +1,7 @@
 /**
  * Task Tracker Extension
  *
- * 注册 paimon_task 供 LLM 调用，当前计划仅保存在内存中
+ * 注册 paimon_task 供 LLM 调用，当前计划从 session 分支的工具结果恢复
  * 在 TUI widget 中展示任务列表和进度，并同步给 Paimon
  *
  * 操作:
@@ -26,6 +26,7 @@ import {
   handleUpdate,
   handleStatus,
   handleClear,
+  reconstructFromBranch,
 } from "./core.js";
 
 const TaskTrackerParams = Type.Object({
@@ -107,13 +108,13 @@ export function registerTaskTool(pi: ExtensionAPI, onChange: () => void) {
     onChange();
   };
 
-  // 内存计划不恢复历史，切换 session 或分支时清空
-  const reset = (_event: unknown, ctx: ExtensionContext) => {
-    tasks = [];
+  // 启动、恢复 session 或切换分支时，恢复目标分支的计划并同步展示
+  const restore = (_event: unknown, ctx: ExtensionContext) => {
+    tasks = reconstructFromBranch(ctx.sessionManager.getBranch());
     publish(ctx);
   };
-  pi.on("session_start", reset);
-  pi.on("session_tree", reset);
+  pi.on("session_start", restore);
+  pi.on("session_tree", restore);
 
   pi.registerTool<typeof TaskTrackerParams, TaskTrackerDetails>({
     name: "paimon_task",
