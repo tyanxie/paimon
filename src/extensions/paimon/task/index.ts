@@ -5,8 +5,8 @@
  * 在 TUI widget 中展示任务列表和进度，并同步给 Paimon
  *
  * 操作:
- *   init   — 初始化任务列表
- *   update — 更新单个任务状态
+ *   init   — 设置任务列表及初始状态
+ *   update — 批量更新任务状态
  *   status — 查看当前进度
  *   clear  — 清除任务列表
  */
@@ -16,11 +16,11 @@ import type {
   ExtensionContext,
   Theme,
 } from "@earendil-works/pi-coding-agent";
+import { StringEnum } from "@earendil-works/pi-ai";
 import { Text } from "@earendil-works/pi-tui";
-import { Type } from "typebox";
+import { type Static, Type } from "typebox";
 import {
   type Task,
-  type TaskStatus,
   type TaskTrackerDetails,
   handleInit,
   handleUpdate,
@@ -29,45 +29,55 @@ import {
   reconstructFromBranch,
 } from "./core.js";
 
-const TaskTrackerParams = Type.Object({
-  action: Type.Union(
-    [
-      Type.Literal("init"),
-      Type.Literal("update"),
-      Type.Literal("status"),
-      Type.Literal("clear"),
-    ],
-    { description: "Action to perform" },
-  ),
-  tasks: Type.Optional(
-    Type.Array(Type.String(), {
-      description: "Task names (for init)",
-    }),
-  ),
-  index: Type.Optional(
-    Type.Integer({
-      minimum: 0,
-      description: "Task index, 0-based (for update)",
-    }),
-  ),
-  status: Type.Optional(
-    Type.Union(
-      [
-        Type.Literal("pending"),
-        Type.Literal("in_progress"),
-        Type.Literal("complete"),
-      ],
-      { description: "New status (for update)" },
-    ),
-  ),
-});
+const TaskStatusParams = StringEnum([
+  "pending",
+  "in_progress",
+  "complete",
+] as const);
 
-interface TaskTrackerInput {
-  action: "init" | "update" | "status" | "clear";
-  tasks?: string[];
-  index?: number;
-  status?: TaskStatus;
-}
+const TaskTrackerParams = Type.Object(
+  {
+    action: StringEnum(["init", "update", "status", "clear"] as const, {
+      description: "Action to perform",
+    }),
+    tasks: Type.Optional(
+      Type.Array(
+        Type.Object(
+          {
+            name: Type.String({ description: "Task name" }),
+            status: Type.Optional(TaskStatusParams),
+          },
+          { additionalProperties: false },
+        ),
+        {
+          description:
+            "Tasks for init; replaces the plan. Omitted status defaults to pending.",
+        },
+      ),
+    ),
+    updates: Type.Optional(
+      Type.Array(
+        Type.Object(
+          {
+            index: Type.Integer({
+              minimum: 0,
+              description: "Task index, 0-based",
+            }),
+            status: TaskStatusParams,
+          },
+          { additionalProperties: false },
+        ),
+        {
+          description:
+            "Non-empty updates for update, including a single task. Indices must be unique and in range; all updates apply together or none do.",
+        },
+      ),
+    ),
+  },
+  { additionalProperties: false },
+);
+
+type TaskTrackerInput = Static<typeof TaskTrackerParams>;
 
 /** 渲染 widget 文本（带主题颜色，展示完整任务列表） */
 function renderWidgetText(tasks: Task[], theme: Theme): string {
@@ -120,11 +130,13 @@ export function registerTaskTool(pi: ExtensionAPI, onChange: () => void) {
     name: "paimon_task",
     label: "Task Tracker",
     description:
-      "Track task/plan progress. Actions: init (set task list), update (change task status), status (show current state), clear (remove task list).",
+      "Track task/plan progress. Actions: init (replace the plan with task objects and initial statuses), update (apply an updates array atomically), status (show the full plan), clear (remove the plan).",
     promptSnippet:
-      "Track current task progress in Paimon with init/update/status/clear actions",
+      "Track task progress in Paimon with initial statuses and batch updates",
     promptGuidelines: [
-      "Use paimon_task to track implementation plan progress in Paimon: init with task names, update status as you work, clear when done.",
+      "Use paimon_task to track implementation plan progress: init with task objects and their actual initial statuses (omitted status defaults to pending), update as you work, clear when done.",
+      "For paimon_task update, combine changes at the same progress point into one updates array, including completing the current task and starting the next. Do not delay progress or mark unfinished work complete to batch updates.",
+      "paimon_task update returns the applied changes and progress; use status only when the full plan is needed, not to confirm a successful update.",
     ],
     parameters: TaskTrackerParams,
     executionMode: "sequential",
@@ -138,7 +150,7 @@ export function registerTaskTool(pi: ExtensionAPI, onChange: () => void) {
           result = handleInit(p.tasks);
           break;
         case "update":
-          result = handleUpdate(tasks, p.index, p.status);
+          result = handleUpdate(tasks, p.updates);
           break;
         case "status":
           result = handleStatus(tasks);
@@ -169,9 +181,15 @@ export function registerTaskTool(pi: ExtensionAPI, onChange: () => void) {
       const a: Partial<TaskTrackerInput> = args;
       let text = theme.fg("toolTitle", theme.bold("paimon_task "));
       text += theme.fg("muted", a.action ?? "");
-      if (a.action === "update" && a.index !== undefined) {
-        text += ` ${theme.fg("accent", `[${a.index}]`)}`;
-        if (a.status) text += ` \u2192 ${theme.fg("dim", a.status)}`;
+      if (a.action === "update" && a.updates) {
+        for (const update of a.updates) {
+          if (update.index !== undefined) {
+            text += ` ${theme.fg("accent", `[${update.index}]`)}`;
+          }
+          if (update.status) {
+            text += ` \u2192 ${theme.fg("dim", update.status)}`;
+          }
+        }
       }
       if (a.action === "init" && a.tasks) {
         text += ` ${theme.fg("dim", `(${a.tasks.length} tasks)`)}`;
@@ -204,9 +222,14 @@ export function registerTaskTool(pi: ExtensionAPI, onChange: () => void) {
           );
           lines.push("");
           for (let i = 0; i < taskList.length; i++) {
-            lines.push(
-              `  ${theme.fg("dim", "\u25CB")} ${theme.fg("muted", `[${i}]`)} ${taskList[i].name}`,
-            );
+            const task = taskList[i];
+            const icon =
+              task.status === "complete"
+                ? theme.fg("success", "\u2713")
+                : task.status === "in_progress"
+                  ? theme.fg("warning", "\u2192")
+                  : theme.fg("dim", "\u25CB");
+            lines.push(`  ${icon} ${theme.fg("muted", `[${i}]`)} ${task.name}`);
           }
           return new Text(lines.join("\n"), 0, 0);
         }
