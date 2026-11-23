@@ -43,8 +43,12 @@ export function useComposerHeight(
 
   useLayoutEffect(() => {
     const measure = () => {
+      const viewport = window.visualViewport;
+      // 局部放大时按布局视口计算，避免可见范围缩小压低编辑区
       const viewportHeight =
-        window.visualViewport?.height ?? window.innerHeight;
+        viewport && viewport.scale > 1
+          ? window.innerHeight
+          : (viewport?.height ?? window.innerHeight);
       const surface = surfaceRef.current;
       const textarea = textareaRef.current;
       const overhead = Math.max(

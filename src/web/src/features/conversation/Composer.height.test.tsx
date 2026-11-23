@@ -318,6 +318,7 @@ describe("输入区高度调节", () => {
     const viewport = Object.assign(new EventTarget(), {
       height: 300,
       width: 375,
+      scale: 1,
       offsetTop: 0,
       offsetLeft: 0,
     });
@@ -341,6 +342,54 @@ describe("输入区高度调节", () => {
     } finally {
       await act(async () => root.render(null));
       remove.mockRestore();
+      if (previous) Object.defineProperty(window, "visualViewport", previous);
+      else Reflect.deleteProperty(window, "visualViewport");
+    }
+  });
+
+  test("局部放大按布局视口限制高度，恢复原比例后适配并保留手动选择", async () => {
+    const previous = Object.getOwnPropertyDescriptor(window, "visualViewport");
+    const viewport = Object.assign(new EventTarget(), {
+      height: viewportHeight / 2,
+      width: 375,
+      offsetTop: 0,
+      offsetLeft: 0,
+      scale: 2,
+    });
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: viewport,
+    });
+    try {
+      await render();
+      expect(Number(handle().getAttribute("aria-valuemax"))).toBe(320);
+      await key("End");
+      const selected = editor().style.height;
+      expect(Number.parseFloat(selected)).toBe(320);
+
+      viewport.scale = 4;
+      viewport.height = viewportHeight / 4;
+      await act(async () => viewport.dispatchEvent(new Event("resize")));
+      expect(Number(handle().getAttribute("aria-valuemax"))).toBe(320);
+      expect(editor().style.height).toBe(selected);
+
+      viewport.scale = 1;
+      await act(async () => viewport.dispatchEvent(new Event("resize")));
+      expect(Number(handle().getAttribute("aria-valuemax"))).toBe(90);
+      expect(Number.parseFloat(editor().style.height)).toBe(90);
+
+      viewport.scale = 2;
+      await act(async () => viewport.dispatchEvent(new Event("resize")));
+      expect(Number(handle().getAttribute("aria-valuemax"))).toBe(320);
+      expect(editor().style.height).toBe(selected);
+
+      viewport.scale = 1;
+      viewport.height = viewportHeight;
+      await act(async () => viewport.dispatchEvent(new Event("resize")));
+      expect(Number(handle().getAttribute("aria-valuemax"))).toBe(320);
+      expect(editor().style.height).toBe(selected);
+    } finally {
+      await act(async () => root.render(null));
       if (previous) Object.defineProperty(window, "visualViewport", previous);
       else Reflect.deleteProperty(window, "visualViewport");
     }

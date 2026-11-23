@@ -13,7 +13,11 @@ export function useViewportHeight(): void {
     function update() {
       if (!viewport) return;
       const diff = window.innerHeight - viewport.height;
-      if (diff > 1) {
+      // 局部放大只改变可见范围，不应触发键盘适配或强制滚动
+      if (viewport.scale > 1) {
+        root.style.removeProperty("--app-viewport-height");
+        root.style.removeProperty("--app-viewport-top");
+      } else if (diff > 1) {
         root.style.setProperty("--app-viewport-height", `${viewport.height}px`);
         root.style.setProperty("--app-viewport-top", `${viewport.offsetTop}px`);
         if (window.scrollY > 0) {
