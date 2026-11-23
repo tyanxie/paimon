@@ -13,6 +13,7 @@ import type {
   ModelInfo,
   ContextUsageInfo,
   ThinkingLevel,
+  Task,
   EdgeInfo,
   BrowseEntry,
   BrowseResult,
@@ -203,6 +204,7 @@ class HubEdgeRegistry {
       contextUsage?: ContextUsageInfo;
       gitBranch?: string;
       thinkingLevel?: ThinkingLevel;
+      tasks?: Task[];
     },
   ): InstanceInfo {
     const now = Date.now();
@@ -225,6 +227,7 @@ class HubEdgeRegistry {
       existing.info.contextUsage = payload.contextUsage;
       existing.info.gitBranch = payload.gitBranch;
       existing.info.thinkingLevel = payload.thinkingLevel;
+      existing.info.tasks = payload.tasks;
       existing.info.lastHeartbeat = now;
 
       log.info(
@@ -256,6 +259,7 @@ class HubEdgeRegistry {
       contextUsage: payload.contextUsage,
       gitBranch: payload.gitBranch,
       thinkingLevel: payload.thinkingLevel,
+      tasks: payload.tasks,
       connectedAt: now,
       lastHeartbeat: now,
     };
@@ -298,11 +302,13 @@ class HubEdgeRegistry {
       gitBranch?: string | null;
       model?: ModelInfo;
       thinkingLevel?: ThinkingLevel | null;
+      tasks?: Task[];
     },
   ): void {
     const record = this.instances.get(instanceId);
     if (!record) return;
 
+    if (state.tasks !== undefined) record.info.tasks = state.tasks;
     if (state.status !== undefined) record.info.status = state.status;
     if (state.contextUsage !== undefined)
       record.info.contextUsage = state.contextUsage;

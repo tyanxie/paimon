@@ -25,6 +25,7 @@ import {
 import { CompactModal } from "./CompactModal";
 import { ComposerToolbar } from "./ComposerToolbar";
 import { ContextIndicator } from "./ContextUsage";
+import { TaskPlan } from "./TaskPlan";
 import { useComposerHeight } from "./useComposerHeight";
 import { useComposerImages } from "./useComposerImages";
 
@@ -48,6 +49,7 @@ interface ComposerProps {
   showCompactButton: boolean;
   compactDisabled: boolean;
   sendDisabled?: boolean;
+  tasks?: unknown;
   onImageLightbox: (src: string) => void;
 }
 
@@ -66,6 +68,7 @@ export function Composer({
   showCompactButton,
   compactDisabled,
   sendDisabled = false,
+  tasks,
   onImageLightbox,
 }: ComposerProps) {
   const { t } = useTranslation();
@@ -192,6 +195,7 @@ export function Composer({
   return (
     <>
       <div ref={surfaceRef} className="composer-surface">
+        <TaskPlan tasks={tasks} />
         <div
           role="separator"
           tabIndex={0}

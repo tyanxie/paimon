@@ -1,6 +1,6 @@
 // useInstances store 测试
 
-import { describe, expect, test, beforeEach } from "bun:test";
+import { afterEach, describe, expect, test, beforeEach } from "bun:test";
 import type { InstanceId, InstanceInfo } from "../../../protocol/types";
 import { useInstances } from "./useInstances";
 
@@ -20,8 +20,85 @@ function makeInstance(id: string): InstanceInfo {
 }
 
 describe("useInstances store", () => {
+  let previous: ReturnType<typeof useInstances.getState>;
+  let persisted: string | null;
   beforeEach(() => {
+    previous = useInstances.getState();
+    persisted = localStorage.getItem("paimon:instances");
     useInstances.setState({ instances: [], instanceListReady: false });
+  });
+  afterEach(() => {
+    useInstances.setState(previous);
+    if (persisted === null) localStorage.removeItem("paimon:instances");
+    else localStorage.setItem("paimon:instances", persisted);
+  });
+
+  test("缓存任务并恢复首屏快照，不持久化 instanceListReady", async () => {
+    const inst = {
+      ...makeInstance("cached"),
+      tasks: [{ name: "one", status: "in_progress" as const }],
+    };
+    useInstances
+      .getState()
+      .handleMessage({ type: "instance_list", payload: { instances: [inst] } });
+    const saved = localStorage.getItem("paimon:instances");
+    expect(saved).not.toBeNull();
+    const parsed = JSON.parse(saved!);
+    expect(parsed.state.instances[0].tasks).toEqual(inst.tasks);
+    expect(parsed.state).not.toHaveProperty("instanceListReady");
+    useInstances.setState({ instances: [], instanceListReady: false });
+    localStorage.setItem("paimon:instances", saved!);
+    await useInstances.persist.rehydrate();
+    expect(useInstances.getState().instances[0].tasks).toEqual(inst.tasks);
+    expect(useInstances.getState().instanceListReady).toBe(false);
+    useInstances
+      .getState()
+      .handleMessage({
+        type: "instance_list",
+        payload: { instances: [{ ...inst, tasks: [] }] },
+      });
+    expect(useInstances.getState().instances[0].tasks).toEqual([]);
+    expect(useInstances.getState().instanceListReady).toBe(true);
+  });
+
+  test("新注册实例带任务，任务快照按实例隔离并完整替换", () => {
+    const one = {
+      ...makeInstance("one"),
+      tasks: [{ name: "one", status: "pending" as const }],
+    };
+    const two = {
+      ...makeInstance("two"),
+      tasks: [{ name: "two", status: "complete" as const }],
+    };
+    for (const instance of [one, two])
+      useInstances
+        .getState()
+        .handleMessage({
+          type: "instance_update",
+          payload: { action: "connected", instance },
+        });
+    expect(useInstances.getState().instances.map((i) => i.tasks)).toEqual([
+      one.tasks,
+      two.tasks,
+    ]);
+    useInstances
+      .getState()
+      .handleMessage({
+        type: "instance_update",
+        payload: { action: "updated", instance: { ...one, tasks: [] } },
+      });
+    expect(useInstances.getState().instances.map((i) => i.tasks)).toEqual([
+      [],
+      two.tasks,
+    ]);
+    useInstances
+      .getState()
+      .handleMessage({
+        type: "instance_list",
+        payload: { instances: [makeInstance("one")] },
+      });
+    expect(useInstances.getState().instances).toHaveLength(1);
+    expect(useInstances.getState().instances[0].tasks).toBeUndefined();
   });
 
   test("instance_list 消息设置实例列表并标记 ready", () => {

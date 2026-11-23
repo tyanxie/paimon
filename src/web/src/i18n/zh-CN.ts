@@ -101,6 +101,19 @@ const zhCN = {
     instanceNotFound: "实例不存在",
   },
 
+  taskPlan: {
+    title: "任务计划",
+    finished: "全部完成",
+    multipleActive: "多项任务进行中",
+    remaining: "暂无进行中任务",
+    progress: "{{complete}}/{{total}} 项完成",
+    expand: "展开任务计划",
+    collapse: "收起任务计划",
+    pending: "待处理",
+    in_progress: "进行中",
+    complete: "已完成",
+  },
+
   conversation: {
     agentName: "Pi",
     you: "你发送的消息",

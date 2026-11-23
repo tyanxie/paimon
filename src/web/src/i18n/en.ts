@@ -105,6 +105,19 @@ const en: LocaleResource = {
     instanceNotFound: "Instance not found",
   },
 
+  taskPlan: {
+    title: "Task plan",
+    finished: "All tasks completed",
+    multipleActive: "Multiple tasks in progress",
+    remaining: "No tasks in progress",
+    progress: "{{complete}}/{{total}} completed",
+    expand: "Expand task plan",
+    collapse: "Collapse task plan",
+    pending: "Pending",
+    in_progress: "In progress",
+    complete: "Completed",
+  },
+
   conversation: {
     agentName: "Pi",
     you: "Your message",
