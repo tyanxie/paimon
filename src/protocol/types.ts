@@ -962,6 +962,8 @@ export interface EdgeState {
   host: string;
   edgeId: string;
   hubUrl: string;
+  /** 上次连接 Hub 使用的访问令牌，旧状态文件可能没有 */
+  accessToken?: string;
   startedAt: string; // ISO 8601
 }
 

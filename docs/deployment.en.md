@@ -10,7 +10,7 @@ On a trusted network, start Hub and the local Edge on machine A:
 
 ```bash
 paimon hub start --host 0.0.0.0
-paimon edge start --hub ws://localhost:8080
+paimon edge start --hub ws://localhost:8080 --token <access-token>
 ```
 
 Connect machine B using the Access Token printed when Hub starts:
@@ -19,7 +19,7 @@ Connect machine B using the Access Token printed when Hub starts:
 paimon edge start --hub ws://<hub-ip>:8080 --token <access-token>
 ```
 
-Run `pi` in a working directory on either machine, or create an instance from the Web UI. A local Edge reads the token from the Hub state file by default; a remote Edge needs an explicit token.
+Run `pi` in a working directory on either machine, or create an instance from the Web UI. Replace `<access-token>` with the Access Token printed when Hub starts. Both local and remote Edges require `--token` or `PAIMON_ACCESS_TOKEN` and do not read `hub.json`. The environment variable takes precedence over `--token`.
 
 Keep Edge bound to loopback. The Web UI can execute Pi operations with system access, so limit remote access to trusted users. Use a TLS reverse proxy for public-network access and connect Edge with the corresponding `wss://` URL.
 
@@ -68,3 +68,5 @@ The browser logs in automatically after proxy authentication. Protect the entire
 ## Service Management
 
 Hub and Edge commands support `start`, `stop`, `restart` and `status`. Use `restart` to change configuration; see `paimon hub --help` and `paimon edge --help` for options.
+
+Edge restart selects credentials in this order: `PAIMON_ACCESS_TOKEN`, `--token`, then the saved token. Changing `--hub` does not affect token inheritance. `stop` deletes the state file, so a subsequent `start` requires the token to be configured again.

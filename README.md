@@ -51,11 +51,11 @@ pi install .
 
 ```bash
 paimon hub start
-paimon edge start
+paimon edge start --token <access-token>
 pi
 ```
 
-在浏览器访问 `http://localhost:8080`，首次登录输入 Hub 启动时输出的 Access Token。
+将 `<access-token>` 替换为 Hub 启动时输出的 Access Token，本机 Edge 也需要显式配置。在浏览器访问 `http://localhost:8080`，首次登录输入同一个 token。
 
 Hub 提供 Web 页面，Edge 管理所在机器的实例，Pi Extension 自动连接本机 Edge。每台运行 Pi 的机器都需要安装 Extension 并启动 Edge。
 
