@@ -16,6 +16,16 @@ export interface TaskTrackerDetails {
   error?: string;
 }
 
+export interface TaskInit {
+  name: string;
+  status?: TaskStatus;
+}
+
+export interface TaskUpdate {
+  index: number;
+  status: TaskStatus;
+}
+
 export interface ActionResult {
   text: string;
   tasks: Task[];
@@ -24,17 +34,17 @@ export interface ActionResult {
 
 // 操作处理
 
-export function handleInit(taskNames: string[] | undefined): ActionResult {
-  if (!taskNames || taskNames.length === 0) {
+export function handleInit(initialTasks: TaskInit[] | undefined): ActionResult {
+  if (!initialTasks || initialTasks.length === 0) {
     return {
       text: "Error: tasks array required for init",
       tasks: [],
       error: "tasks required",
     };
   }
-  const tasks: Task[] = taskNames.map((name) => ({
+  const tasks: Task[] = initialTasks.map(({ name, status }) => ({
     name,
-    status: "pending" as TaskStatus,
+    status: status ?? "pending",
   }));
   return {
     text: `Plan initialized with ${tasks.length} tasks.\n${formatStatus(tasks)}`,
@@ -44,14 +54,13 @@ export function handleInit(taskNames: string[] | undefined): ActionResult {
 
 export function handleUpdate(
   tasks: Task[],
-  index: number | undefined,
-  status: TaskStatus | undefined,
+  updates: TaskUpdate[] | undefined,
 ): ActionResult {
-  if (index === undefined || !status) {
+  if (!updates || updates.length === 0) {
     return {
-      text: "Error: index and status required for update",
+      text: "Error: non-empty updates array required for update",
       tasks: [...tasks],
-      error: "index and status required",
+      error: "updates required",
     };
   }
   if (tasks.length === 0) {
@@ -61,18 +70,37 @@ export function handleUpdate(
       error: "no task list active",
     };
   }
-  if (index < 0 || index >= tasks.length) {
-    return {
-      text: `Error: index ${index} out of range (0-${tasks.length - 1})`,
-      tasks: [...tasks],
-      error: `index ${index} out of range`,
-    };
+
+  // 先校验整批索引，避免失败时只应用部分状态变更
+  const statuses = new Map<number, TaskStatus>();
+  for (const { index, status } of updates) {
+    if (index < 0 || index >= tasks.length) {
+      return {
+        text: `Error: index ${index} out of range (0-${tasks.length - 1})`,
+        tasks: [...tasks],
+        error: `index ${index} out of range`,
+      };
+    }
+    if (statuses.has(index)) {
+      return {
+        text: `Error: duplicate index ${index} in updates`,
+        tasks: [...tasks],
+        error: `duplicate index ${index}`,
+      };
+    }
+    statuses.set(index, status);
   }
-  const updated = tasks.map((t, i) =>
-    i === index ? { ...t, status } : { ...t },
+
+  const updated = tasks.map((task, index) => ({
+    ...task,
+    status: statuses.get(index) ?? task.status,
+  }));
+  const changes = updates.map(
+    ({ index, status }) => `[${index}] ${updated[index].name} -> ${status}`,
   );
+  const complete = updated.filter((task) => task.status === "complete").length;
   return {
-    text: `Task ${index} "${updated[index].name}" -> ${status}\n${formatStatus(updated)}`,
+    text: `Updated ${updates.length} tasks:\n${changes.join("\n")}\nProgress: ${complete}/${updated.length} complete`,
     tasks: updated,
   };
 }

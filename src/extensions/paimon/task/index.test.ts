@@ -3,10 +3,15 @@ import {
   SessionManager,
   type ExtensionAPI,
   type ExtensionContext,
+  type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import type { JsonRepresentation } from "@earendil-works/pi-ai";
+import {
+  validateToolArguments,
+  type JsonRepresentation,
+} from "@earendil-works/pi-ai";
+import { Compile } from "typebox/compile";
 import { registerTaskTool } from "./index";
-import type { Task, TaskStatus, TaskTrackerDetails } from "./core";
+import type { Task, TaskInit, TaskUpdate, TaskTrackerDetails } from "./core";
 
 function appendResult(
   session: SessionManager,
@@ -23,22 +28,26 @@ function appendResult(
   });
 }
 
-type Input = {
+type Input = JsonRepresentation<{
   action: "init" | "update" | "status" | "clear";
-  tasks?: string[];
-  index?: number;
-  status?: TaskStatus;
-};
-type Tool = {
-  name: string;
-  executionMode?: string;
+  tasks?: TaskInit[];
+  updates?: TaskUpdate[];
+}>;
+type Tool = Pick<
+  ToolDefinition,
+  "name" | "description" | "parameters" | "executionMode"
+> & {
   execute: (
     id: string,
     input: Input,
     signal: AbortSignal,
     update: undefined,
     ctx: ExtensionContext,
-  ) => Promise<{ details: TaskTrackerDetails; isError?: boolean }>;
+  ) => Promise<{
+    content: { type: "text"; text: string }[];
+    details: TaskTrackerDetails;
+    isError?: boolean;
+  }>;
 };
 function harness(
   mode: "tui" | "rpc" = "rpc",
@@ -92,10 +101,18 @@ function harness(
       if (!tool) throw new Error("Tool not registered");
       return tool;
     },
+    validate(input: Input): Input {
+      return validateToolArguments(this.tool, {
+        type: "toolCall",
+        id: "test",
+        name: this.tool.name,
+        arguments: input,
+      });
+    },
     async call(input: Input) {
       const result = await this.tool.execute(
         "test",
-        input,
+        this.validate(input),
         new AbortController().signal,
         undefined,
         ctx,
@@ -107,61 +124,156 @@ function harness(
 }
 
 describe("paimon_task", () => {
-  test("顺序注册，初始化替换计划，更新与查询后清空", async () => {
+  test.each<{ name: string; input: Record<string, unknown> }>([
+    { name: "字符串任务", input: { action: "init", tasks: ["one"] } },
+    {
+      name: "旧顶层更新参数",
+      input: { action: "update", index: 0, status: "complete" },
+    },
+    {
+      name: "初始化任务缺少名称",
+      input: { action: "init", tasks: [{ status: "pending" }] },
+    },
+    {
+      name: "非法初始状态",
+      input: { action: "init", tasks: [{ name: "one", status: "unknown" }] },
+    },
+    {
+      name: "非法更新状态",
+      input: { action: "update", updates: [{ index: 0, status: "unknown" }] },
+    },
+    {
+      name: "更新缺少状态",
+      input: { action: "update", updates: [{ index: 0 }] },
+    },
+    {
+      name: "负数索引",
+      input: { action: "update", updates: [{ index: -1, status: "complete" }] },
+    },
+    {
+      name: "非整数索引",
+      input: {
+        action: "update",
+        updates: [{ index: 0.5, status: "complete" }],
+      },
+    },
+  ])("参数 schema 不接受 $name", ({ input }) => {
+    const h = harness();
+    expect(Compile(h.tool.parameters).Check(input)).toBe(false);
+  });
+  test("顺序注册，初始化替换计划，批量更新与查询后清空", async () => {
     const h = harness();
     expect(h.tool.name).toBe("paimon_task");
     expect(h.tool.executionMode).toBe("sequential");
-    await h.call({ action: "init", tasks: ["one", "two"] });
-    expect(h.tracker.getTasks().map((t) => t.status)).toEqual([
-      "pending",
-      "pending",
-    ]);
-    await h.call({ action: "update", index: 0, status: "in_progress" });
-    await h.call({ action: "update", index: 1, status: "complete" });
-    expect((await h.call({ action: "status" })).details.tasks).toEqual([
+    const initial = await h.call({
+      action: "init",
+      tasks: [
+        { name: "one", status: "in_progress" },
+        { name: "two" },
+        { name: "three", status: "complete" },
+      ],
+    });
+    expect(initial.details.tasks).toEqual([
       { name: "one", status: "in_progress" },
-      { name: "two", status: "complete" },
+      { name: "two", status: "pending" },
+      { name: "three", status: "complete" },
     ]);
-    await h.call({ action: "init", tasks: ["replacement"] });
+    for (const name of ["one", "two", "three"]) {
+      expect(initial.content[0].text).toContain(name);
+    }
+    const updated = await h.call({
+      action: "update",
+      updates: [
+        { index: 0, status: "complete" },
+        { index: 1, status: "in_progress" },
+      ],
+    });
+    const expected: Task[] = [
+      { name: "one", status: "complete" },
+      { name: "two", status: "in_progress" },
+      { name: "three", status: "complete" },
+    ];
+    expect(updated.isError).toBe(false);
+    expect(updated.details.tasks).toEqual(expected);
+    expect(h.published).toBe(2);
+    expect(h.snapshots).toEqual([initial.details.tasks, expected]);
+    expect(updated.content[0].text).toContain("[0] one -> complete");
+    expect(updated.content[0].text).toContain("[1] two -> in_progress");
+    expect(updated.content[0].text).toContain("2/3 complete");
+    expect(updated.content[0].text).not.toContain("three");
+    const status = await h.call({ action: "status" });
+    expect(status.details.tasks).toEqual(expected);
+    expect(status.content[0].text).toContain("three");
+    await h.call({ action: "init", tasks: [{ name: "replacement" }] });
     expect(h.tracker.getTasks()).toEqual([
       { name: "replacement", status: "pending" },
     ]);
     await h.call({ action: "clear" });
     expect(h.tracker.getTasks()).toEqual([]);
-    expect(h.published).toBe(6);
+    expect(h.published).toBe(5);
   });
-  test("错误和查询也发布快照，错误不破坏现有计划", async () => {
-    const h = harness();
+  test("错误和查询也发布快照，批量更新失败不破坏现有计划", async () => {
+    const session = SessionManager.inMemory();
+    const h = harness("rpc", session);
     const noPlan = await h.call({
       action: "update",
-      index: 0,
-      status: "complete",
+      updates: [{ index: 0, status: "complete" }],
     });
-    expect(noPlan.details.error).toBeDefined();
+    expect(noPlan.details.error).toBe("no task list active");
     expect(noPlan.isError).toBe(true);
-    await h.call({ action: "init", tasks: ["one"] });
-    for (const input of [
-      { action: "init" },
-      { action: "init", tasks: [] },
-      { action: "update" },
-      { action: "update", index: 3, status: "complete" },
-    ] satisfies Input[]) {
+    const initial = await h.call({
+      action: "init",
+      tasks: [{ name: "one", status: "in_progress" }, { name: "two" }],
+    });
+    const invalid: { input: Input; error: string }[] = [
+      { input: { action: "init" }, error: "tasks required" },
+      { input: { action: "init", tasks: [] }, error: "tasks required" },
+      { input: { action: "update" }, error: "updates required" },
+      { input: { action: "update", updates: [] }, error: "updates required" },
+      {
+        input: {
+          action: "update",
+          updates: [
+            { index: 0, status: "complete" },
+            { index: 2, status: "in_progress" },
+          ],
+        },
+        error: "index 2 out of range",
+      },
+      {
+        input: {
+          action: "update",
+          updates: [
+            { index: 0, status: "complete" },
+            { index: 0, status: "pending" },
+          ],
+        },
+        error: "duplicate index 0",
+      },
+    ];
+    for (const { input, error } of invalid) {
+      const published = h.published;
       const result = await h.call(input);
-      expect(result.details.error).toBeDefined();
+      expect(result.details.error).toBe(error);
       expect(result.isError).toBe(true);
-      expect(result.details.tasks).toEqual([
-        { name: "one", status: "pending" },
-      ]);
+      expect(result.details.tasks).toEqual(initial.details.tasks);
+      expect(h.tracker.getTasks()).toEqual(initial.details.tasks);
+      expect(h.snapshots.at(-1)).toEqual(initial.details.tasks);
+      expect(h.published).toBe(published + 1);
     }
+    const restored = harness("rpc", session);
+    restored.emit("session_start");
+    expect(restored.tracker.getTasks()).toEqual(initial.details.tasks);
     await h.call({ action: "status" });
-    expect(h.published).toBe(7);
+    expect(h.published).toBe(3 + invalid.length);
   });
-  test("成功操作不标记为错误，包括错误后的恢复", async () => {
+  test("成功操作不标记为错误，包括错误后的恢复和相同状态更新", async () => {
     const h = harness();
     await h.call({ action: "init" });
     for (const input of [
-      { action: "init", tasks: ["one"] },
-      { action: "update", index: 0, status: "complete" },
+      { action: "init", tasks: [{ name: "one" }] },
+      { action: "update", updates: [{ index: 0, status: "pending" }] },
+      { action: "update", updates: [{ index: 0, status: "complete" }] },
       { action: "status" },
       { action: "clear" },
       { action: "clear" },
@@ -173,7 +285,7 @@ describe("paimon_task", () => {
   });
   test("读取快照和工具结果不允许外部修改内部计划", async () => {
     const h = harness();
-    const result = await h.call({ action: "init", tasks: ["one"] });
+    const result = await h.call({ action: "init", tasks: [{ name: "one" }] });
     result.details.tasks[0].name = "changed";
     const snapshot = h.tracker.getTasks();
     snapshot[0].status = "complete";
@@ -184,7 +296,7 @@ describe("paimon_task", () => {
     "%s 目标分支没有任务记录时清空计划并移除 TUI widget",
     async (event) => {
       const h = harness("tui");
-      await h.call({ action: "init", tasks: ["one"] });
+      await h.call({ action: "init", tasks: [{ name: "one" }] });
       expect(h.widgets[0][0]).toBe("paimon:task");
       expect(typeof h.widgets[0][1]).toBe("function");
       h.useSession(SessionManager.inMemory());
@@ -198,11 +310,16 @@ describe("paimon_task", () => {
   test("重新加载 Extension 后恢复计划，更新时不修改历史快照", async () => {
     const session = SessionManager.inMemory();
     const original = harness("rpc", session);
-    await original.call({ action: "init", tasks: ["one", "two"] });
+    await original.call({
+      action: "init",
+      tasks: [{ name: "one" }, { name: "two" }],
+    });
     const latest = await original.call({
       action: "update",
-      index: 0,
-      status: "in_progress",
+      updates: [
+        { index: 0, status: "in_progress" },
+        { index: 1, status: "complete" },
+      ],
     });
 
     const restored = harness("rpc", session);
@@ -210,7 +327,10 @@ describe("paimon_task", () => {
     expect(restored.tracker.getTasks()).toEqual(latest.details.tasks);
     expect(restored.snapshots).toEqual([latest.details.tasks]);
     expect(restored.widgets).toEqual([]);
-    await restored.call({ action: "update", index: 0, status: "complete" });
+    await restored.call({
+      action: "update",
+      updates: [{ index: 0, status: "complete" }],
+    });
     expect(latest.details.tasks[0].status).toBe("in_progress");
     expect(restored.tracker.getTasks()[0].status).toBe("complete");
   });
@@ -218,13 +338,19 @@ describe("paimon_task", () => {
     const first = SessionManager.inMemory();
     const second = SessionManager.inMemory();
     const h = harness("tui", first);
-    await h.call({ action: "init", tasks: ["first"] });
-    await h.call({ action: "update", index: 0, status: "in_progress" });
+    await h.call({ action: "init", tasks: [{ name: "first" }] });
+    await h.call({
+      action: "update",
+      updates: [{ index: 0, status: "in_progress" }],
+    });
     h.useSession(second);
     h.emit("session_start");
     expect(h.tracker.getTasks()).toEqual([]);
-    await h.call({ action: "init", tasks: ["second"] });
-    await h.call({ action: "update", index: 0, status: "complete" });
+    await h.call({ action: "init", tasks: [{ name: "second" }] });
+    await h.call({
+      action: "update",
+      updates: [{ index: 0, status: "complete" }],
+    });
 
     for (const [session, expected] of [
       [first, [{ name: "first", status: "in_progress" }]],
@@ -246,7 +372,10 @@ describe("paimon_task", () => {
     });
     const h = harness("tui", session);
     h.emit("session_start");
-    await h.call({ action: "update", index: 0, status: "complete" });
+    await h.call({
+      action: "update",
+      updates: [{ index: 0, status: "complete" }],
+    });
     const completed = session.getLeafId()!;
     session.branch(root);
     h.emit("session_tree");
@@ -270,7 +399,7 @@ describe("paimon_task", () => {
   test("重新打开已 clear 的 session 不恢复旧计划", async () => {
     const session = SessionManager.inMemory();
     const original = harness("rpc", session);
-    await original.call({ action: "init", tasks: ["one"] });
+    await original.call({ action: "init", tasks: [{ name: "one" }] });
     await original.call({ action: "clear" });
     const restored = harness("rpc", session);
     restored.emit("session_start");
