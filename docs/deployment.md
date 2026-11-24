@@ -10,7 +10,7 @@
 
 ```bash
 paimon hub start --host 0.0.0.0
-paimon edge start --hub ws://localhost:8080
+paimon edge start --hub ws://localhost:8080 --token <access-token>
 ```
 
 机器 B 使用 Hub 启动时输出的 Access Token 连接：
@@ -19,7 +19,7 @@ paimon edge start --hub ws://localhost:8080
 paimon edge start --hub ws://<hub-ip>:8080 --token <access-token>
 ```
 
-两台机器都可以在工作目录执行 `pi`，或从页面创建实例。本机 Edge 默认从 Hub 状态文件读取 token，远程 Edge 需要显式提供 token。
+两台机器都可以在工作目录执行 `pi`，或从页面创建实例。将 `<access-token>` 替换为 Hub 启动时输出的 Access Token；本机和远程 Edge 均通过 `--token` 或 `PAIMON_ACCESS_TOKEN` 配置，不读取 `hub.json`。环境变量优先于 `--token`。
 
 Edge 保持 loopback 监听。Web 可以执行具有系统访问权限的 Pi 操作，远程访问仅向可信用户开放；公共网络访问通过反向代理提供 TLS，Edge 使用对应的 `wss://` 地址连接。
 
@@ -68,3 +68,5 @@ proxy_set_header Authorization "Bearer <access-token>";
 ## 服务管理
 
 Hub 和 Edge 命令支持 `start`、`stop`、`restart`、`status`。修改配置时使用 `restart`，具体参数查看 `paimon hub --help` 和 `paimon edge --help`。
+
+Edge restart 按 `PAIMON_ACCESS_TOKEN`、`--token`、已保存 token 的顺序选择凭据，修改 `--hub` 不影响 token 继承。`stop` 会删除状态文件，随后 `start` 需要重新配置 token。

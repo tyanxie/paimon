@@ -1,7 +1,7 @@
 // Edge Daemon 进程管理：启动/停止/状态查询
 
 import { join, resolve } from "node:path";
-import { mkdir, unlink, rename } from "node:fs/promises";
+import { mkdir, unlink } from "node:fs/promises";
 import { openSync, closeSync } from "node:fs";
 import { DEFAULTS } from "../protocol/types";
 import type { EdgeState } from "../protocol/types";
@@ -12,7 +12,7 @@ import {
   STATE_DIR,
 } from "../utils/env";
 import { maskToken } from "../hub/auth";
-import { readHubState } from "./daemon";
+import { writeJsonState } from "./state-file";
 import { getStdLogPath, getMainLogPath, readLogTail } from "../utils/logger";
 
 /** 获取状态文件路径 */
@@ -41,11 +41,11 @@ export async function readEdgeState(): Promise<EdgeState | null> {
 
 /** 原子写入 Edge 状态文件 */
 async function writeEdgeState(state: EdgeState): Promise<void> {
-  await ensureStateDir();
-  const target = getEdgeStatePath(DEFAULTS.EDGE_STATE_FILE);
-  const tmp = `${target}.tmp`;
-  await Bun.write(tmp, JSON.stringify(state, null, 2));
-  await rename(tmp, target);
+  await writeJsonState(
+    getEdgeStatePath(DEFAULTS.EDGE_STATE_FILE),
+    state,
+    0o600,
+  );
 }
 
 /** 删除状态文件 */
@@ -68,24 +68,21 @@ function isProcessAlive(pid: number): boolean {
 }
 
 /** Token 来源描述 */
-type EdgeTokenSource = "env" | "--token" | "hub.json";
+type EdgeTokenSource = "env" | "--token" | "inherited";
 
-/**
- * 确定 Edge 连接 Hub 的 access token。
- * 优先级：环境变量 > 显式传入 > hub.json。
- * 全部找不到时返回 null（不携带 token 连接，会被 Hub 拒绝）。
- */
-async function resolveEdgeToken(
+/** 确定 token：环境变量 > 显式传入 > 已保存 token */
+function resolveEdgeToken(
   explicitToken?: string,
-): Promise<{ token: string; source: EdgeTokenSource } | null> {
+  previousState?: EdgeState | null,
+): { token: string; source: EdgeTokenSource } | null {
   const envToken = process.env.PAIMON_ACCESS_TOKEN;
   if (envToken) return { token: envToken, source: "env" };
   if (explicitToken) return { token: explicitToken, source: "--token" };
-  // 同机 fallback：尝试从 hub.json 读取
-  const hubState = await readHubState();
-  if (hubState?.accessToken) {
-    return { token: hubState.accessToken, source: "hub.json" };
+
+  if (previousState?.accessToken) {
+    return { token: previousState.accessToken, source: "inherited" };
   }
+
   return null;
 }
 
@@ -96,6 +93,7 @@ export async function startEdgeDaemon(
   edgeId: string,
   hubUrl: string,
   explicitToken?: string,
+  previousState?: EdgeState | null,
 ): Promise<void> {
   // 检查是否已在运行
   const existing = await readEdgeState();
@@ -112,7 +110,7 @@ export async function startEdgeDaemon(
   await ensureStateDir();
 
   // 解析 access token
-  const tokenResult = await resolveEdgeToken(explicitToken);
+  const tokenResult = resolveEdgeToken(explicitToken, previousState);
 
   // stdout/stderr 兜底日志：仅捕获未处理异常和 Bun runtime crash
   const stdLogPath = getStdLogPath(DEFAULTS.EDGE_LOG_NAME);
@@ -178,6 +176,7 @@ export async function startEdgeDaemon(
     host,
     edgeId,
     hubUrl,
+    ...(tokenResult ? { accessToken: tokenResult.token } : {}),
     startedAt: new Date().toISOString(),
   });
 

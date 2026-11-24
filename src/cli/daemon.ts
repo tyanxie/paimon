@@ -1,7 +1,7 @@
 // Daemon 进程管理：启动/停止/状态查询
 
 import { join, resolve } from "node:path";
-import { mkdir, unlink, rename } from "node:fs/promises";
+import { mkdir, unlink } from "node:fs/promises";
 import { openSync, closeSync } from "node:fs";
 import { normalizeBasePath } from "../utils/basePath";
 import { DEFAULTS } from "../protocol/types";
@@ -13,6 +13,7 @@ import {
   STATE_DIR,
 } from "../utils/env";
 import { generateAccessToken } from "../hub/auth";
+import { writeJsonState } from "./state-file";
 import { getStdLogPath, getMainLogPath, readLogTail } from "../utils/logger";
 
 /** 获取状态文件路径 */
@@ -40,11 +41,7 @@ export async function readHubState(): Promise<HubState | null> {
 
 /** 原子写入 Hub 状态文件（write-tmp + rename） */
 async function writeHubState(state: HubState): Promise<void> {
-  await ensureStateDir();
-  const target = getStatePath(DEFAULTS.STATE_FILE);
-  const tmp = `${target}.tmp`;
-  await Bun.write(tmp, JSON.stringify(state, null, 2));
-  await rename(tmp, target);
+  await writeJsonState(getStatePath(DEFAULTS.STATE_FILE), state);
 }
 
 /** 删除状态文件 */

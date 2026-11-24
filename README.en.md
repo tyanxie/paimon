@@ -51,11 +51,11 @@ Start Hub and Edge on the same machine, then start Pi in your working directory:
 
 ```bash
 paimon hub start
-paimon edge start
+paimon edge start --token <access-token>
 pi
 ```
 
-Visit `http://localhost:8080` in your browser. On your first visit, enter the Access Token printed when Hub starts.
+Replace `<access-token>` with the Access Token printed when Hub starts; a local Edge also requires explicit configuration. Visit `http://localhost:8080` in your browser and enter the same token on your first visit.
 
 Hub serves the Web UI, Edge manages instances on its machine, and the Pi Extension connects automatically to the local Edge. Install the Extension and start Edge on every machine running Pi.
 

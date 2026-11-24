@@ -28,5 +28,12 @@ export async function handleEdgeRestart(
   }
 
   await stopEdgeDaemon();
-  await startEdgeDaemon(finalPort, finalHost, finalEdgeId, finalHubUrl, token);
+  await startEdgeDaemon(
+    finalPort,
+    finalHost,
+    finalEdgeId,
+    finalHubUrl,
+    token,
+    prevState,
+  );
 }
