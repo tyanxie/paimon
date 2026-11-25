@@ -12,6 +12,7 @@ import type {
 } from "../protocol/types";
 import { hubRegistry } from "./edge";
 import * as log from "./logger";
+import { resolveHistory, resolveSessionList } from "./queries";
 
 /** 处理 Edge 消息 */
 export function handleEdgeMessage(
@@ -95,38 +96,11 @@ export function handleEdgeMessage(
       break;
     }
     case "instance_history": {
-      const subscribers = hubRegistry.getSubscribers(msg.payload.instanceId);
-      if (subscribers.length > 0) {
-        const historyMsg = JSON.stringify({
-          type: "history",
-          payload: {
-            instanceId: msg.payload.instanceId,
-            messages: msg.payload.entries,
-            hasMore: msg.payload.hasMore,
-          },
-        });
-        for (const browser of subscribers) {
-          browser.send(historyMsg);
-        }
-      }
+      resolveHistory(msg.payload);
       break;
     }
     case "instance_session_list": {
-      const subscribers = hubRegistry.getSubscribers(msg.payload.instanceId);
-      if (subscribers.length > 0) {
-        const sessionListMsg = JSON.stringify({
-          type: "session_list",
-          payload: {
-            instanceId: msg.payload.instanceId,
-            sessions: msg.payload.sessions,
-            total: msg.payload.total,
-            hasMore: msg.payload.hasMore,
-          },
-        });
-        for (const browser of subscribers) {
-          browser.send(sessionListMsg);
-        }
-      }
+      resolveSessionList(msg.payload);
       break;
     }
     case "instance_quit": {
@@ -224,12 +198,10 @@ export function handleBrowserMessage(
     case "abort":
     case "set_model":
     case "set_thinking_level":
-    case "list_sessions":
     case "new_session":
     case "switch_session":
     case "compact":
-    case "shutdown":
-    case "get_history": {
+    case "shutdown": {
       const payload = msg.payload as { instanceId: InstanceId };
       forwardToEdge(ws, payload.instanceId, {
         type: msg.type,

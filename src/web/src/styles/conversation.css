@@ -20,6 +20,54 @@
   mask-image: var(--conversation-edge-mask);
 }
 
+.conversation-history-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+}
+
+.conversation-history-error-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 0;
+  row-gap: 4px;
+}
+
+.conversation-history-error-row .ui-status {
+  padding: 0;
+  color: var(--label-secondary);
+}
+
+.conversation-history-error-row .ui-status > svg {
+  color: var(--toast-icon-error);
+}
+
+.conversation-history-retry.ui-button {
+  padding-inline: 0;
+  color: var(--color-accent);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.conversation-history-retry.ui-button:hover:not(:disabled),
+.conversation-history-retry.ui-button:focus-visible {
+  color: var(--color-accent);
+}
+
+.conversation-history-error-detail {
+  color: var(--label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
 .conversation-scroll-bottom {
   width: 32px;
   height: 32px;

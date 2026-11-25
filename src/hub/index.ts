@@ -24,10 +24,12 @@ import {
   forwardToEdgeForHttp,
 } from "./router";
 import * as log from "./logger";
+import { handleInstanceQuery } from "./queries";
 
 // 路由匹配正则
 const RE_BROWSE = /^\/api\/edges\/([^/]+)\/browse$/;
 const RE_SHUTDOWN = /^\/api\/instance\/([^/]+)\/shutdown$/;
+const RE_INSTANCE_QUERY = /^\/api\/instance\/([^/]+)\/(history|sessions)$/;
 
 const port = parseInt(process.env.PAIMON_PORT || String(DEFAULTS.PORT), 10);
 const host = process.env.PAIMON_HOST || DEFAULTS.HOST;
@@ -186,6 +188,17 @@ const server = Bun.serve<WsData>({
       const denied = authenticate(req);
       if (denied) return denied;
       return handleBrowse(url.searchParams, decodeURIComponent(browseMatch[1]));
+    }
+
+    const queryMatch = pathname.match(RE_INSTANCE_QUERY);
+    if (queryMatch && method === "GET") {
+      const denied = authenticate(req);
+      if (denied) return denied;
+      return handleInstanceQuery(
+        decodeURIComponent(queryMatch[1]),
+        queryMatch[2] === "history" ? "history" : "sessions",
+        url.searchParams,
+      );
     }
 
     // /api/instance/:id/shutdown

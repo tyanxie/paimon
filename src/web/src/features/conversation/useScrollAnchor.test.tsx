@@ -77,10 +77,13 @@ beforeEach(async () => {
     entriesRef: { current: entries },
     instanceId: "instance",
     hasMore: true,
+    isLoadingMore: false,
     shouldScrollToBottom: false,
     onScrollToBottomHandled: () => {},
     onLoadMore: () => {
       loads += 1;
+      options.isLoadingMore = true;
+      root.render(<Probe />);
     },
     bottomChromeHeight: 80,
     bottomSafeGap: 0,
@@ -162,6 +165,44 @@ async function resizeContent(height: number) {
 }
 
 describe("历史加载与主动定位", () => {
+  test("分页失败停止自动加载，手动重试保留阅读锚点", async () => {
+    scroll.scrollTop = 50;
+    await act(async () => api.handleScroll());
+    expect(loads).toBe(1);
+    await act(async () => api.handleScroll());
+    expect(loads).toBe(1);
+    options.isLoadingMore = false;
+    options.onRetryLoadMore = options.onLoadMore;
+    options.onLoadMore = undefined;
+    await act(async () => root.render(<Probe />));
+    expect(scroll.scrollTop).toBe(50);
+    expect(options.hasMore).toBe(true);
+    for (let i = 0; i < 10; i++) await act(async () => api.handleScroll());
+    expect(loads).toBe(1);
+    await act(async () => {
+      api.retryLoadMore();
+      api.retryLoadMore();
+    });
+    expect(loads).toBe(2);
+    // 重试成功时仍恢复本次分页的阅读锚点
+    buttonTop += 500;
+    Object.defineProperty(scroll, "scrollHeight", {
+      value: 2500,
+      configurable: true,
+    });
+    options.entries = [
+      {
+        type: "message",
+        id: "older",
+        message: { role: "user", content: "old" },
+      },
+      ...options.entries,
+    ];
+    options.entriesRef.current = options.entries;
+    options.isLoadingMore = false;
+    await act(async () => root.render(<Probe />));
+    expect(scroll.scrollTop).toBe(550);
+  });
   test("等待历史响应时尺寸通知不改变按钮或触发重复加载", async () => {
     scroll.scrollTop = 0;
     await act(async () => api.handleScroll());
@@ -197,6 +238,7 @@ describe("历史加载与主动定位", () => {
         ...options.entries,
       ];
       options.entriesRef.current = options.entries;
+      options.isLoadingMore = false;
       await act(async () => root.render(<Probe />));
       await frames();
       expect(scroll.scrollTop).toBe(jumpToBottom ? 2000 : 500);

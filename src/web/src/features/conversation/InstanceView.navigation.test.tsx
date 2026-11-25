@@ -14,6 +14,8 @@ import { useInstances } from "../../stores/useInstances";
 import { useSidebar } from "../../stores/useSidebar";
 import { useWebSocket } from "../../stores/useWebSocket";
 import { InstanceView } from "./InstanceView";
+import { ToastContainer } from "../../components/ui/Toast";
+import * as http from "../../utils/authFetch";
 
 function instance(id: string): InstanceInfo {
   return {
@@ -48,6 +50,18 @@ let sidebarState: ReturnType<typeof useSidebar.getState>;
 let persisted: Map<string, string | null>;
 let language: string;
 let overlay: HTMLElement | undefined;
+let fetchSpy: ReturnType<typeof spyOn<typeof http, "authFetch">>;
+let requests: { url: string; resolve: (response: Response) => void }[];
+
+async function history(entries: unknown[] = [], hasMore = false) {
+  const request = requests.at(-1)!;
+  const sessionId =
+    new URL(request.url, "http://localhost").searchParams.get("sessionId") ??
+    undefined;
+  await act(async () =>
+    request.resolve(Response.json({ entries, hasMore, sessionId })),
+  );
+}
 
 function Harness() {
   navigate = useNavigate();
@@ -74,6 +88,7 @@ async function render() {
       <MotionConfig reducedMotion="always">
         <MemoryRouter initialEntries={["/instance/one"]}>
           <Harness />
+          <ToastContainer />
         </MemoryRouter>
       </MotionConfig>,
     ),
@@ -123,6 +138,13 @@ beforeEach(async () => {
   );
   language = i18n.language;
   await i18n.changeLanguage("zh-CN");
+  requests = [];
+  fetchSpy = spyOn(http, "authFetch").mockImplementation(
+    (input) =>
+      new Promise<Response>((resolve) =>
+        requests.push({ url: String(input), resolve }),
+      ),
+  );
   selected = [];
   sentMessages = [];
   listeners = new Set();
@@ -179,6 +201,7 @@ afterEach(async () => {
   container.remove();
   trigger.remove();
   mediaSpy.mockRestore();
+  fetchSpy.mockRestore();
   useWebSocket.setState(socketState);
   useInstances.setState(instancesState);
   useDrafts.setState(draftsState);
@@ -206,12 +229,10 @@ describe("实例页面任务快照", () => {
       "cached task",
     );
     await act(async () =>
-      useInstances
-        .getState()
-        .handleMessage({
-          type: "instance_list",
-          payload: { instances: [{ ...instance("one"), tasks: [] }] },
-        }),
+      useInstances.getState().handleMessage({
+        type: "instance_list",
+        payload: { instances: [{ ...instance("one"), tasks: [] }] },
+      }),
     );
     expect(container.querySelector(".composer-task-plan")).toBeNull();
   });
@@ -305,10 +326,7 @@ describe("实例页面导航与自动聚焦", () => {
     );
     expect(editor().value).toBe("draft");
     expect(document.activeElement).toBe(trigger);
-    await emit({
-      type: "history",
-      payload: { instanceId: "one", messages: [], hasMore: false },
-    });
+    await history();
     expect(
       container
         .querySelector(".conversation-scroll")!
@@ -382,22 +400,109 @@ describe("实例页面导航与自动聚焦", () => {
 });
 
 describe("实例页面发送与滚动", () => {
-  async function prepareReadingPosition() {
+  test("分页失败暂停滚动加载，点击重试不影响阅读和发送", async () => {
     await render();
-    await emit({
-      type: "history",
+    await history(
+      [
+        {
+          type: "message",
+          id: "latest",
+          message: { role: "user", content: "loaded conversation" },
+        },
+      ],
+      true,
+    );
+    await act(
+      async () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    const scroll = container.querySelector<HTMLDivElement>(
+      ".conversation-scroll",
+    )!;
+    Object.defineProperties(scroll, {
+      scrollHeight: { configurable: true, value: 2000 },
+      clientHeight: { configurable: true, value: 500 },
+      scrollTop: { configurable: true, writable: true, value: 50 },
+    });
+    const before = requests.length;
+    await act(async () =>
+      scroll.dispatchEvent(new Event("scroll", { bubbles: true })),
+    );
+    expect(requests).toHaveLength(before + 1);
+    await act(async () =>
+      requests
+        .at(-1)!
+        .resolve(
+          Response.json({ error: "Request timed out (10s)" }, { status: 502 }),
+        ),
+    );
+    expect(container.textContent).toContain("loaded conversation");
+    expect(container.textContent).not.toContain(
+      i18n.t("conversation.loadFailed"),
+    );
+    expect(document.body.textContent).toContain("Request timed out (10s)");
+    expect(scroll.scrollTop).toBe(50);
+    for (let i = 0; i < 10; i++) {
+      await act(async () =>
+        scroll.dispatchEvent(new Event("scroll", { bubbles: true })),
+      );
+    }
+    expect(requests).toHaveLength(before + 1);
+    const retry = Array.from(
+      container.querySelectorAll<HTMLButtonElement>("button"),
+    ).find(
+      (button) =>
+        button.textContent === i18n.t("conversation.retryLoadingEarlier"),
+    )!;
+    expect(retry).toBeDefined();
+    await act(async () => retry.click());
+    expect(requests).toHaveLength(before + 2);
+    expect(
+      new URL(requests.at(-1)!.url, "http://localhost").searchParams.get(
+        "offset",
+      ),
+    ).toBe("1");
+    expect(container.textContent).not.toContain(
+      i18n.t("conversation.retryLoadingEarlier"),
+    );
+    await act(async () =>
+      requests
+        .at(-1)!
+        .resolve(Response.json({ error: "Still offline" }, { status: 502 })),
+    );
+    for (let i = 0; i < 10; i++) {
+      await act(async () =>
+        scroll.dispatchEvent(new Event("scroll", { bubbles: true })),
+      );
+    }
+    expect(requests).toHaveLength(before + 2);
+    expect(container.textContent).toContain("Still offline");
+    await act(async () =>
+      useDrafts
+        .getState()
+        .setDraft("one", { text: "continue conversation", images: [] }),
+    );
+    await key("Enter");
+    expect(sentMessages).toContainEqual({
+      type: "prompt",
       payload: {
         instanceId: "one",
-        messages: [
-          {
-            type: "message",
-            id: "old",
-            message: { role: "user", content: "previous" },
-          },
-        ],
-        hasMore: false,
+        message: "continue conversation",
+        images: undefined,
       },
     });
+  });
+  async function prepareReadingPosition() {
+    await render();
+    await history([
+      {
+        type: "message",
+        id: "old",
+        message: { role: "user", content: "previous" },
+      },
+    ]);
     await act(
       async () =>
         new Promise<void>((resolve) => {

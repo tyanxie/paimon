@@ -25,6 +25,7 @@ import type {
   ToolExecutionState,
 } from "./types";
 import { useConversationDisplay } from "./useConversationDisplay";
+import { queryHistory } from "./queries";
 
 // ── 返回值类型 ──
 
@@ -41,6 +42,7 @@ export interface ConversationState {
   errorMessage: string | null;
   hasMore: boolean;
   loadMore: () => void;
+  retryLoadMore: () => void;
 }
 
 // ── renderKey 生成 ──
@@ -156,8 +158,71 @@ export function useConversation(
   const hasMoreRef = useRef(hasMore);
   hasMoreRef.current = hasMore;
 
+  const historyRequestRef = useRef<AbortController | null>(null);
+  const contextRef = useRef({ instanceId, sessionId: instance?.sessionId });
+  contextRef.current = { instanceId, sessionId: instance?.sessionId };
+  const applyHistoryRef = useRef(applyHistory);
+  applyHistoryRef.current = applyHistory;
+
+  const requestHistory = useCallback(
+    (offset = 0) => {
+      historyRequestRef.current?.abort();
+      const controller = new AbortController();
+      historyRequestRef.current = controller;
+      const sessionId = contextRef.current.sessionId;
+      if (offset > 0) {
+        loadStateRef.current = "loadingMore";
+        setLoadState("loadingMore");
+      }
+      void queryHistory(
+        instanceId,
+        { offset, sessionId },
+        controller.signal,
+        t("conversation.historyError"),
+      )
+        .then((result) => {
+          if (
+            controller.signal.aborted ||
+            contextRef.current.instanceId !== instanceId ||
+            contextRef.current.sessionId !== sessionId ||
+            (sessionId !== undefined && result.sessionId !== sessionId)
+          )
+            return;
+          applyHistoryRef.current(
+            instanceId,
+            result.entries,
+            result.hasMore,
+            offset,
+          );
+        })
+        .catch((error: unknown) => {
+          if (
+            controller.signal.aborted ||
+            contextRef.current.instanceId !== instanceId ||
+            contextRef.current.sessionId !== sessionId
+          )
+            return;
+          const message =
+            error instanceof Error
+              ? error.message
+              : t("conversation.historyError");
+          if (offset > 0) {
+            loadStateRef.current = "loadingMoreError";
+            setLoadState("loadingMoreError");
+            setErrorMessage(message);
+          } else {
+            setLoadState("error");
+            setErrorMessage(message);
+          }
+        });
+    },
+    [instanceId, t],
+  );
+
   // ── 重置对话状态 ──
   const resetConversation = useCallback(() => {
+    historyRequestRef.current?.abort();
+    loadStateRef.current = "refreshing";
     updateLocalSend(null);
     setEntries([]);
     lastEntryKeyRef.current = null;
@@ -189,19 +254,6 @@ export function useConversation(
             msg.payload.data,
             msg.payload.timestamp,
           );
-          break;
-        }
-        case "history": {
-          if (msg.payload.instanceId !== instanceId) return;
-          const messages: unknown = msg.payload.messages;
-          if (!Array.isArray(messages) || !messages.every(isSessionEntry)) {
-            console.error("[Paimon] Invalid conversation history");
-            setLoadState("error");
-            setErrorMessage(null);
-            break;
-          }
-          const newHasMore = msg.payload.hasMore ?? false;
-          applyHistory(instanceId, messages, newHasMore);
           break;
         }
         case "error": {
@@ -241,12 +293,20 @@ export function useConversation(
 
     resetConversation();
     send({ type: "subscribe", payload: { instanceId } });
-    send({ type: "get_history", payload: { instanceId } });
+    requestHistory();
 
     return () => {
+      historyRequestRef.current?.abort();
       send({ type: "unsubscribe", payload: { instanceId } });
     };
-  }, [instanceId, connected, send, resetConversation, updateLocalSend]);
+  }, [
+    instanceId,
+    connected,
+    send,
+    resetConversation,
+    updateLocalSend,
+    requestHistory,
+  ]);
 
   // ── 监听 sessionId 变化 → 重新拉取 history ──
   const prevSessionIdRef = useRef(instance?.sessionId);
@@ -264,19 +324,25 @@ export function useConversation(
     }
 
     if (
-      prevSessionIdRef.current !== undefined &&
+      connected &&
       currentSessionId !== undefined &&
       currentSessionId !== prevSessionIdRef.current
     ) {
       // 同实例内 session 变了，重置并重新拉取
       resetConversation();
-      send({ type: "get_history", payload: { instanceId } });
+      requestHistory();
     }
     // 只在 sessionId 有效时更新 ref，避免中间态 undefined 覆盖有效值
     if (currentSessionId !== undefined) {
       prevSessionIdRef.current = currentSessionId;
     }
-  }, [instance?.sessionId, instanceId, send, resetConversation]);
+  }, [
+    instance?.sessionId,
+    instanceId,
+    connected,
+    requestHistory,
+    resetConversation,
+  ]);
 
   // 压缩结束后通过历史恢复结果，并更新对应系统事件。
   const prevStatusRef = useRef(instance?.status);
@@ -299,11 +365,11 @@ export function useConversation(
       updateCompaction({ status: "refreshing" });
       compactionRefreshRef.current = true;
       if (loadStateRef.current !== "loadingMore") {
-        send({ type: "get_history", payload: { instanceId } });
+        requestHistory();
       }
     }
     prevStatusRef.current = currentStatus;
-  }, [instance?.status, instanceId, send, updateLocalSend]);
+  }, [instance?.status, instanceId, requestHistory, updateLocalSend]);
 
   function beginCompaction(timestamp = Date.now()) {
     const key = nextRenderKey(instanceId, "compaction");
@@ -531,16 +597,17 @@ export function useConversation(
     id: InstanceId,
     messages: SessionEntry[],
     newHasMore: boolean,
+    offset: number,
   ) {
     const normalized = messages.map((entry) =>
       ensureRenderKey(id, entry, "history"),
     );
 
     const refreshingCompaction = compactionRefreshRef.current;
-    if (loadStateRef.current === "loadingMore") {
+    if (offset > 0) {
       setEntries((prev) => [...normalized, ...prev]);
       if (refreshingCompaction) {
-        send({ type: "get_history", payload: { instanceId } });
+        requestHistory();
       }
     } else if (refreshingCompaction) {
       const result = [...normalized]
@@ -606,6 +673,7 @@ export function useConversation(
       return next;
     });
     setHasMore(newHasMore);
+    loadStateRef.current = "idle";
     setLoadState("idle");
     setErrorMessage(null);
   }
@@ -619,9 +687,19 @@ export function useConversation(
     )
       return;
     const offset = entriesRef.current.length;
-    setLoadState("loadingMore");
-    send({ type: "get_history", payload: { instanceId, offset } });
-  }, [instanceId, send]);
+    requestHistory(offset);
+  }, [requestHistory]);
+
+  const retryLoadMore = useCallback(() => {
+    if (
+      !hasMoreRef.current ||
+      loadStateRef.current !== "loadingMoreError" ||
+      compactionRefreshRef.current
+    )
+      return;
+    setErrorMessage(null);
+    requestHistory(entriesRef.current.length);
+  }, [requestHistory]);
 
   const visibleEntries = useMemo(
     () => (streamingEntry ? [...entries, streamingEntry] : entries),
@@ -703,5 +781,6 @@ export function useConversation(
     errorMessage,
     hasMore,
     loadMore,
+    retryLoadMore,
   };
 }

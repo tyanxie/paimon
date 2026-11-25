@@ -62,7 +62,7 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
     sessionTotal,
     requestSessionList,
     resetSessionList,
-  } = useSessionList(instanceId);
+  } = useSessionList(instanceId, instance?.sessionId);
 
   // ── 对话状态（私有 hook） ──
   const {
@@ -76,6 +76,7 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
     errorMessage,
     hasMore,
     loadMore,
+    retryLoadMore,
   } = useConversation(instanceId, instance, resetSessionList);
 
   // ── 草稿 ──
@@ -238,6 +239,7 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
   // 滚动 hook
   const {
     handleScroll,
+    retryLoadMore: handleRetryLoadMore,
     scrollToBottom,
     showScrollBtn,
     startBottomFollow,
@@ -252,7 +254,10 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
     hasMore,
     shouldScrollToBottom,
     onScrollToBottomHandled: clearScrollToBottom,
-    onLoadMore: loadMore,
+    onLoadMore: loadState === "idle" ? loadMore : undefined,
+    onRetryLoadMore:
+      loadState === "loadingMoreError" ? retryLoadMore : undefined,
+    isLoadingMore: loadState === "loadingMore",
     bottomChromeHeight,
     bottomSafeGap,
   });
@@ -372,6 +377,28 @@ export function InstanceView({ onSelectInstance }: InstanceViewProps) {
               <StatusMessage compact tone="loading" className="justify-center">
                 {t("conversation.loadingEarlier")}
               </StatusMessage>
+            )}
+            {loadState === "loadingMoreError" && (
+              <div className="conversation-history-error">
+                <div className="conversation-history-error-row">
+                  <StatusMessage compact tone="error">
+                    {t("conversation.loadingEarlierFailed")}
+                  </StatusMessage>
+                  <Button
+                    size="inline"
+                    variant="ghost"
+                    className="conversation-history-retry"
+                    onClick={handleRetryLoadMore}
+                  >
+                    {t("conversation.retryLoadingEarlier")}
+                  </Button>
+                </div>
+                {errorMessage && (
+                  <div className="conversation-history-error-detail">
+                    {errorMessage}
+                  </div>
+                )}
+              </div>
             )}
             {isRefreshing ? (
               <RefreshingConversationSkeleton />

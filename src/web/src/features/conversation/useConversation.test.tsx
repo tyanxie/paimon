@@ -9,6 +9,7 @@ import type {
 import "../../i18n";
 import { useWebSocket } from "../../stores/useWebSocket";
 import { useConversation, type ConversationState } from "./useConversation";
+import * as http from "../../utils/authFetch";
 
 const instanceId = "instance-1" as InstanceId;
 let state: ConversationState;
@@ -17,9 +18,19 @@ let root: Root;
 let container: HTMLDivElement;
 let sentMessages: unknown[];
 const originalSocketState = useWebSocket.getState();
+let fetchSpy: ReturnType<typeof spyOn<typeof http, "authFetch">>;
+let requests: {
+  url: string;
+  resolve: (response: Response) => void;
+  reject: (error: Error) => void;
+  signal?: AbortSignal | null;
+}[];
 
-function Probe({ instance }: { instance?: InstanceInfo } = {}) {
-  state = useConversation(instanceId, instance);
+function Probe({
+  instance,
+  id = instanceId,
+}: { instance?: InstanceInfo; id?: InstanceId } = {}) {
+  state = useConversation(id, instance);
   return null;
 }
 
@@ -38,16 +49,29 @@ async function event(
 }
 
 async function history(messages: unknown[] = [], hasMore = false) {
+  const request = requests.at(-1)!;
+  const sessionId =
+    new URL(request.url, "http://localhost").searchParams.get("sessionId") ??
+    undefined;
   await act(async () =>
-    handler({
-      type: "history",
-      payload: { instanceId, messages, hasMore },
-    }),
+    request.resolve(Response.json({ entries: messages, hasMore, sessionId })),
   );
 }
 
 beforeEach(async () => {
   sentMessages = [];
+  requests = [];
+  fetchSpy = spyOn(http, "authFetch").mockImplementation(
+    (input, init) =>
+      new Promise<Response>((resolve, reject) =>
+        requests.push({
+          url: String(input),
+          resolve,
+          reject,
+          signal: init?.signal,
+        }),
+      ),
+  );
   useWebSocket.setState({
     connectionState: "connected",
     send: (message) => {
@@ -62,13 +86,200 @@ beforeEach(async () => {
   document.body.append(container);
   root = createRoot(container);
   await act(async () => root.render(<Probe />));
-  await history();
 });
 
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  fetchSpy.mockRestore();
   useWebSocket.setState(originalSocketState);
+});
+
+describe("历史 HTTP 查询隔离", () => {
+  const entry = (id: string) => ({
+    type: "message",
+    id,
+    message: { role: "user", content: id },
+  });
+
+  test("两个页面打开同一实例，A 分页不替换 B 的最新历史", async () => {
+    let other: ConversationState;
+    function OtherPage() {
+      other = useConversation(instanceId, undefined);
+      return null;
+    }
+    const a = requests.at(-1)!;
+    const otherContainer = document.createElement("div");
+    document.body.append(otherContainer);
+    const otherRoot = createRoot(otherContainer);
+    try {
+      await act(async () => otherRoot.render(<OtherPage />));
+      const b = requests.at(-1)!;
+      await act(async () =>
+        b.resolve(Response.json({ entries: [entry("latest")], hasMore: true })),
+      );
+      expect(state.loadState).toBe("refreshing");
+      await act(async () =>
+        a.resolve(Response.json({ entries: [entry("latest")], hasMore: true })),
+      );
+      await act(async () => state.loadMore());
+      await history([entry("older")]);
+      expect(state.entries.map((item) => item.id)).toEqual(["older", "latest"]);
+      expect(other!.entries.map((item) => item.id)).toEqual(["latest"]);
+      expect(other!.hasMore).toBe(true);
+      expect(other!.loadState).toBe("idle");
+      expect(
+        sentMessages.some(
+          (message) =>
+            typeof message === "object" &&
+            message !== null &&
+            "type" in message &&
+            message.type === "get_history",
+        ),
+      ).toBe(false);
+    } finally {
+      await act(async () => otherRoot.unmount());
+      otherContainer.remove();
+    }
+  });
+
+  test.each(["instance", "session"] as const)(
+    "%s 切换后迟到的分页响应不污染新历史",
+    async (change) => {
+      const info: InstanceInfo = {
+        id: instanceId,
+        edgeId: "edge",
+        hostname: "host",
+        cwd: "/project",
+        homedir: "/home",
+        pid: 1,
+        status: "idle",
+        model: { provider: "provider", id: "model" },
+        connectedAt: 0,
+        lastHeartbeat: 0,
+        sessionId: "one",
+      };
+      await act(async () => root.render(<Probe instance={info} />));
+      await history([entry("latest")], true);
+      await act(async () => state.loadMore());
+      const old = requests.at(-1)!;
+      const id = change === "instance" ? "other-instance" : instanceId;
+      await act(async () =>
+        root.render(
+          <Probe id={id} instance={{ ...info, id, sessionId: "two" }} />,
+        ),
+      );
+      expect(old.signal?.aborted).toBe(true);
+      await act(async () =>
+        old.resolve(
+          Response.json({
+            entries: [entry("old-page")],
+            hasMore: false,
+            sessionId: "one",
+          }),
+        ),
+      );
+      expect(state.entries).toEqual([]);
+      expect(state.loadState).toBe("refreshing");
+      await history([entry("new-session")]);
+      expect(state.entries.map((item) => item.id)).toEqual(["new-session"]);
+      expect(state.loadState).toBe("idle");
+    },
+  );
+
+  test("重连忽略旧请求的迟到错误，卸载取消当前历史查询", async () => {
+    const old = requests.at(-1)!;
+    await act(async () =>
+      useWebSocket.setState({ connectionState: "disconnected" }),
+    );
+    await act(async () =>
+      useWebSocket.setState({ connectionState: "connected" }),
+    );
+    expect(old.signal?.aborted).toBe(true);
+    await act(async () =>
+      old.resolve(Response.json({ error: "old timeout" }, { status: 502 })),
+    );
+    expect(state.loadState).toBe("refreshing");
+    expect(state.errorMessage).toBeNull();
+    const current = requests.at(-1)!;
+    await act(async () => root.unmount());
+    expect(current.signal?.aborted).toBe(true);
+  });
+
+  test.each(["timeout", "server", "network"] as const)(
+    "分页 %s 失败暂停自动加载，手动重试保留已有条目",
+    async (failure) => {
+      await history([entry("latest")], true);
+      await act(async () => state.loadMore());
+      const message =
+        failure === "timeout"
+          ? "Request timed out (10s)"
+          : failure === "server"
+            ? "Read failed"
+            : "Network unavailable";
+      await act(async () => {
+        if (failure === "network")
+          requests.at(-1)!.reject(new TypeError(message));
+        else
+          requests
+            .at(-1)!
+            .resolve(Response.json({ error: message }, { status: 502 }));
+      });
+      expect(state.loadState).toBe("loadingMoreError");
+      expect(state.errorMessage).toBe(message);
+      expect(state.entries.map((item) => item.id)).toEqual(["latest"]);
+      expect(state.hasMore).toBe(true);
+      const count = requests.length;
+      for (let i = 0; i < 10; i++) await act(async () => state.loadMore());
+      expect(requests).toHaveLength(count);
+      await act(async () => {
+        state.retryLoadMore();
+        state.retryLoadMore();
+      });
+      expect(requests).toHaveLength(count + 1);
+      expect(state.loadState).toBe("loadingMore");
+      expect(state.errorMessage).toBeNull();
+      await history([entry("older")]);
+      expect(state.entries.map((item) => item.id)).toEqual(["older", "latest"]);
+    },
+  );
+
+  test("分页重试成功恢复自动加载，重连清除失败状态", async () => {
+    await history([entry("latest")], true);
+    await act(async () => state.loadMore());
+    await act(async () => requests.at(-1)!.reject(new TypeError("Offline")));
+    expect(state.loadState).toBe("loadingMoreError");
+    await act(async () => state.retryLoadMore());
+    await history([entry("older")], true);
+    expect(state.loadState).toBe("idle");
+    const count = requests.length;
+    await act(async () => state.loadMore());
+    expect(requests).toHaveLength(count + 1);
+    await act(async () =>
+      requests.at(-1)!.reject(new TypeError("Offline again")),
+    );
+    await act(async () =>
+      useWebSocket.setState({ connectionState: "disconnected" }),
+    );
+    await act(async () =>
+      useWebSocket.setState({ connectionState: "connected" }),
+    );
+    expect(state.loadState).toBe("refreshing");
+    expect(state.errorMessage).toBeNull();
+    await history([entry("restored")], true);
+    expect(state.loadState).toBe("idle");
+  });
+
+  test("首次历史加载失败仍显示整体错误", async () => {
+    await act(async () =>
+      requests
+        .at(-1)!
+        .resolve(Response.json({ error: "Read failed" }, { status: 502 })),
+    );
+    expect(state.loadState).toBe("error");
+    expect(state.errorMessage).toBe("Read failed");
+    expect(state.entries).toEqual([]);
+  });
 });
 
 describe("本地发送记录", () => {
@@ -91,10 +302,11 @@ describe("本地发送记录", () => {
     expect(state.isAwaitingReply).toBe(true);
     expect(state.entries).toEqual([user]);
     await act(async () => state.loadMore());
-    expect(sentMessages).toContainEqual({
-      type: "get_history",
-      payload: { instanceId, offset: 1 },
-    });
+    expect(
+      new URL(requests.at(-1)!.url, "http://localhost").searchParams.get(
+        "offset",
+      ),
+    ).toBe("1");
   });
 
   test("只由当前实例的真实用户消息接替，占位 key 与等待状态保持连续", async () => {
@@ -510,10 +722,11 @@ describe("useConversation 展示模型", () => {
     expect(state.entries).toHaveLength(5);
     expect(state.displayItems).toHaveLength(2);
     await act(async () => state.loadMore());
-    expect(sentMessages).toContainEqual({
-      type: "get_history",
-      payload: { instanceId, offset: 4 },
-    });
+    expect(
+      new URL(requests.at(-1)!.url, "http://localhost").searchParams.get(
+        "offset",
+      ),
+    ).toBe("4");
     await history([
       {
         type: "message",
@@ -528,7 +741,7 @@ describe("useConversation 展示模型", () => {
     expect(state.displayItems.at(-1)!.key).toBe("reply:u1");
   });
 
-  test("未知历史类型保留条目数量、对象身份与分页 offset", async () => {
+  test("未知历史类型保留条目数量、扩展字段与分页 offset", async () => {
     const entry = {
       type: "future_entry",
       id: "future",
@@ -536,13 +749,14 @@ describe("useConversation 展示模型", () => {
       extra: true,
     };
     await history([entry], true);
-    expect(state.entries[0]).toBe(entry);
+    expect(state.entries[0]).toEqual(entry);
     expect(state.displayItems).toEqual([]);
     await act(async () => state.loadMore());
-    expect(sentMessages).toContainEqual({
-      type: "get_history",
-      payload: { instanceId, offset: 1 },
-    });
+    expect(
+      new URL(requests.at(-1)!.url, "http://localhost").searchParams.get(
+        "offset",
+      ),
+    ).toBe("1");
   });
 
   test("无效历史显示加载错误，合法响应恢复对话", async () => {
@@ -551,6 +765,12 @@ describe("useConversation 展示模型", () => {
       await history([null]);
       expect(state.loadState).toBe("error");
       expect(state.entries).toEqual([]);
+      await act(async () =>
+        useWebSocket.setState({ connectionState: "disconnected" }),
+      );
+      await act(async () =>
+        useWebSocket.setState({ connectionState: "connected" }),
+      );
       await history([
         {
           type: "message",

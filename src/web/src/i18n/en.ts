@@ -119,6 +119,7 @@ const en: LocaleResource = {
   },
 
   conversation: {
+    historyError: "Failed to load history",
     agentName: "Pi",
     you: "Your message",
     replyDuration: "Duration {{duration}}",
@@ -172,6 +173,8 @@ const en: LocaleResource = {
     replyStart: "Started",
     replyEnd: "Ended",
     loadingEarlier: "Loading earlier messages…",
+    loadingEarlierFailed: "Failed to load,",
+    retryLoadingEarlier: "click to retry",
     loadingConversation: "Loading conversation",
     loadFailed: "Failed to load conversation",
     noMessages: "No messages yet",
@@ -257,6 +260,7 @@ const en: LocaleResource = {
 
   // ─── Session Panel ───
   session: {
+    queryError: "Failed to load sessions",
     title: "Sessions",
     new: "New",
     filter: "Filter…",

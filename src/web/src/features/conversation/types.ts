@@ -174,4 +174,5 @@ export type ConversationLoadState =
   | "idle"
   | "refreshing"
   | "loadingMore"
+  | "loadingMoreError"
   | "error";

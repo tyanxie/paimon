@@ -249,15 +249,41 @@ export interface ExtStateMessage {
   };
 }
 
+/** 历史与会话查询的分页参数 */
+export interface InstanceQueryParams {
+  offset?: number;
+  limit?: number;
+  sessionId?: string;
+}
+
+export interface SessionListQueryParams extends InstanceQueryParams {
+  filter?: string;
+}
+
+export interface HistoryResult {
+  sessionId?: string;
+  /** session branch entries（分页后的），保留原始条目与扩展字段 */
+  entries: unknown[];
+  hasMore: boolean;
+}
+
+export interface SessionListResult {
+  sessionId?: string;
+  sessions: SessionListItem[];
+  total: number;
+  hasMore: boolean;
+}
+
+/** token 仅用于关联内部请求，不是 Access Token */
+export type InstanceQueryReply<T> = { token: string } & (
+  | { result: T }
+  | { error: string }
+);
+
 /** 历史消息响应 */
 export interface ExtHistoryMessage {
   type: "history";
-  payload: {
-    /** session branch entries（分页后的） */
-    entries: unknown[];
-    /** 是否还有更早的历史 */
-    hasMore: boolean;
-  };
+  payload: InstanceQueryReply<HistoryResult>;
 }
 
 // ============================================================
@@ -347,12 +373,7 @@ export interface PongMessage {
 /** 请求历史消息 */
 export interface HubGetHistoryMessage {
   type: "get_history";
-  payload?: {
-    /** 从末尾跳过的条目数 */
-    offset?: number;
-    /** 本次请求的最大条目数（按 turn 对齐） */
-    limit?: number;
-  };
+  payload: InstanceQueryParams & { token: string };
 }
 
 /** 创建新 session */
@@ -384,8 +405,6 @@ export type BrowserToHubMessage =
   | BrowserCompactMessage
   | BrowserShutdownMessage
   | BrowserListMessage
-  | BrowserHistoryMessage
-  | BrowserListSessionsMessage
   | BrowserNewSessionMessage
   | BrowserSwitchSessionMessage;
 
@@ -474,32 +493,6 @@ export interface BrowserListMessage {
   type: "list";
 }
 
-/** 请求实例历史消息 */
-export interface BrowserHistoryMessage {
-  type: "get_history";
-  payload: {
-    instanceId: InstanceId;
-    /** 从末尾跳过的条目数 */
-    offset?: number;
-    /** 本次请求的最大条目数（按 turn 对齐） */
-    limit?: number;
-  };
-}
-
-/** 请求实例的 session 列表 */
-export interface BrowserListSessionsMessage {
-  type: "list_sessions";
-  payload: {
-    instanceId: InstanceId;
-    /** 跳过的条目数（默认 0） */
-    offset?: number;
-    /** 单页大小（默认 20） */
-    limit?: number;
-    /** 搜索关键字（匹配 name/firstMessage） */
-    filter?: string;
-  };
-}
-
 /** 指示实例创建新 session */
 export interface BrowserNewSessionMessage {
   type: "new_session";
@@ -526,8 +519,6 @@ export type HubToBrowserMessage =
   | HubInstanceListMessage
   | HubInstanceUpdateMessage
   | HubForwardedEventMessage
-  | HubHistoryMessage
-  | HubSessionListMessage
   | HubInstanceErrorMessage
   | HubErrorMessage;
 
@@ -559,31 +550,6 @@ export interface HubForwardedEventMessage {
     event: string;
     data: unknown;
     timestamp: number;
-  };
-}
-
-/** 历史消息 */
-export interface HubHistoryMessage {
-  type: "history";
-  payload: {
-    instanceId: InstanceId;
-    /** session branch 数据（分页后的） */
-    messages: unknown[];
-    /** 是否还有更早的历史 */
-    hasMore: boolean;
-  };
-}
-
-/** Session 列表（响应 list_sessions） */
-export interface HubSessionListMessage {
-  type: "session_list";
-  payload: {
-    instanceId: InstanceId;
-    sessions: SessionListItem[];
-    /** 过滤后的总数 */
-    total: number;
-    /** 是否还有更多 */
-    hasMore: boolean;
   };
 }
 
@@ -702,24 +668,13 @@ export interface EdgeInstanceStateMessage {
 /** 转发：pi 历史响应 */
 export interface EdgeInstanceHistoryMessage {
   type: "instance_history";
-  payload: {
-    instanceId: InstanceId;
-    entries: unknown[];
-    hasMore: boolean;
-  };
+  payload: InstanceQueryReply<HistoryResult> & { instanceId: InstanceId };
 }
 
 /** 实例 session 列表 */
 export interface EdgeInstanceSessionListMessage {
   type: "instance_session_list";
-  payload: {
-    instanceId: InstanceId;
-    sessions: SessionListItem[];
-    /** 过滤后的总数 */
-    total: number;
-    /** 是否还有更多 */
-    hasMore: boolean;
-  };
+  payload: InstanceQueryReply<SessionListResult> & { instanceId: InstanceId };
 }
 
 /** 转发：pi 操作失败 */
@@ -878,25 +833,13 @@ export interface HubEdgeShutdownMessage {
 /** 转发到 pi：请求历史 */
 export interface HubEdgeGetHistoryMessage {
   type: "get_history";
-  payload: {
-    instanceId: InstanceId;
-    offset?: number;
-    limit?: number;
-  };
+  payload: InstanceQueryParams & { instanceId: InstanceId; token: string };
 }
 
 /** 查询实例的 session 列表 */
 export interface HubEdgeListSessionsMessage {
   type: "list_sessions";
-  payload: {
-    instanceId: InstanceId;
-    /** 跳过的条目数（默认 0） */
-    offset?: number;
-    /** 单页大小（默认 20） */
-    limit?: number;
-    /** 搜索关键字（匹配 name/firstMessage） */
-    filter?: string;
-  };
+  payload: SessionListQueryParams & { instanceId: InstanceId; token: string };
 }
 
 /** 转发到 pi：创建新 session */
@@ -1027,6 +970,8 @@ export const DEFAULTS = {
   EDGE_HUB_URL: "ws://127.0.0.1:8080" as string,
   /** 目录浏览请求超时 (ms) */
   BROWSE_TIMEOUT: 5_000,
+  /** 历史与会话列表查询超时 (ms) */
+  INSTANCE_QUERY_TIMEOUT: 10_000,
   /** 目录浏览最大返回条目数 */
   BROWSE_MAX_ENTRIES: 200,
   /** Edge 状态文件名 */

@@ -49,15 +49,18 @@ interface UseScrollAnchorOptions {
   entriesRef: RefObject<SessionEntry[]>;
   instanceId: InstanceId | null;
   hasMore: boolean;
+  isLoadingMore: boolean;
   shouldScrollToBottom: boolean;
   onScrollToBottomHandled: () => void;
   onLoadMore?: () => void;
+  onRetryLoadMore?: () => void;
   bottomChromeHeight: number;
   bottomSafeGap: number;
 }
 
 export interface UseScrollAnchorReturn {
   handleScroll: () => void;
+  retryLoadMore: () => void;
   scrollToBottom: () => void;
   showScrollBtn: boolean;
   startBottomFollow: () => void;
@@ -232,9 +235,11 @@ export function useScrollAnchor({
   entriesRef,
   instanceId,
   hasMore,
+  isLoadingMore,
   shouldScrollToBottom,
   onScrollToBottomHandled,
   onLoadMore,
+  onRetryLoadMore,
   bottomChromeHeight,
   bottomSafeGap,
 }: UseScrollAnchorOptions): UseScrollAnchorReturn {
@@ -591,6 +596,14 @@ export function useScrollAnchor({
     startAnchorPin,
   ]);
 
+  // 先完成成功分页的锚点恢复，再释放失败或空响应留下的等待状态
+  useLayoutEffect(() => {
+    if (isLoadingMore) return;
+    loadingMoreRef.current = false;
+    loadMoreAnchorRef.current = null;
+    firstEntryKeyBeforeLoadRef.current = undefined;
+  }, [isLoadingMore]);
+
   const prepareForContentResize = useCallback(
     (element: HTMLElement) => {
       const el = scrollRef.current;
@@ -613,6 +626,27 @@ export function useScrollAnchor({
     },
     [scrollRef, startAnchorPin],
   );
+
+  const beginLoadMore = useCallback(
+    (load: () => void) => {
+      const el = scrollRef.current;
+      if (!el || loadingMoreRef.current) return;
+      stopBottomFollow();
+      stopAnchorPin();
+      loadingMoreRef.current = true;
+      const currentEntries = entriesRef.current;
+      loadMoreAnchorRef.current = captureScrollAnchor(el);
+      firstEntryKeyBeforeLoadRef.current = currentEntries[0]
+        ? getSessionEntryRenderKey(currentEntries[0])
+        : undefined;
+      load();
+    },
+    [scrollRef, entriesRef, stopAnchorPin, stopBottomFollow],
+  );
+
+  const retryLoadMore = useCallback(() => {
+    if (onRetryLoadMore) beginLoadMore(onRetryLoadMore);
+  }, [onRetryLoadMore, beginLoadMore]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -654,22 +688,13 @@ export function useScrollAnchor({
 
     // 滚动到顶部加载更多
     if (willLoadMore && onLoadMore) {
-      stopBottomFollow();
-      stopAnchorPin();
-      loadingMoreRef.current = true;
-      const currentEntries = entriesRef.current;
-      const snapshot = captureScrollAnchor(el);
-      loadMoreAnchorRef.current = snapshot;
-      firstEntryKeyBeforeLoadRef.current = currentEntries[0]
-        ? getSessionEntryRenderKey(currentEntries[0])
-        : undefined;
-      onLoadMore();
+      beginLoadMore(onLoadMore);
     }
   }, [
     scrollRef,
-    entriesRef,
     hasMore,
     onLoadMore,
+    beginLoadMore,
     stopAnchorPin,
     stopBottomFollow,
   ]);
@@ -692,6 +717,7 @@ export function useScrollAnchor({
 
   return {
     handleScroll,
+    retryLoadMore,
     scrollToBottom,
     showScrollBtn,
     startBottomFollow,
