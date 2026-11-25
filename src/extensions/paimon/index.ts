@@ -377,9 +377,16 @@ function handleHubMessage(
       const ctx = getCurrentCtx();
       if (ctx?.sessionManager) {
         try {
+          const sessionId = ctx.sessionManager.getSessionId();
+          if (
+            msg.payload.sessionId !== undefined &&
+            msg.payload.sessionId !== sessionId
+          ) {
+            throw new Error("Instance session has changed");
+          }
           const allEntries = ctx.sessionManager.getBranch();
-          const offset = msg.payload?.offset ?? 0;
-          const limit = msg.payload?.limit ?? 50;
+          const offset = msg.payload.offset ?? 0;
+          const limit = msg.payload.limit ?? 50;
 
           // 按 turn 分组：每个 role=user 的 message 开始一个新 turn
           const turns: unknown[][] = [];
@@ -421,20 +428,28 @@ function handleHubMessage(
 
           const response: ExtHistoryMessage = {
             type: "history",
-            payload: { entries: sliced, hasMore },
+            payload: {
+              token: msg.payload.token,
+              result: { entries: sliced, hasMore, sessionId },
+            },
           };
           client.send(response);
-        } catch {
-          // getBranch 失败时返回空列表
+        } catch (error) {
           client.send({
             type: "history",
-            payload: { entries: [], hasMore: false },
+            payload: {
+              token: msg.payload.token,
+              error: error instanceof Error ? error.message : String(error),
+            },
           });
         }
       } else {
         client.send({
           type: "history",
-          payload: { entries: [], hasMore: false },
+          payload: {
+            token: msg.payload.token,
+            error: "Session context is unavailable",
+          },
         });
       }
       break;

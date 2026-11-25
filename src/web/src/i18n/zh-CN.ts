@@ -115,6 +115,7 @@ const zhCN = {
   },
 
   conversation: {
+    historyError: "加载历史失败",
     agentName: "Pi",
     you: "你发送的消息",
     replyDuration: "耗时 {{duration}}",
@@ -165,6 +166,8 @@ const zhCN = {
     replyStart: "开始",
     replyEnd: "结束",
     loadingEarlier: "正在加载更早的消息…",
+    loadingEarlierFailed: "加载失败，",
+    retryLoadingEarlier: "点击重试",
     loadingConversation: "正在加载对话",
     loadFailed: "对话加载失败",
     noMessages: "暂无消息",
@@ -248,6 +251,7 @@ const zhCN = {
 
   // ─── Session 面板 ───
   session: {
+    queryError: "加载 Session 列表失败",
     title: "Sessions",
     new: "新建",
     filter: "筛选…",

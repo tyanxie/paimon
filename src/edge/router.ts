@@ -92,8 +92,7 @@ export function handleExtensionMessage(
         type: "instance_history",
         payload: {
           instanceId: id,
-          entries: msg.payload.entries,
-          hasMore: msg.payload.hasMore ?? false,
+          ...msg.payload,
         },
       });
       break;
@@ -186,19 +185,41 @@ export function handleUpstreamMessage(
       break;
     }
     case "get_history": {
-      const payload =
-        msg.payload.offset !== undefined || msg.payload.limit !== undefined
-          ? { offset: msg.payload.offset, limit: msg.payload.limit }
-          : undefined;
-      forwardToLocalInstance(msg.payload.instanceId, {
-        type: "get_history",
-        payload,
-      });
+      const { instanceId, ...payload } = msg.payload;
+      const ws = edgeRegistry.getInstanceWs(instanceId);
+      if (!ws) {
+        upstream.send({
+          type: "instance_history",
+          payload: {
+            instanceId,
+            token: payload.token,
+            error: "Instance is disconnected",
+          },
+        });
+        break;
+      }
+      ws.send(JSON.stringify({ type: "get_history", payload }));
       break;
     }
     case "list_sessions": {
-      const { instanceId, ...params } = msg.payload;
-      const sessionFile = edgeRegistry.getInstance(instanceId)?.sessionFile;
+      const { instanceId, token, sessionId, ...params } = msg.payload;
+      const instance = edgeRegistry.getInstance(instanceId);
+      if (
+        !instance ||
+        (sessionId !== undefined && sessionId !== instance.sessionId)
+      ) {
+        upstream.send({
+          type: "instance_session_list",
+          payload: {
+            instanceId,
+            token,
+            error: "Instance session is unavailable or has changed",
+          },
+        });
+        break;
+      }
+      const sessionFile = instance.sessionFile;
+      const currentSessionId = instance.sessionId;
       sessionList
         .query(sessionFile, params)
         .then((result) => {
@@ -206,11 +227,15 @@ export function handleUpstreamMessage(
             type: "instance_session_list",
             payload: {
               instanceId,
-              ...result,
-              sessions: result.sessions.map((session) => ({
-                ...session,
-                isCurrent: session.path === sessionFile,
-              })),
+              token,
+              result: {
+                ...result,
+                sessionId: currentSessionId,
+                sessions: result.sessions.map((session) => ({
+                  ...session,
+                  isCurrent: session.path === sessionFile,
+                })),
+              },
             },
           });
         })
@@ -220,7 +245,11 @@ export function handleUpstreamMessage(
           );
           upstream.send({
             type: "instance_session_list",
-            payload: { instanceId, sessions: [], total: 0, hasMore: false },
+            payload: {
+              instanceId,
+              token,
+              error: error instanceof Error ? error.message : String(error),
+            },
           });
         });
       break;
